@@ -1,0 +1,344 @@
+import 'package:flutter/material.dart';
+import 'package:siparis/config/theme.dart';
+import 'package:uuid/uuid.dart';
+
+// Sipariş durumları
+enum OrderStatus { waiting, processing, completed, cancelled }
+
+// Ödeme durumu
+enum PaymentStatus { pending, paid, partial }
+
+// Ürün sınıfı
+class Product {
+  final String id;
+  final String name;
+  final double price;
+  final String? imageUrl;
+  final String category;
+  final String? description;
+  final bool isActive;
+
+  Product({
+    String? id,
+    required this.name,
+    required this.price,
+    this.imageUrl,
+    required this.category,
+    this.description,
+    this.isActive = true,
+  }) : id = id ?? const Uuid().v4();
+
+  factory Product.fromJson(Map<String, dynamic> json) {
+    return Product(
+      id: json['id'],
+      name: json['name'],
+      price: json['price'].toDouble(),
+      imageUrl: json['imageUrl'],
+      category: json['category'],
+      description: json['description'],
+      isActive: json['isActive'] ?? true,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'price': price,
+      'imageUrl': imageUrl,
+      'category': category,
+      'description': description,
+      'isActive': isActive,
+    };
+  }
+}
+
+// Sipariş Öğesi
+class OrderItem {
+  final String id;
+  final Product product;
+  final int quantity;
+  final String? note;
+  final double total;
+
+  OrderItem({
+    String? id,
+    required this.product,
+    required this.quantity,
+    this.note,
+  }) : id = id ?? const Uuid().v4(),
+       total = product.price * quantity;
+
+  factory OrderItem.fromJson(Map<String, dynamic> json) {
+    return OrderItem(
+      id: json['id'],
+      product: Product.fromJson(json['product']),
+      quantity: json['quantity'],
+      note: json['note'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'product': product.toJson(),
+      'quantity': quantity,
+      'note': note,
+      'total': total,
+    };
+  }
+}
+
+// Müşteri/İşletme
+class Customer {
+  final String id;
+  final String name;
+  final String? phoneNumber;
+  final String? email;
+  final String? address;
+  final String? imageUrl;
+
+  Customer({
+    String? id,
+    required this.name,
+    this.phoneNumber,
+    this.email,
+    this.address,
+    this.imageUrl,
+  }) : id = id ?? const Uuid().v4();
+
+  factory Customer.fromJson(Map<String, dynamic> json) {
+    return Customer(
+      id: json['id'],
+      name: json['name'],
+      phoneNumber: json['phoneNumber'],
+      email: json['email'],
+      address: json['address'],
+      imageUrl: json['imageUrl'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'phoneNumber': phoneNumber,
+      'email': email,
+      'address': address,
+      'imageUrl': imageUrl,
+    };
+  }
+}
+
+// Ana Sipariş Sınıfı
+class Order {
+  final String id;
+  final Customer customer;
+  final List<OrderItem> items;
+  final DateTime orderDate;
+  final DateTime deliveryDate;
+  final OrderStatus status;
+  final PaymentStatus paymentStatus;
+  final double totalAmount;
+  final double? paidAmount;
+  final String? note;
+
+  Order({
+    String? id,
+    required this.customer,
+    required this.items,
+    required this.orderDate,
+    required this.deliveryDate,
+    this.status = OrderStatus.waiting,
+    this.paymentStatus = PaymentStatus.pending,
+    this.paidAmount,
+    this.note,
+  }) : id = id ?? const Uuid().v4(),
+       totalAmount = items.fold(0, (sum, item) => sum + item.total);
+
+  double get remainingAmount => totalAmount - (paidAmount ?? 0);
+
+  bool get isPaid => paymentStatus == PaymentStatus.paid;
+
+  factory Order.fromJson(Map<String, dynamic> json) {
+    return Order(
+      id: json['id'],
+      customer: Customer.fromJson(json['customer']),
+      items:
+          (json['items'] as List)
+              .map((item) => OrderItem.fromJson(item))
+              .toList(),
+      orderDate: DateTime.parse(json['orderDate']),
+      deliveryDate: DateTime.parse(json['deliveryDate']),
+      status: OrderStatus.values[json['status']],
+      paymentStatus: PaymentStatus.values[json['paymentStatus']],
+      paidAmount: json['paidAmount']?.toDouble(),
+      note: json['note'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'customer': customer.toJson(),
+      'items': items.map((item) => item.toJson()).toList(),
+      'orderDate': orderDate.toIso8601String(),
+      'deliveryDate': deliveryDate.toIso8601String(),
+      'status': status.index,
+      'paymentStatus': paymentStatus.index,
+      'totalAmount': totalAmount,
+      'paidAmount': paidAmount,
+      'note': note,
+    };
+  }
+
+  // Duruma göre sipariş rengi
+  static Color getStatusColor(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.waiting:
+        return AppTheme.waitingColor;
+      case OrderStatus.processing:
+        return AppTheme.processingColor;
+      case OrderStatus.completed:
+        return AppTheme.completedColor;
+      case OrderStatus.cancelled:
+        return AppTheme.errorColor.withOpacity(0.1);
+    }
+  }
+
+  // Duruma göre sipariş metni
+  static String getStatusText(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.waiting:
+        return 'Bekliyor';
+      case OrderStatus.processing:
+        return 'Hazırlanıyor';
+      case OrderStatus.completed:
+        return 'Tamamlandı';
+      case OrderStatus.cancelled:
+        return 'İptal Edildi';
+    }
+  }
+}
+
+// Günlük Ürün Özeti
+class DailyProductSummary {
+  final String productName;
+  final int totalQuantity;
+  final String category;
+  final String? imageUrl;
+  final Map<String, int>? firmaCounts; // Her firma için miktar bilgisi
+  final DateTime? productionDate; // Üretim tarihi
+  final bool isPopular; // Popüler ürün mü
+  final List<FirmaSiparis>? firmaDetaylari; // Firma detayları
+
+  DailyProductSummary({
+    required this.productName,
+    required this.totalQuantity,
+    required this.category,
+    this.imageUrl,
+    this.firmaCounts,
+    this.productionDate,
+    this.isPopular = false,
+    this.firmaDetaylari,
+  });
+
+  // Bu ürün için firma sayısını döndür
+  int get firmaCount => firmaDetaylari?.length ?? firmaCounts?.length ?? 0;
+
+  // Firma başına ortalama siparişi hesapla
+  double get averagePerFirma {
+    if (firmaCount == 0) return 0;
+    return totalQuantity / firmaCount;
+  }
+
+  // Toplam ürün adedini gerçek verilerden hesapla
+  int get gercekToplam {
+    if (firmaDetaylari != null && firmaDetaylari!.isNotEmpty) {
+      return firmaDetaylari!.fold(0, (sum, firma) => sum + firma.adet);
+    } else if (firmaCounts != null && firmaCounts!.isNotEmpty) {
+      return firmaCounts!.values.fold(0, (sum, count) => sum + count);
+    }
+    return totalQuantity;
+  }
+}
+
+// Firma sipariş detayları
+class FirmaSiparis {
+  final String firmaAdi; // Firma adı
+  final int adet; // Sipariş adedi
+  final String? telefon; // İletişim telefonu
+  final String? aciklama; // Sipariş açıklaması
+  final DateTime? siparisTarihi; // Sipariş tarihi
+
+  FirmaSiparis({
+    required this.firmaAdi,
+    required this.adet,
+    this.telefon,
+    this.aciklama,
+    this.siparisTarihi,
+  });
+
+  factory FirmaSiparis.fromJson(Map<String, dynamic> json) {
+    return FirmaSiparis(
+      firmaAdi: json['firmaAdi'],
+      adet: json['adet'],
+      telefon: json['telefon'],
+      aciklama: json['aciklama'],
+      siparisTarihi:
+          json['siparisTarihi'] != null
+              ? DateTime.parse(json['siparisTarihi'])
+              : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'firmaAdi': firmaAdi,
+      'adet': adet,
+      'telefon': telefon,
+      'aciklama': aciklama,
+      'siparisTarihi': siparisTarihi?.toIso8601String(),
+    };
+  }
+}
+
+// Finansal Özet
+class FinancialSummary {
+  final double totalAmount;
+  final double collectedAmount;
+  final double pendingAmount;
+  final double collectionRate;
+  final int totalOrders;
+  final int paidOrders;
+  final int pendingOrders;
+
+  FinancialSummary({
+    required this.totalAmount,
+    required this.collectedAmount,
+    required this.pendingAmount,
+    required this.collectionRate,
+    required this.totalOrders,
+    required this.paidOrders,
+    required this.pendingOrders,
+  });
+}
+
+// Firma Özeti
+class CompanySummary {
+  final Customer company;
+  final double totalAmount;
+  final double paidAmount;
+  final double pendingAmount;
+  final int totalOrders;
+  final double collectionRate;
+
+  CompanySummary({
+    required this.company,
+    required this.totalAmount,
+    required this.paidAmount,
+    required this.pendingAmount,
+    required this.totalOrders,
+    required this.collectionRate,
+  });
+}

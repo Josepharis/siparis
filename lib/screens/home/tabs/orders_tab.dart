@@ -1,0 +1,185 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:siparis/config/theme.dart';
+import 'package:siparis/models/order.dart';
+import 'package:siparis/providers/order_provider.dart';
+import 'package:siparis/screens/order_detail_screen.dart';
+import 'package:siparis/widgets/order_list_item.dart';
+
+class OrdersTab extends StatefulWidget {
+  const OrdersTab({super.key});
+
+  @override
+  State<OrdersTab> createState() => _OrdersTabState();
+}
+
+class _OrdersTabState extends State<OrdersTab>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final orderProvider = Provider.of<OrderProvider>(context);
+
+    return SafeArea(
+      child: Column(
+        children: [
+          // App Bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+            child: Row(
+              children: [
+                Text(
+                  'Siparişler',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: AppTheme.textPrimaryColor,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.search_rounded),
+                  color: AppTheme.primaryColor,
+                  onPressed: () {
+                    // Arama ekranını aç
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.filter_list_rounded),
+                  color: AppTheme.primaryColor,
+                  onPressed: () {
+                    // Filtre ekranını aç
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // Tab Bar
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 12.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              indicator: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: AppTheme.primaryColor.withOpacity(0.1),
+              ),
+              labelColor: AppTheme.primaryColor,
+              unselectedLabelColor: AppTheme.textSecondaryColor,
+              tabs: const [
+                Tab(text: 'Bekleyen'),
+                Tab(text: 'Hazırlanıyor'),
+                Tab(text: 'Tamamlanan'),
+              ],
+            ),
+          ),
+
+          // Tab İçeriği
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // Bekleyen Siparişler
+                OrderListView(
+                  orders: orderProvider.waitingOrders,
+                  emptyMessage: 'Bekleyen sipariş bulunmuyor.',
+                ),
+
+                // Hazırlanan Siparişler
+                OrderListView(
+                  orders: orderProvider.processingOrders,
+                  emptyMessage: 'Hazırlanmakta olan sipariş bulunmuyor.',
+                ),
+
+                // Tamamlanan Siparişler
+                OrderListView(
+                  orders: orderProvider.completedOrders,
+                  emptyMessage: 'Tamamlanan sipariş bulunmuyor.',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class OrderListView extends StatelessWidget {
+  final List<Order> orders;
+  final String emptyMessage;
+
+  const OrderListView({
+    super.key,
+    required this.orders,
+    required this.emptyMessage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+
+    if (orders.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.receipt_long_outlined,
+              size: 64,
+              color: AppTheme.textLightColor.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              emptyMessage,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: AppTheme.textSecondaryColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(8),
+      itemCount: orders.length,
+      itemBuilder: (context, index) {
+        final order = orders[index];
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: OrderListItem(
+            order: order,
+            onStatusChanged: (newStatus) {
+              orderProvider.updateOrderStatus(order.id, newStatus);
+            },
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => OrderDetailScreen(order: order),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
