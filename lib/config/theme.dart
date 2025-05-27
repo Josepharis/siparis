@@ -124,67 +124,67 @@ class AppTheme {
     ),
     textTheme: GoogleFonts.poppinsTextTheme(
       ThemeData.light().textTheme.copyWith(
-        displayLarge: GoogleFonts.poppins(
-          color: textPrimaryColor,
-          fontSize: 24,
-          fontWeight: FontWeight.w700,
-        ),
-        displayMedium: GoogleFonts.poppins(
-          color: textPrimaryColor,
-          fontSize: 22,
-          fontWeight: FontWeight.w700,
-        ),
-        displaySmall: GoogleFonts.poppins(
-          color: textPrimaryColor,
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-        ),
-        headlineMedium: GoogleFonts.poppins(
-          color: textPrimaryColor,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
-        headlineSmall: GoogleFonts.poppins(
-          color: textPrimaryColor,
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
-        titleLarge: GoogleFonts.poppins(
-          color: textPrimaryColor,
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
-        titleMedium: GoogleFonts.poppins(
-          color: textPrimaryColor,
-          fontSize: 15,
-          fontWeight: FontWeight.w500,
-        ),
-        titleSmall: GoogleFonts.poppins(
-          color: textSecondaryColor,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
-        bodyLarge: GoogleFonts.poppins(
-          color: textPrimaryColor,
-          fontSize: 15,
-          fontWeight: FontWeight.normal,
-        ),
-        bodyMedium: GoogleFonts.poppins(
-          color: textPrimaryColor,
-          fontSize: 14,
-          fontWeight: FontWeight.normal,
-        ),
-        bodySmall: GoogleFonts.poppins(
-          color: textSecondaryColor,
-          fontSize: 13,
-          fontWeight: FontWeight.normal,
-        ),
-        labelLarge: GoogleFonts.poppins(
-          color: textPrimaryColor,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
+            displayLarge: GoogleFonts.poppins(
+              color: textPrimaryColor,
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+            ),
+            displayMedium: GoogleFonts.poppins(
+              color: textPrimaryColor,
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+            ),
+            displaySmall: GoogleFonts.poppins(
+              color: textPrimaryColor,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+            headlineMedium: GoogleFonts.poppins(
+              color: textPrimaryColor,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+            headlineSmall: GoogleFonts.poppins(
+              color: textPrimaryColor,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+            titleLarge: GoogleFonts.poppins(
+              color: textPrimaryColor,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+            titleMedium: GoogleFonts.poppins(
+              color: textPrimaryColor,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
+            titleSmall: GoogleFonts.poppins(
+              color: textSecondaryColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+            bodyLarge: GoogleFonts.poppins(
+              color: textPrimaryColor,
+              fontSize: 15,
+              fontWeight: FontWeight.normal,
+            ),
+            bodyMedium: GoogleFonts.poppins(
+              color: textPrimaryColor,
+              fontSize: 14,
+              fontWeight: FontWeight.normal,
+            ),
+            bodySmall: GoogleFonts.poppins(
+              color: textSecondaryColor,
+              fontSize: 13,
+              fontWeight: FontWeight.normal,
+            ),
+            labelLarge: GoogleFonts.poppins(
+              color: textPrimaryColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: primaryColor,

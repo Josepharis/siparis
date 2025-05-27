@@ -3,29 +3,29 @@ import 'package:provider/provider.dart';
 import 'package:siparis/config/theme.dart';
 import 'package:siparis/models/order.dart';
 import 'package:siparis/providers/order_provider.dart';
-import 'package:siparis/screens/home/tabs/dashboard_tab.dart';
-import 'package:siparis/screens/home/tabs/finance_tab.dart';
-import 'package:siparis/screens/home/tabs/orders_tab.dart';
-import 'package:siparis/screens/home/tabs/products_tab.dart';
-import 'package:siparis/screens/budget_screen.dart';
-import 'package:siparis/screens/stock_screen.dart';
-// import 'package:siparis/screens/home/tabs/settings_tab.dart';
+import 'package:siparis/customer/screens/tabs/customer_dashboard_tab.dart';
+import 'package:siparis/customer/screens/tabs/customer_companies_tab.dart';
+import 'package:siparis/customer/screens/cart_screen.dart';
+import 'package:siparis/customer/screens/transactions_screen.dart';
+import 'package:siparis/customer/screens/tabs/customer_profile_tab.dart';
+import 'package:siparis/providers/cart_provider.dart';
 
-class HomeScreen extends StatefulWidget {
+class CustomerHomeScreen extends StatefulWidget {
   final int initialIndex;
   final bool skipLoading;
 
-  const HomeScreen({
+  const CustomerHomeScreen({
     super.key,
     this.initialIndex = 0,
     this.skipLoading = false,
   });
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<CustomerHomeScreen> createState() => _CustomerHomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+class _CustomerHomeScreenState extends State<CustomerHomeScreen>
+    with TickerProviderStateMixin {
   late int _selectedIndex;
   final List<Widget> _tabs = [];
   late bool _isLoading;
@@ -39,11 +39,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _isLoading = !widget.skipLoading;
 
     _tabs.addAll([
-      const DashboardTab(),
-      const OrdersTab(),
+      const CustomerDashboardTab(),
+      const CustomerCompaniesTab(),
       Container(), // FAB için boş tab
-      const ProductsTab(),
-      const FinanceTab(),
+      const TransactionsScreen(),
+      const CustomerProfileTab(),
     ]);
 
     // FAB animasyonu
@@ -77,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _loadData() async {
-    // Veri yükleme işlemi
+    // Müşteri verilerini yükleme işlemi
     await Provider.of<OrderProvider>(context, listen: false).loadOrders();
     if (mounted) {
       setState(() {
@@ -90,10 +90,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body:
-          _isLoading
-              ? _buildLoadingView()
-              : IndexedStack(index: _selectedIndex, children: _tabs),
+      body: _isLoading
+          ? _buildLoadingView()
+          : IndexedStack(index: _selectedIndex, children: _tabs),
       floatingActionButton: _buildFloatingActionButton(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: _buildBottomNavigationBar(),
@@ -125,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Siparişler Yükleniyor...',
+              'Siparişleriniz Yükleniyor...',
               style: TextStyle(
                 color: AppTheme.primaryColor,
                 fontSize: 16,
@@ -146,12 +145,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         width: 64,
         margin: const EdgeInsets.only(top: 25),
         child: FloatingActionButton(
-          heroTag: 'home_screen_fab',
+          heroTag: 'customer_home_screen_fab',
           onPressed: () {
-            // Stok sayfasına yönlendir
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => const StockScreen()),
-            );
+            // Yeni sipariş oluşturma sayfasına yönlendir
+            _showNewOrderDialog();
           },
           elevation: 2,
           highlightElevation: 5,
@@ -177,10 +174,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ],
             ),
-            child: const Icon(Icons.add, size: 32, color: Colors.white),
+            child: const Icon(Icons.add_shopping_cart,
+                size: 28, color: Colors.white),
           ),
         ),
       ),
+    );
+  }
+
+  void _showNewOrderDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Yeni Sipariş'),
+          content: const Text(
+              'Yeni sipariş oluşturmak için firmalar sekmesinden istediğiniz firmayı seçebilirsiniz.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Tamam'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                setState(() {
+                  _selectedIndex = 1; // Firmalar sekmesine git
+                });
+              },
+              child: const Text('Firmalara Git'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -212,10 +238,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(0, Icons.home_rounded, 'Ana Sayfa'),
-              _buildNavItem(1, Icons.receipt_long_rounded, 'Siparişler'),
+              _buildNavItem(1, Icons.business_rounded, 'Firmalar'),
               const SizedBox(width: 40), // FAB için boşluk
-              _buildNavItem(3, Icons.restaurant_menu_rounded, 'Ürünler'),
-              _buildNavItem(4, Icons.analytics_rounded, 'Bütçe'),
+              _buildNavItem(3, Icons.receipt_long_rounded, 'İşlemler'),
+              _buildNavItem(4, Icons.person_rounded, 'Profil'),
             ],
           ),
         ),
@@ -228,24 +254,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     return InkWell(
       onTap: () {
-        // Bütçe sekmesi (4) dışındaki sekmelere tıklandığında
-        if (index != 4) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        }
-        // Bütçe sekmesine tıklandığında
-        else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const BudgetScreen()),
-          ).then((_) {
-            // Bütçe ekranından dönüldüğünde FAB animasyonunu yeniden göster
-            if (!_fabAnimationController.isCompleted && mounted) {
-              _fabAnimationController.forward();
-            }
-          });
-        }
+        setState(() {
+          _selectedIndex = index;
+        });
       },
       customBorder: const CircleBorder(),
       splashColor: AppTheme.primaryColor.withOpacity(0.1),
@@ -255,10 +266,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         height: 50,
         width: 65,
         decoration: BoxDecoration(
-          color:
-              isSelected
-                  ? AppTheme.primaryColor.withOpacity(0.1)
-                  : Colors.transparent,
+          color: isSelected
+              ? AppTheme.primaryColor.withOpacity(0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -266,20 +276,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           children: [
             Icon(
               iconData,
-              color:
-                  isSelected
-                      ? AppTheme.primaryColor
-                      : AppTheme.textSecondaryColor,
+              color: isSelected
+                  ? AppTheme.primaryColor
+                  : AppTheme.textSecondaryColor,
               size: isSelected ? 28 : 24,
             ),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
-                color:
-                    isSelected
-                        ? AppTheme.primaryColor
-                        : AppTheme.textSecondaryColor,
+                color: isSelected
+                    ? AppTheme.primaryColor
+                    : AppTheme.textSecondaryColor,
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               ),

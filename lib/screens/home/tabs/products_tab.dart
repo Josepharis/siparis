@@ -215,10 +215,10 @@ class _ProductsTabState extends State<ProductsTab>
                                   color: Colors.grey.shade600,
                                   fontSize: 14,
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
+                ),
+              ],
+            ),
+          ),
 
                         // Arama butonu
                         Container(
@@ -393,31 +393,31 @@ class _ProductsTabState extends State<ProductsTab>
 
             // Ürünler
             SliverFillRemaining(
-              child: TabBarView(
-                controller: _tabController,
-                children:
-                    _categories.map((category) {
-                      final products = _categorizedProducts[category] ?? [];
-                      return Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: GridView.builder(
+            child: TabBarView(
+              controller: _tabController,
+              children:
+                  _categories.map((category) {
+                    final products = _categorizedProducts[category] ?? [];
+                    return Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: GridView.builder(
                           physics: const BouncingScrollPhysics(),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
                                 childAspectRatio: 1.0,
                                 crossAxisSpacing: 8,
                                 mainAxisSpacing: 10,
-                              ),
-                          itemCount: products.length,
-                          itemBuilder: (context, index) {
-                            final product = products[index];
+                            ),
+                        itemCount: products.length,
+                        itemBuilder: (context, index) {
+                          final product = products[index];
                             return _buildProductCard(context, product);
-                          },
-                        ),
-                      );
-                    }).toList(),
-              ),
+                        },
+                      ),
+                    );
+                  }).toList(),
+            ),
             ),
           ],
         ),
@@ -1045,9 +1045,9 @@ class _ProductsTabState extends State<ProductsTab>
                   backgroundColor: AppTheme.primaryColor,
                 ),
                 child: const Text('Güncelle'),
-              ),
-            ],
           ),
+        ],
+      ),
     );
   }
 }

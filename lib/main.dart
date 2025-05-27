@@ -8,6 +8,11 @@ import 'package:siparis/providers/order_provider.dart';
 import 'package:siparis/screens/home/home_screen.dart';
 import 'package:siparis/screens/splash_screen.dart';
 import 'package:siparis/screens/budget_screen.dart';
+import 'package:siparis/providers/stock_provider.dart';
+import 'package:siparis/providers/company_provider.dart';
+import 'package:siparis/customer/screens/customer_home_screen.dart';
+import 'package:siparis/providers/cart_provider.dart';
+import 'package:siparis/customer/screens/cart_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,25 +31,48 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  runApp(
-    MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => OrderProvider())],
-      child: const MyApp(),
-    ),
-  );
+  runApp(const MainApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MainApp extends StatelessWidget {
+  const MainApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Sipariş Takip',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: const SplashScreen(),
-      routes: {'/home': (context) => const HomeScreen()},
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => OrderProvider()),
+        ChangeNotifierProvider(create: (_) => StockProvider()),
+        ChangeNotifierProvider(create: (_) => CompanyProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
+      ],
+      child: MaterialApp(
+        title: 'Sipariş Takip',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        initialRoute: '/customer',
+        onGenerateRoute: (settings) {
+          switch (settings.name) {
+            case '/':
+            case '/customer':
+              return MaterialPageRoute(
+                builder: (_) => const CustomerHomeScreen(),
+              );
+            case '/home':
+              return MaterialPageRoute(
+                builder: (_) => const HomeScreen(),
+              );
+            case '/cart':
+              return MaterialPageRoute(
+                builder: (_) => const CartScreen(),
+              );
+            default:
+              return MaterialPageRoute(
+                builder: (_) => const CustomerHomeScreen(),
+              );
+          }
+        },
+      ),
     );
   }
 }
