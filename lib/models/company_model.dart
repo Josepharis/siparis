@@ -1,3 +1,6 @@
+import 'package:siparis/models/product.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class CompanyModel {
   final String id;
   final String name;
@@ -15,6 +18,7 @@ class CompanyModel {
   final String? logoUrl;
   final Map<String, dynamic>? businessHours; // Çalışma saatleri
   final List<String>? categories; // Faaliyet alanları
+  List<Product> products = [];
 
   CompanyModel({
     required this.id,
@@ -33,7 +37,40 @@ class CompanyModel {
     this.logoUrl,
     this.businessHours,
     this.categories,
-  });
+    List<Product>? products,
+  }) {
+    this.products = products ?? [];
+  }
+
+  // Ürünleri yükle
+  Future<void> loadProducts() async {
+    try {
+      final productsSnapshot = await FirebaseFirestore.instance
+          .collection('products')
+          .where('createdBy', isEqualTo: ownerId)
+          .get();
+
+      products = productsSnapshot.docs.map((doc) {
+        final data = doc.data();
+        return Product(
+          id: doc.id,
+          name: data['name'] ?? '',
+          description: data['description'] ?? '',
+          price: (data['price'] as num?)?.toDouble() ?? 0.0,
+          imageUrl: data['imageUrl'] ?? '',
+          category: data['category'] ?? '',
+          companyId: id,
+          companyName: name,
+          isAvailable: data['isActive'] ?? true,
+          rating: 0.0,
+          reviewCount: 0,
+        );
+      }).toList();
+    } catch (e) {
+      print('DEBUG: Ürünler yüklenirken hata: $e');
+      products = [];
+    }
+  }
 
   // Firebase'den gelen data'yı CompanyModel'e çevir
   factory CompanyModel.fromMap(Map<String, dynamic> map, String id) {
@@ -98,6 +135,7 @@ class CompanyModel {
     String? logoUrl,
     Map<String, dynamic>? businessHours,
     List<String>? categories,
+    List<Product>? products,
   }) {
     return CompanyModel(
       id: id,
@@ -116,6 +154,7 @@ class CompanyModel {
       logoUrl: logoUrl ?? this.logoUrl,
       businessHours: businessHours ?? this.businessHours,
       categories: categories ?? this.categories,
+      products: products ?? this.products,
     );
   }
 

@@ -1,0 +1,43 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Test dosyaları - herkes okuyabilir ve yazabilir (geliştirme için)
+    match /test/{allPaths=**} {
+      allow read, write: if true;
+    }
+    
+    // Ürün resimleri - kullanıcı bazlı erişim
+    match /products/{userId}/{allPaths=**} {
+      // Kullanıcı kendi ürün resimlerini yönetebilir
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Tüm ürün resimleri herkese açık okunabilir (müşteriler için)
+      allow read: if true;
+      
+      // Dosya yükleme için ek kontroller
+      allow create: if request.auth != null && 
+                    request.auth.uid == userId &&
+                    request.resource.size < 5 * 1024 * 1024 && // 5MB limit
+                    request.resource.contentType.matches('image/.*'); // Sadece resim dosyaları
+      
+      // Dosya güncelleme
+      allow update: if request.auth != null && 
+                    request.auth.uid == userId &&
+                    request.resource.size < 5 * 1024 * 1024;
+      
+      // Dosya silme
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Kullanıcı profil resimleri
+    match /users/{userId}/profile/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if true; // Profil resimleri herkese açık
+    }
+    
+    // Geliştirme aşaması için geçici - tüm dosyalara erişim (SADECE TEST İÇİN)
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+} 

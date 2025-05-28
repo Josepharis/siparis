@@ -66,8 +66,8 @@ class OrderItem {
     required this.product,
     required this.quantity,
     this.note,
-  }) : id = id ?? const Uuid().v4(),
-       total = product.price * quantity;
+  })  : id = id ?? const Uuid().v4(),
+        total = product.price * quantity;
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     return OrderItem(
@@ -153,8 +153,8 @@ class Order {
     this.paymentStatus = PaymentStatus.pending,
     this.paidAmount,
     this.note,
-  }) : id = id ?? const Uuid().v4(),
-       totalAmount = items.fold(0, (sum, item) => sum + item.total);
+  })  : id = id ?? const Uuid().v4(),
+        totalAmount = items.fold(0, (sum, item) => sum + item.total);
 
   double get remainingAmount => totalAmount - (paidAmount ?? 0);
 
@@ -164,10 +164,9 @@ class Order {
     return Order(
       id: json['id'],
       customer: Customer.fromJson(json['customer']),
-      items:
-          (json['items'] as List)
-              .map((item) => OrderItem.fromJson(item))
-              .toList(),
+      items: (json['items'] as List)
+          .map((item) => OrderItem.fromJson(item))
+          .toList(),
       orderDate: DateTime.parse(json['orderDate']),
       deliveryDate: DateTime.parse(json['deliveryDate']),
       status: OrderStatus.values[json['status']],
@@ -285,10 +284,9 @@ class FirmaSiparis {
       adet: json['adet'],
       telefon: json['telefon'],
       aciklama: json['aciklama'],
-      siparisTarihi:
-          json['siparisTarihi'] != null
-              ? DateTime.parse(json['siparisTarihi'])
-              : null,
+      siparisTarihi: json['siparisTarihi'] != null
+          ? DateTime.parse(json['siparisTarihi'])
+          : null,
     );
   }
 
