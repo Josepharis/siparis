@@ -6,13 +6,16 @@ import '../services/auth_service.dart';
 class AuthProvider with ChangeNotifier {
   UserModel? _currentUser;
   bool _isLoading = false;
+  bool _isInitialized =
+      false; // Auth durumunun başlatılıp başlatılmadığını kontrol eder
   String? _errorMessage;
 
   // Getters
   UserModel? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
+  bool get isInitialized => _isInitialized;
   String? get errorMessage => _errorMessage;
-  bool get isAuthenticated => _currentUser != null;
+  bool get isAuthenticated => _currentUser != null && _isInitialized;
 
   // Constructor
   AuthProvider() {
@@ -27,10 +30,16 @@ class AuthProvider with ChangeNotifier {
           _currentUser = await AuthService.getUserData(user.uid);
         } catch (e) {
           _errorMessage = e.toString();
+          _currentUser = null;
         }
       } else {
         _currentUser = null;
       }
+
+      if (!_isInitialized) {
+        _isInitialized = true;
+      }
+
       notifyListeners();
     });
   }

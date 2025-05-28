@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
+import '../models/company_model.dart';
+import 'company_service.dart';
 
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -32,6 +34,29 @@ class AuthService {
 
       User? user = userCredential.user;
       if (user != null) {
+        String? companyId;
+
+        // Eğer firma bilgileri varsa, firma oluştur
+        if (companyName != null &&
+            companyName.isNotEmpty &&
+            companyAddress != null &&
+            companyAddress.isNotEmpty) {
+          try {
+            CompanyModel? company = await CompanyService.createCompany(
+              name: companyName,
+              address: companyAddress,
+              phone: phone,
+              email: email,
+              ownerId: user.uid,
+              type: role,
+            );
+            companyId = company?.id;
+          } catch (e) {
+            print('Firma oluşturulurken hata: $e');
+            // Firma oluşturulamazsa devam et, sadece kullanıcıyı kaydet
+          }
+        }
+
         // Kullanıcı bilgilerini Firestore'a kaydet
         UserModel userModel = UserModel(
           uid: user.uid,
@@ -40,6 +65,7 @@ class AuthService {
           phone: phone,
           companyName: companyName,
           companyAddress: companyAddress,
+          companyId: companyId,
           role: role,
           createdAt: DateTime.now(),
           isActive: true,

@@ -19,6 +19,7 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _scaleAnimation;
   late Animation<double> _rotateAnimation;
   late Animation<Offset> _slideAnimation;
+  bool _hasNavigated = false;
 
   @override
   void initState() {
@@ -61,33 +62,28 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _controller.forward();
-
-    // Auth durumunu kontrol et ve yönlendir
-    _checkAuthAndNavigate();
   }
 
-  Future<void> _checkAuthAndNavigate() async {
-    // Animasyonun tamamlanmasını bekle
-    await Future.delayed(const Duration(seconds: 3));
+  void _navigateToHome() {
+    if (_hasNavigated || !mounted) return;
+    _hasNavigated = true;
 
-    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const CustomerHomeScreen(),
+      ),
+    );
+  }
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  void _navigateToLogin() {
+    if (_hasNavigated || !mounted) return;
+    _hasNavigated = true;
 
-    // Kullanıcı oturum açmışsa ana sayfaya, değilse login sayfasına yönlendir
-    if (authProvider.isAuthenticated) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const CustomerHomeScreen(),
-        ),
-      );
-    } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const LoginScreen(),
-        ),
-      );
-    }
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const LoginScreen(),
+      ),
+    );
   }
 
   @override
@@ -98,186 +94,211 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.primaryColor.withOpacity(0.9),
-              const Color(0xFF0D47A1),
-            ],
-          ),
-        ),
-        child: Stack(
-          children: [
-            // Arkaplan partikül efektleri
-            Positioned(
-              top: MediaQuery.of(context).size.height * 0.1,
-              left: 20,
-              child: _buildGlowingCircle(40, Colors.white.withOpacity(0.1)),
-            ),
-            Positioned(
-              top: MediaQuery.of(context).size.height * 0.3,
-              right: 40,
-              child: _buildGlowingCircle(60, Colors.white.withOpacity(0.08)),
-            ),
-            Positioned(
-              bottom: MediaQuery.of(context).size.height * 0.2,
-              left: 50,
-              child: _buildGlowingCircle(80, Colors.white.withOpacity(0.06)),
-            ),
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        // Auth başlatıldıktan sonra yönlendirme yap
+        if (authProvider.isInitialized && !_hasNavigated) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (authProvider.isAuthenticated) {
+              _navigateToHome();
+            } else {
+              _navigateToLogin();
+            }
+          });
+        }
 
-            // Ana içerik
-            Center(
-              child: AnimatedBuilder(
-                animation: _controller,
-                builder: (context, child) {
-                  return FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: SlideTransition(
-                      position: _slideAnimation,
-                      child: Transform.scale(
-                        scale: _scaleAnimation.value,
-                        child: Transform.rotate(
-                          angle: _rotateAnimation.value,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // Logo
-                              Container(
-                                width: 130,
-                                height: 130,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(30),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      spreadRadius: 1,
-                                      blurRadius: 20,
-                                      offset: const Offset(0, 10),
+        return Scaffold(
+          body: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppTheme.primaryColor.withOpacity(0.9),
+                  const Color(0xFF0D47A1),
+                ],
+              ),
+            ),
+            child: Stack(
+              children: [
+                // Arkaplan partikül efektleri
+                Positioned(
+                  top: MediaQuery.of(context).size.height * 0.1,
+                  left: 20,
+                  child: _buildGlowingCircle(40, Colors.white.withOpacity(0.1)),
+                ),
+                Positioned(
+                  top: MediaQuery.of(context).size.height * 0.3,
+                  right: 40,
+                  child:
+                      _buildGlowingCircle(60, Colors.white.withOpacity(0.08)),
+                ),
+                Positioned(
+                  bottom: MediaQuery.of(context).size.height * 0.2,
+                  left: 50,
+                  child:
+                      _buildGlowingCircle(80, Colors.white.withOpacity(0.06)),
+                ),
+
+                // Ana içerik
+                Center(
+                  child: AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, child) {
+                      return FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: SlideTransition(
+                          position: _slideAnimation,
+                          child: Transform.scale(
+                            scale: _scaleAnimation.value,
+                            child: Transform.rotate(
+                              angle: _rotateAnimation.value,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // Logo
+                                  Container(
+                                    width: 130,
+                                    height: 130,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(30),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.2),
+                                          spreadRadius: 1,
+                                          blurRadius: 20,
+                                          offset: const Offset(0, 10),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                                child: Container(
-                                  padding: const EdgeInsets.all(20),
-                                  child: Stack(
-                                    children: [
-                                      Icon(
-                                        Icons.restaurant_menu_rounded,
-                                        size: 90,
-                                        color: AppTheme.primaryColor
-                                            .withOpacity(0.4),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(20),
+                                      child: Stack(
+                                        children: [
+                                          Icon(
+                                            Icons.restaurant_menu_rounded,
+                                            size: 90,
+                                            color: AppTheme.primaryColor
+                                                .withOpacity(0.4),
+                                          ),
+                                          Icon(
+                                            Icons.restaurant_menu_rounded,
+                                            size: 80,
+                                            color: AppTheme.primaryColor,
+                                          ),
+                                        ],
                                       ),
-                                      Icon(
-                                        Icons.restaurant_menu_rounded,
-                                        size: 80,
-                                        color: AppTheme.primaryColor,
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 40),
+
+                                  // Uygulama adı
+                                  ShaderMask(
+                                    shaderCallback: (bounds) => LinearGradient(
+                                      colors: [
+                                        Colors.white,
+                                        Colors.white.withOpacity(0.8),
+                                      ],
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                    ).createShader(bounds),
+                                    child: const Text(
+                                      'SİPARİŞ TAKİP',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 2,
                                       ),
-                                    ],
+                                    ),
                                   ),
-                                ),
-                              ),
 
-                              const SizedBox(height: 40),
+                                  const SizedBox(height: 16),
 
-                              // Uygulama adı
-                              ShaderMask(
-                                shaderCallback: (bounds) => LinearGradient(
-                                  colors: [
-                                    Colors.white,
-                                    Colors.white.withOpacity(0.8),
-                                  ],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                ).createShader(bounds),
-                                child: const Text(
-                                  'SİPARİŞ TAKİP',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 2,
+                                  // Alt başlık
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(50),
+                                    ),
+                                    child: const Text(
+                                      'Pastane ve Fırın Yönetimi',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
 
-                              const SizedBox(height: 16),
+                                  const SizedBox(height: 60),
 
-                              // Alt başlık
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(50),
-                                ),
-                                child: const Text(
-                                  'Pastane ve Fırın Yönetimi',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
+                                  // Yükleniyor indikatörü
+                                  SizedBox(
+                                    width: 40,
+                                    height: 40,
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white.withOpacity(0.9),
+                                      ),
+                                      strokeWidth: 3,
+                                    ),
                                   ),
-                                ),
-                              ),
 
-                              const SizedBox(height: 60),
+                                  const SizedBox(height: 20),
 
-                              // Yükleniyor indikatörü
-                              SizedBox(
-                                width: 40,
-                                height: 40,
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white.withOpacity(0.9),
+                                  // Durum metni
+                                  Text(
+                                    authProvider.isInitialized
+                                        ? (authProvider.isAuthenticated
+                                            ? 'Hoş geldiniz...'
+                                            : 'Giriş sayfasına yönlendiriliyor...')
+                                        : 'Başlatılıyor...',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.8),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w400,
+                                    ),
                                   ),
-                                  strokeWidth: 3,
-                                ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
+                      );
+                    },
+                  ),
+                ),
+
+                // Footer
+                Positioned(
+                  bottom: 40,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Text(
+                      'v1.0.0',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.6),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w300,
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
-
-            // Footer
-            Positioned(
-              bottom: 40,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: AnimatedBuilder(
-                  animation: _controller,
-                  builder: (context, child) {
-                    return FadeTransition(
-                      opacity: Animation.fromValueListenable(
-                        _controller,
-                        transformer: (value) =>
-                            value > 0.6 ? (value - 0.6) * 2.5 : 0,
-                      ),
-                      child: const Text(
-                        'v1.0.0',
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
-                      ),
-                    );
-                  },
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

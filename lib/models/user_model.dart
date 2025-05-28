@@ -5,6 +5,7 @@ class UserModel {
   final String? phone;
   final String? companyName;
   final String? companyAddress;
+  final String? companyId; // Bağlı olduğu firma ID'si
   final String role; // 'producer' veya 'customer'
   final DateTime createdAt;
   final DateTime? updatedAt;
@@ -18,6 +19,7 @@ class UserModel {
     this.phone,
     this.companyName,
     this.companyAddress,
+    this.companyId,
     required this.role,
     required this.createdAt,
     this.updatedAt,
@@ -34,6 +36,7 @@ class UserModel {
       phone: map['phone'],
       companyName: map['companyName'],
       companyAddress: map['companyAddress'],
+      companyId: map['companyId'],
       role: map['role'] ?? 'customer',
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] ?? 0),
       updatedAt: map['updatedAt'] != null
@@ -52,6 +55,7 @@ class UserModel {
       'phone': phone,
       'companyName': companyName,
       'companyAddress': companyAddress,
+      'companyId': companyId,
       'role': role,
       'createdAt': createdAt.millisecondsSinceEpoch,
       'updatedAt': updatedAt?.millisecondsSinceEpoch,
@@ -67,6 +71,7 @@ class UserModel {
     String? phone,
     String? companyName,
     String? companyAddress,
+    String? companyId,
     String? role,
     DateTime? updatedAt,
     bool? isActive,
@@ -79,6 +84,7 @@ class UserModel {
       phone: phone ?? this.phone,
       companyName: companyName ?? this.companyName,
       companyAddress: companyAddress ?? this.companyAddress,
+      companyId: companyId ?? this.companyId,
       role: role ?? this.role,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -95,4 +101,7 @@ class UserModel {
 
   // Kullanıcının admin olup olmadığını kontrol et
   bool get isAdmin => role == 'admin';
+
+  // Kullanıcının bir firmaya bağlı olup olmadığını kontrol et
+  bool get hasCompany => companyId != null && companyId!.isNotEmpty;
 }
