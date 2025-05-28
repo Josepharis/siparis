@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:siparis/config/theme.dart';
 import 'package:siparis/models/company.dart';
+import 'package:siparis/models/company_model.dart';
 import 'package:siparis/providers/company_provider.dart';
+import 'package:siparis/providers/work_request_provider.dart';
 import 'package:siparis/customer/screens/company_detail_screen.dart';
 
 class CustomerCompaniesTab extends StatefulWidget {
@@ -17,9 +19,89 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
 
   @override
   Widget build(BuildContext context) {
-    final companyProvider = Provider.of<CompanyProvider>(context);
-    final filteredCompanies =
-        _getFilteredCompanies(companyProvider.activeCompanies);
+    return Consumer2<CompanyProvider, WorkRequestProvider>(
+      builder: (context, companyProvider, workRequestProvider, child) {
+        // Hem örnek hem de Firebase firmalarını al
+        final sampleCompanies = companyProvider.activeCompanies;
+        final firestoreCompanies = companyProvider.activeFirestoreCompanies;
+
+        // Firebase firmalarını Company tipine dönüştür
+        final convertedFirestoreCompanies = firestoreCompanies
+            .map((companyModel) => Company(
+                  id: companyModel.id,
+                  name: companyModel.name,
+                  description: companyModel.description ?? '',
+                  services: companyModel.categories ?? ['Genel'],
+                  address: companyModel.address,
+                  phone: companyModel.phone ?? '',
+                  email: companyModel.email ?? '',
+                  website: companyModel.website,
+                  rating: 4.5, // Varsayılan rating
+                  totalProjects: 0, // Varsayılan proje sayısı
+                  products: [], // Boş ürün listesi
+                  isActive: companyModel.isActive,
+                ))
+            .toList();
+
+        final partneredCompanyIds = workRequestProvider.partneredCompanies;
+
+        // Debug log'ları
+        print('DEBUG: CustomerCompaniesTab build çağrıldı');
+        print('DEBUG: Örnek firma sayısı: ${sampleCompanies.length}');
+        print(
+            'DEBUG: Firebase firma sayısı: ${convertedFirestoreCompanies.length}');
+        print('DEBUG: Partner firma ID\'leri: $partneredCompanyIds');
+
+        for (var company in sampleCompanies) {
+          print(
+              'DEBUG: Örnek Firma - ID: ${company.id}, Name: ${company.name}');
+        }
+
+        for (var company in convertedFirestoreCompanies) {
+          print(
+              'DEBUG: Firebase Firma - ID: ${company.id}, Name: ${company.name}');
+        }
+
+        // İş ortağı firmaları - hem örnek hem Firebase'den
+        final partneredSampleCompanies = sampleCompanies
+            .where((company) => partneredCompanyIds.contains(company.id))
+            .toList();
+
+        final partneredFirestoreCompanies = convertedFirestoreCompanies
+            .where((company) => partneredCompanyIds.contains(company.id))
+            .toList();
+
+        final totalPartneredCompanies = partneredSampleCompanies.length +
+            partneredFirestoreCompanies.length;
+
+        print(
+            'DEBUG: Bulunan örnek partner firma sayısı: ${partneredSampleCompanies.length}');
+        print(
+            'DEBUG: Bulunan Firebase partner firma sayısı: ${partneredFirestoreCompanies.length}');
+        print('DEBUG: Toplam partner firma sayısı: $totalPartneredCompanies');
+
+        for (var company in partneredSampleCompanies) {
+          print('DEBUG: Örnek Partner firma: ${company.name} (${company.id})');
+        }
+
+        for (var company in partneredFirestoreCompanies) {
+          print(
+              'DEBUG: Firebase Partner firma: ${company.name} (${company.id})');
+        }
+
+        // Diğer firmalar (iş ortağı olmayanlar)
+        final otherSampleCompanies = sampleCompanies
+            .where((company) => !partneredCompanyIds.contains(company.id))
+            .toList();
+
+        final otherFirestoreCompanies = convertedFirestoreCompanies
+            .where((company) => !partneredCompanyIds.contains(company.id))
+            .toList();
+
+        final filteredOtherSampleCompanies =
+            _getFilteredCompanies(otherSampleCompanies);
+        final filteredOtherFirestoreCompanies =
+            _getFilteredCompanies(otherFirestoreCompanies);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -96,7 +178,7 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
                                 const SizedBox(width: 16),
                                 const Expanded(
                                   child: Text(
-                                    'Premium Tedarikçiler',
+                                        'İş Ortaklarım',
                                     style: TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w800,
@@ -126,7 +208,7 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          '${companyProvider.activeCompanies.length} Güvenilir Partner',
+                                              '${totalPartneredCompanies} Aktif İş Ortağı',
                                           style: const TextStyle(
                                             fontSize: 20,
                                             fontWeight: FontWeight.w700,
@@ -135,11 +217,11 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          'En kaliteli ürünler, en güvenilir tedarikçiler',
+                                              'Güvenilir iş ortaklarınızla çalışın',
                                           style: TextStyle(
                                             fontSize: 13,
-                                            color:
-                                                Colors.white.withOpacity(0.8),
+                                                color: Colors.white
+                                                    .withOpacity(0.8),
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
@@ -153,7 +235,7 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(
-                                      Icons.verified_rounded,
+                                          Icons.handshake_rounded,
                                       color: Colors.white,
                                       size: 24,
                                     ),
@@ -171,12 +253,118 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
             ),
           ),
         ],
-        body: Column(
+            body: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // İş Ortaklarım Bölümü
+                  if (totalPartneredCompanies > 0) ...[
+                    Container(
+                      color: Colors.white,
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                      child: Row(
           children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.handshake_rounded,
+                              color: Colors.green,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Aktif İş Ortaklarım',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF1F2937),
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              '$totalPartneredCompanies',
+                              style: const TextStyle(
+                                color: Colors.green,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      color: Colors.white,
+                      height: 200,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        itemCount: totalPartneredCompanies,
+                        itemBuilder: (context, index) {
+                          if (index < partneredSampleCompanies.length) {
+                            final company = partneredSampleCompanies[index];
+                            return _buildPartnerCompanyCard(company, index);
+                          } else {
+                            final firestoreIndex =
+                                index - partneredSampleCompanies.length;
+                            final company =
+                                partneredFirestoreCompanies[firestoreIndex];
+                            return _buildPartnerCompanyCard(company, index);
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // Arama Bölümü
             Container(
               color: Colors.white,
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-              child: Container(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.search_rounded,
+                                color: AppTheme.primaryColor,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Yeni İş Ortakları Keşfedin',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1F2937),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
                 height: 56,
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
@@ -227,28 +415,215 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
                     ),
                   ),
                 ),
-              ),
-            ),
+                        ),
+                      ],
+                    ),
+                  ),
 
-            // Firma Listesi
-            Expanded(
-              child: GridView.builder(
+                  // Tüm Firmalar Grid
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(24),
-                physics: const BouncingScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   childAspectRatio: 0.85,
                   mainAxisSpacing: 20,
                   crossAxisSpacing: 20,
                 ),
-                itemCount: filteredCompanies.length,
+                    itemCount: filteredOtherSampleCompanies.length +
+                        filteredOtherFirestoreCompanies.length,
                 itemBuilder: (context, index) {
-                  final company = filteredCompanies[index];
+                      if (index < filteredOtherSampleCompanies.length) {
+                        final company = filteredOtherSampleCompanies[index];
+                        return _buildCompanyCard(company, index);
+                      } else {
+                        final firestoreIndex =
+                            index - filteredOtherSampleCompanies.length;
+                        final company =
+                            filteredOtherFirestoreCompanies[firestoreIndex];
                   return _buildCompanyCard(company, index);
-                },
+                      }
+                    },
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPartnerCompanyCard(Company company, int index) {
+    return Container(
+      width: 160,
+      margin: const EdgeInsets.only(right: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.green.withOpacity(0.2),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.green.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: () => _navigateToCompanyDetail(company),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Partner Badge + Logo
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.verified_rounded,
+                            color: Colors.green,
+                            size: 12,
+                          ),
+                          const SizedBox(width: 4),
+                          const Text(
+                            'Partner',
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.green,
+                            Colors.green.withOpacity(0.8),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(
+                          company.name.substring(0, 2).toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Company Name
+                Text(
+                  company.name,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1F2937),
+                    height: 1.2,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                const SizedBox(height: 8),
+
+                // Service Type
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    company.services.first,
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+
+                const Spacer(),
+
+                // Rating
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.star_rounded,
+                      color: Color(0xFFFACC15),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      company.rating.toString(),
+                      style: const TextStyle(
+                        color: Color(0xFFFACC15),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.arrow_forward_rounded,
+                        color: Colors.green,
+                        size: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

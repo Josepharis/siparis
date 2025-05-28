@@ -169,280 +169,274 @@ class _DashboardTabState extends State<DashboardTab> {
             SliverToBoxAdapter(
               child: SizedBox(
                 height: 150,
-                child:
-                    dailyProducts.isEmpty
-                        ? _buildEmptyState(
-                          icon: Icons.bakery_dining_rounded,
-                          message: 'Bugün için üretilecek ürün bulunmuyor',
-                        )
-                        : ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: dailyProducts.entries.length,
-                          itemBuilder: (context, index) {
-                            final entry = dailyProducts.entries.elementAt(
-                              index,
-                            );
-                            final product = entry.value;
+                child: dailyProducts.isEmpty
+                    ? _buildEmptyState(
+                        icon: Icons.bakery_dining_rounded,
+                        message: 'Bugün için üretilecek ürün bulunmuyor',
+                      )
+                    : ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: dailyProducts.entries.length,
+                        itemBuilder: (context, index) {
+                          final entry = dailyProducts.entries.elementAt(
+                            index,
+                          );
+                          final product = entry.value;
 
-                            return GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => ProductDetailScreen(
-                                          product: product,
-                                        ),
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ProductDetailScreen(
+                                    product: product,
                                   ),
-                                );
-                              },
-                              child: Container(
-                                width: 120,
-                                margin: const EdgeInsets.only(
-                                  right: 10,
-                                  bottom: 6,
-                                  top: 6,
                                 ),
-                                child: Stack(
-                                  children: [
-                                    // Ana kart
-                                    Card(
-                                      elevation: 3,
-                                      shadowColor: _getCategoryColor(
-                                        product.category,
-                                      ).withOpacity(0.2),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(14),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.stretch,
-                                          children: [
-                                            // Üst renkli bölüm
-                                            Container(
-                                              height: 70,
-                                              decoration: BoxDecoration(
-                                                gradient: LinearGradient(
-                                                  begin: Alignment.topLeft,
-                                                  end: Alignment.bottomRight,
-                                                  colors: [
-                                                    _getCategoryColor(
-                                                      product.category,
-                                                    ),
-                                                    _getCategoryLighterColor(
-                                                      product.category,
-                                                    ),
-                                                  ],
-                                                  stops: const [0.2, 1.0],
-                                                ),
-                                              ),
-                                              child: Stack(
-                                                children: [
-                                                  // Dekoratif öğeler
-                                                  Positioned(
-                                                    right: -20,
-                                                    top: -20,
-                                                    child: Container(
-                                                      width: 50,
-                                                      height: 50,
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.white
-                                                            .withOpacity(0.1),
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                    ),
+                              );
+                            },
+                            child: Container(
+                              width: 120,
+                              margin: const EdgeInsets.only(
+                                right: 10,
+                                bottom: 6,
+                                top: 6,
+                              ),
+                              child: Stack(
+                                children: [
+                                  // Ana kart
+                                  Card(
+                                    elevation: 3,
+                                    shadowColor: _getCategoryColor(
+                                      product.category,
+                                    ).withOpacity(0.2),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(14),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          // Üst renkli bölüm
+                                          Container(
+                                            height: 70,
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                                colors: [
+                                                  _getCategoryColor(
+                                                    product.category,
                                                   ),
-                                                  Positioned(
-                                                    left: -15,
-                                                    bottom: -15,
-                                                    child: Container(
-                                                      width: 30,
-                                                      height: 30,
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.white
-                                                            .withOpacity(0.1),
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                    ),
-                                                  ),
-
-                                                  // Kategori ikonu
-                                                  Center(
-                                                    child: Container(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                            10,
-                                                          ),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.white
-                                                            .withOpacity(0.2),
-                                                        shape: BoxShape.circle,
-                                                        boxShadow: [
-                                                          BoxShadow(
-                                                            color: Colors.black
-                                                                .withOpacity(
-                                                                  0.1,
-                                                                ),
-                                                            blurRadius: 6,
-                                                            spreadRadius: 0,
-                                                            offset:
-                                                                const Offset(
-                                                                  0,
-                                                                  3,
-                                                                ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      child: Icon(
-                                                        _getCategoryIcon(
-                                                          product.category,
-                                                        ),
-                                                        color: Colors.white,
-                                                        size: 28,
-                                                        shadows: [
-                                                          Shadow(
-                                                            color: Colors.black
-                                                                .withOpacity(
-                                                                  0.2,
-                                                                ),
-                                                            blurRadius: 6,
-                                                            offset:
-                                                                const Offset(
-                                                                  0,
-                                                                  2,
-                                                                ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
+                                                  _getCategoryLighterColor(
+                                                    product.category,
                                                   ),
                                                 ],
+                                                stops: const [0.2, 1.0],
                                               ),
                                             ),
-
-                                            // Alt bilgi bölümü
-                                            Expanded(
-                                              child: Container(
-                                                padding: const EdgeInsets.all(
-                                                  6,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  borderRadius:
-                                                      const BorderRadius.only(
-                                                        bottomLeft:
-                                                            Radius.circular(14),
-                                                        bottomRight:
-                                                            Radius.circular(14),
-                                                      ),
-                                                ),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: [
-                                                    Text(
-                                                      product.productName,
-                                                      style: const TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: 13,
-                                                      ),
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
+                                            child: Stack(
+                                              children: [
+                                                // Dekoratif öğeler
+                                                Positioned(
+                                                  right: -20,
+                                                  top: -20,
+                                                  child: Container(
+                                                    width: 50,
+                                                    height: 50,
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white
+                                                          .withOpacity(0.1),
+                                                      shape: BoxShape.circle,
                                                     ),
-                                                    const SizedBox(height: 2),
-                                                    Row(
-                                                      children: [
-                                                        Icon(
-                                                          _getCategorySmallIcon(
-                                                            product.category,
+                                                  ),
+                                                ),
+                                                Positioned(
+                                                  left: -15,
+                                                  bottom: -15,
+                                                  child: Container(
+                                                    width: 30,
+                                                    height: 30,
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white
+                                                          .withOpacity(0.1),
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                  ),
+                                                ),
+
+                                                // Kategori ikonu
+                                                Center(
+                                                  child: Container(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                      10,
+                                                    ),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white
+                                                          .withOpacity(0.2),
+                                                      shape: BoxShape.circle,
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Colors.black
+                                                              .withOpacity(
+                                                            0.1,
                                                           ),
-                                                          size: 10,
-                                                          color:
-                                                              _getCategoryColor(
-                                                                product
-                                                                    .category,
-                                                              ),
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 3,
-                                                        ),
-                                                        Text(
-                                                          product.category,
-                                                          style: TextStyle(
-                                                            color:
-                                                                Colors
-                                                                    .grey[600],
-                                                            fontSize: 10,
+                                                          blurRadius: 6,
+                                                          spreadRadius: 0,
+                                                          offset: const Offset(
+                                                            0,
+                                                            3,
                                                           ),
                                                         ),
                                                       ],
                                                     ),
-                                                  ],
+                                                    child: Icon(
+                                                      _getCategoryIcon(
+                                                        product.category,
+                                                      ),
+                                                      color: Colors.white,
+                                                      size: 28,
+                                                      shadows: [
+                                                        Shadow(
+                                                          color: Colors.black
+                                                              .withOpacity(
+                                                            0.2,
+                                                          ),
+                                                          blurRadius: 6,
+                                                          offset: const Offset(
+                                                            0,
+                                                            2,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+
+                                          // Alt bilgi bölümü
+                                          Expanded(
+                                            child: Container(
+                                              padding: const EdgeInsets.all(
+                                                6,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    const BorderRadius.only(
+                                                  bottomLeft:
+                                                      Radius.circular(14),
+                                                  bottomRight:
+                                                      Radius.circular(14),
                                                 ),
                                               ),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Text(
+                                                    product.productName,
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 13,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Row(
+                                                    children: [
+                                                      Icon(
+                                                        _getCategorySmallIcon(
+                                                          product.category,
+                                                        ),
+                                                        size: 10,
+                                                        color:
+                                                            _getCategoryColor(
+                                                          product.category,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(
+                                                        width: 3,
+                                                      ),
+                                                      Text(
+                                                        product.category,
+                                                        style: TextStyle(
+                                                          color:
+                                                              Colors.grey[600],
+                                                          fontSize: 10,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
                                     ),
+                                  ),
 
-                                    // Miktar göstergesi
-                                    Positioned(
-                                      top: 6,
-                                      right: 6,
-                                      child: Container(
-                                        width: 30,
-                                        height: 30,
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                            colors: [
-                                              Colors.white,
-                                              Colors.white.withOpacity(0.9),
-                                            ],
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(
-                                                0.1,
-                                              ),
-                                              blurRadius: 4,
-                                              spreadRadius: 0,
-                                              offset: const Offset(0, 2),
-                                            ),
+                                  // Miktar göstergesi
+                                  Positioned(
+                                    top: 6,
+                                    right: 6,
+                                    child: Container(
+                                      width: 30,
+                                      height: 30,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            Colors.white,
+                                            Colors.white.withOpacity(0.9),
                                           ],
                                         ),
-                                        child: Center(
-                                          child: Text(
-                                            '${product.totalQuantity}',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 13,
-                                              color: _getCategoryColor(
-                                                product.category,
-                                              ),
+                                        borderRadius: BorderRadius.circular(
+                                          8,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(
+                                              0.1,
+                                            ),
+                                            blurRadius: 4,
+                                            spreadRadius: 0,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          '${product.totalQuantity}',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: _getCategoryColor(
+                                              product.category,
                                             ),
                                           ),
                                         ),
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
+                      ),
               ),
             ),
 
@@ -476,23 +470,23 @@ class _DashboardTabState extends State<DashboardTab> {
             // Sipariş Listesi
             todayActiveOrders.isEmpty
                 ? SliverToBoxAdapter(
-                  child: _buildEmptyState(
-                    icon: Icons.receipt_long_rounded,
-                    message: 'Bugün için aktif sipariş bulunmuyor',
-                  ),
-                )
+                    child: _buildEmptyState(
+                      icon: Icons.receipt_long_rounded,
+                      message: 'Bugün için aktif sipariş bulunmuyor',
+                    ),
+                  )
                 : SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      final order = todayActiveOrders[index];
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
-                        child: _buildOrderCard(context, order, orderProvider),
-                      );
-                    }, childCount: todayActiveOrders.length),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final order = todayActiveOrders[index];
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
+                          child: _buildOrderCard(context, order, orderProvider),
+                        );
+                      }, childCount: todayActiveOrders.length),
+                    ),
                   ),
-                ),
 
             // Alt Boşluk
             const SliverToBoxAdapter(child: SizedBox(height: 80)),
@@ -735,12 +729,11 @@ class _DashboardTabState extends State<DashboardTab> {
                   // Değer
                   Container(
                     height: 4,
-                    width:
-                        percentage > 0
-                            ? (percentage / 100) *
-                                MediaQuery.of(context).size.width *
-                                0.25
-                            : 0, // Ekran genişliğine göre ayarlanmış max genişlik
+                    width: percentage > 0
+                        ? (percentage / 100) *
+                            MediaQuery.of(context).size.width *
+                            0.25
+                        : 0, // Ekran genişliğine göre ayarlanmış max genişlik
                     decoration: BoxDecoration(
                       color: color,
                       borderRadius: BorderRadius.circular(2),
@@ -806,10 +799,9 @@ class _DashboardTabState extends State<DashboardTab> {
 
     // Teslimat tarihinden kalan gün sayısı
     final int daysLeft = order.deliveryDate.difference(DateTime.now()).inDays;
-    final String timeIndicator =
-        daysLeft > 0
-            ? '$daysLeft gün kaldı'
-            : daysLeft == 0
+    final String timeIndicator = daysLeft > 0
+        ? '$daysLeft gün kaldı'
+        : daysLeft == 0
             ? 'Bugün'
             : '${daysLeft.abs()} gün geçti';
 

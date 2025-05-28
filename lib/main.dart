@@ -13,6 +13,7 @@ import 'package:siparis/screens/splash_screen.dart';
 import 'package:siparis/screens/budget_screen.dart';
 import 'package:siparis/providers/stock_provider.dart';
 import 'package:siparis/providers/company_provider.dart';
+import 'package:siparis/providers/work_request_provider.dart';
 import 'package:siparis/customer/screens/customer_home_screen.dart';
 import 'package:siparis/providers/cart_provider.dart';
 import 'package:siparis/customer/screens/cart_screen.dart';
@@ -53,6 +54,7 @@ class MainApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => OrderProvider()),
         ChangeNotifierProvider(create: (_) => StockProvider()),
         ChangeNotifierProvider(create: (_) => CompanyProvider()),
+        ChangeNotifierProvider(create: (_) => WorkRequestProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: MaterialApp(

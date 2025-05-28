@@ -1,19 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:siparis/models/company.dart';
+import 'package:siparis/models/company_model.dart';
 import 'package:siparis/models/product.dart';
+import 'package:siparis/services/company_service.dart';
 
 class CompanyProvider with ChangeNotifier {
   List<Company> _companies = [];
+  List<CompanyModel> _firestoreCompanies = [];
   bool _isLoading = false;
 
   List<Company> get companies => _companies;
+  List<CompanyModel> get firestoreCompanies => _firestoreCompanies;
   bool get isLoading => _isLoading;
 
   List<Company> get activeCompanies =>
       _companies.where((company) => company.isActive).toList();
 
+  List<CompanyModel> get activeFirestoreCompanies =>
+      _firestoreCompanies.where((company) => company.isActive).toList();
+
   CompanyProvider() {
     _loadSampleData();
+    loadFirestoreCompanies();
   }
 
   void _loadSampleData() {
@@ -264,6 +272,110 @@ class CompanyProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // Firebase'den firmaları yükle
+  Future<void> loadFirestoreCompanies() async {
+    try {
+      print('DEBUG: CompanyProvider - Firebase firmaları yükleniyor...');
+      _isLoading = true;
+      notifyListeners();
+
+      // Hem producer hem customer tipindeki tüm aktif firmaları getir
+      final producerCompanies =
+          await CompanyService.getCompaniesByType('producer');
+      final customerCompanies =
+          await CompanyService.getCompaniesByType('customer');
+
+      _firestoreCompanies = [...producerCompanies, ...customerCompanies];
+
+      print(
+          'DEBUG: CompanyProvider - ${producerCompanies.length} producer firma yüklendi');
+      print(
+          'DEBUG: CompanyProvider - ${customerCompanies.length} customer firma yüklendi');
+      print(
+          'DEBUG: CompanyProvider - Toplam ${_firestoreCompanies.length} Firebase firması yüklendi');
+
+      for (var company in _firestoreCompanies) {
+        print(
+            'DEBUG: Firebase Firma - ID: ${company.id}, Name: ${company.name}, Type: ${company.type}');
+      }
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      print('Firestore firmaları yüklenirken hata: $e');
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Firebase'de firma ara
+  Future<List<CompanyModel>> searchFirestoreCompanies(String query) async {
+    try {
+      if (query.isEmpty) return _firestoreCompanies;
+      return await CompanyService.searchCompanies(query);
+    } catch (e) {
+      print('Firestore firma arama hatası: $e');
+      return [];
+    }
+  }
+
+  // Kullanıcının sahip olduğu firmaları getir
+  Future<List<CompanyModel>> getUserCompanies(String userId) async {
+    try {
+      return await CompanyService.getUserCompanies(userId);
+    } catch (e) {
+      print('Kullanıcı firmaları alınırken hata: $e');
+      return [];
+    }
+  }
+
+  // Kullanıcının çalıştığı firmaları getir
+  Future<List<CompanyModel>> getUserEmployeeCompanies(String userId) async {
+    try {
+      return await CompanyService.getUserEmployeeCompanies(userId);
+    } catch (e) {
+      print('Çalışılan firmalar alınırken hata: $e');
+      return [];
+    }
+  }
+
+  // Yeni firma oluştur
+  Future<CompanyModel?> createCompany({
+    required String name,
+    required String address,
+    String? phone,
+    String? email,
+    String? website,
+    String? description,
+    required String ownerId,
+    required String type,
+    List<String>? categories,
+  }) async {
+    try {
+      final company = await CompanyService.createCompany(
+        name: name,
+        address: address,
+        phone: phone,
+        email: email,
+        website: website,
+        description: description,
+        ownerId: ownerId,
+        type: type,
+        categories: categories,
+      );
+
+      if (company != null) {
+        _firestoreCompanies.add(company);
+        notifyListeners();
+      }
+
+      return company;
+    } catch (e) {
+      print('Firma oluşturulurken hata: $e');
+      return null;
+    }
+  }
+
   Future<void> loadCompanies() async {
     _isLoading = true;
     notifyListeners();
@@ -283,6 +395,14 @@ class CompanyProvider with ChangeNotifier {
     }
   }
 
+  CompanyModel? getFirestoreCompanyById(String id) {
+    try {
+      return _firestoreCompanies.firstWhere((company) => company.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
+
   List<Company> searchCompanies(String query) {
     if (query.isEmpty) return _companies;
 
@@ -292,6 +412,26 @@ class CompanyProvider with ChangeNotifier {
           company.services.any(
               (service) => service.toLowerCase().contains(query.toLowerCase()));
     }).toList();
+  }
+
+  // Hem örnek hem de Firestore firmalarını birleştirerek ara
+  List<dynamic> searchAllCompanies(String query) {
+    List<dynamic> allCompanies = [];
+
+    // Örnek firmaları ekle
+    allCompanies.addAll(searchCompanies(query));
+
+    // Firestore firmalarını ekle
+    if (query.isEmpty) {
+      allCompanies.addAll(_firestoreCompanies);
+    } else {
+      allCompanies.addAll(_firestoreCompanies.where((company) =>
+          company.name.toLowerCase().contains(query.toLowerCase()) ||
+          (company.description?.toLowerCase().contains(query.toLowerCase()) ??
+              false)));
+    }
+
+    return allCompanies;
   }
 
   List<Company> getCompaniesByService(String service) {
