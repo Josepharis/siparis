@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'package:siparis/config/theme.dart';
 import 'package:siparis/models/order.dart';
 import 'package:siparis/providers/order_provider.dart';
@@ -16,6 +18,11 @@ import 'package:siparis/customer/screens/cart_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Firebase'i başlat
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // Sistem UI ayarları
   SystemChrome.setSystemUIOverlayStyle(
@@ -50,10 +57,13 @@ class MainApp extends StatelessWidget {
         title: 'Sipariş Takip',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        initialRoute: '/customer',
+        initialRoute: '/',
         onGenerateRoute: (settings) {
           switch (settings.name) {
             case '/':
+              return MaterialPageRoute(
+                builder: (_) => const SplashScreen(),
+              );
             case '/customer':
               return MaterialPageRoute(
                 builder: (_) => const CustomerHomeScreen(),
@@ -68,7 +78,7 @@ class MainApp extends StatelessWidget {
               );
             default:
               return MaterialPageRoute(
-                builder: (_) => const CustomerHomeScreen(),
+                builder: (_) => const SplashScreen(),
               );
           }
         },

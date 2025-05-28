@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:siparis/config/theme.dart';
-import 'package:siparis/screens/home/home_screen.dart';
+import 'package:siparis/screens/auth/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -63,7 +63,7 @@ class _SplashScreenState extends State<SplashScreen>
     Future.delayed(const Duration(seconds: 3), () {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => const HomeScreen(skipLoading: false),
+          builder: (context) => const LoginScreen(),
         ),
       );
     });
@@ -166,15 +166,14 @@ class _SplashScreenState extends State<SplashScreen>
 
                               // Uygulama adı
                               ShaderMask(
-                                shaderCallback:
-                                    (bounds) => LinearGradient(
-                                      colors: [
-                                        Colors.white,
-                                        Colors.white.withOpacity(0.8),
-                                      ],
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                    ).createShader(bounds),
+                                shaderCallback: (bounds) => LinearGradient(
+                                  colors: [
+                                    Colors.white,
+                                    Colors.white.withOpacity(0.8),
+                                  ],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ).createShader(bounds),
                                 child: const Text(
                                   'SİPARİŞ TAKİP',
                                   style: TextStyle(
@@ -243,8 +242,8 @@ class _SplashScreenState extends State<SplashScreen>
                     return FadeTransition(
                       opacity: Animation.fromValueListenable(
                         _controller,
-                        transformer:
-                            (value) => value > 0.6 ? (value - 0.6) * 2.5 : 0,
+                        transformer: (value) =>
+                            value > 0.6 ? (value - 0.6) * 2.5 : 0,
                       ),
                       child: const Text(
                         'v1.0.0',
