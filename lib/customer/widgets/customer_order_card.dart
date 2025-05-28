@@ -18,6 +18,25 @@ class CustomerOrderCard extends StatelessWidget {
     // Durum bilgileri
     final statusText = Order.getStatusText(order.status);
 
+    // Firma adını çıkar
+    String companyName = 'Bilinmeyen Firma';
+    if (order.customer.name.contains('→')) {
+      companyName = order.customer.name.split('→').last.trim();
+    } else if (order.note != null && order.note!.contains('firmasından')) {
+      // Note'tan firma adını çıkarmaya çalış
+      final noteWords = order.note!.split(' ');
+      final firmaIndex = noteWords.indexOf('firmasından');
+      if (firmaIndex > 0) {
+        companyName = noteWords[firmaIndex - 1];
+      }
+    }
+
+    // Debug: Firma adı çıkarma işlemini kontrol et
+    print('🔍 CustomerOrderCard Debug:');
+    print('   Müşteri adı: ${order.customer.name}');
+    print('   Çıkarılan firma: $companyName');
+    print('   Not: ${order.note}');
+
     // Saat formatı ve bilgileri
     final timeFormat = DateFormat('HH:mm');
     final deliveryTime = timeFormat.format(order.deliveryDate);
@@ -104,6 +123,28 @@ class CustomerOrderCard extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.store_rounded,
+                                  color: Colors.white.withOpacity(0.8),
+                                  size: 12,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    companyName,
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 2),
                             Text(
@@ -369,10 +410,12 @@ class CustomerOrderCard extends StatelessWidget {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        order.paymentStatus == PaymentStatus.pending
+                                        order.paymentStatus ==
+                                                PaymentStatus.pending
                                             ? 'Ödeme Bekleniyor'
                                             : 'Kısmi Ödeme Yapıldı',
                                         style: TextStyle(
@@ -405,9 +448,11 @@ class CustomerOrderCard extends StatelessWidget {
                                         ),
                                         const SizedBox(height: 4),
                                         LinearProgressIndicator(
-                                          value: order.paidAmount! / order.totalAmount,
+                                          value: order.paidAmount! /
+                                              order.totalAmount,
                                           backgroundColor: Colors.grey.shade200,
-                                          valueColor: AlwaysStoppedAnimation<Color>(
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
                                             Colors.green.shade500,
                                           ),
                                           minHeight: 3,

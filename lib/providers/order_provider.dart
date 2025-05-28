@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:siparis/models/order.dart';
+import 'package:siparis/services/order_service.dart';
+import 'dart:async';
 
 class OrderProvider extends ChangeNotifier {
   // Tüm siparişler
@@ -14,6 +16,9 @@ class OrderProvider extends ChangeNotifier {
   // Firma özetleri
   List<CompanySummary> _companySummaries = [];
 
+  // Firebase stream subscription
+  StreamSubscription<List<Order>>? _ordersStreamSubscription;
+
   // Getters
   List<Order> get orders => _orders;
   List<Order> get waitingOrders =>
@@ -27,22 +32,100 @@ class OrderProvider extends ChangeNotifier {
   FinancialSummary? get financialSummary => _financialSummary;
   List<CompanySummary> get companySummaries => _companySummaries;
 
-  // Siparişleri yükle (gerçek uygulamada bu veriler API'den veya yerel depodan gelecek)
-  Future<void> loadOrders() async {
-    // Örnek veri
-    await Future.delayed(const Duration(seconds: 1));
+  // Real-time Firebase listener başlat
+  void startListeningToOrders() {
+    _ordersStreamSubscription?.cancel(); // Önceki listener'ı iptal et
 
-    // TODO: API veya yerel depodan siparişleri yükle
-    _buildMockData();
+    _ordersStreamSubscription = OrderService.getOrdersStream().listen(
+      (firebaseOrders) {
+        print('🔥 Firebase\'den ${firebaseOrders.length} siparis alindi');
 
-    notifyListeners();
+        // Mock verilerle birleştir
+        _buildMockData();
+
+        // Firebase'den gelen verileri ekle/güncelle
+        for (var firebaseOrder in firebaseOrders) {
+          int existingIndex =
+              _orders.indexWhere((order) => order.id == firebaseOrder.id);
+          if (existingIndex != -1) {
+            _orders[existingIndex] = firebaseOrder;
+          } else {
+            _orders.add(firebaseOrder);
+          }
+        }
+
+        _updateSummaries();
+        notifyListeners();
+
+        print('✅ Toplam ${_orders.length} siparis guncellendi (Real-time)');
+      },
+      onError: (error) {
+        print('❌ Firebase stream hatasi: $error');
+        // Hata durumunda sadece mock verilerle devam et
+        _buildMockData();
+        notifyListeners();
+      },
+    );
   }
 
-  // Sipariş ekleme
-  void addOrder(Order order) {
+  // Listener'ı durdur
+  void stopListeningToOrders() {
+    _ordersStreamSubscription?.cancel();
+    _ordersStreamSubscription = null;
+  }
+
+  // Siparişleri yükle (Firebase'den) - Artık sadece ilk yükleme için
+  Future<void> loadOrders() async {
+    try {
+      // Eğer listener aktif değilse başlat
+      if (_ordersStreamSubscription == null) {
+        startListeningToOrders();
+      }
+
+      // İlk yükleme için Firebase'den siparişleri çek
+      List<Order> firebaseOrders = await OrderService.getAllOrders();
+
+      // Mevcut mock verilerle birleştir (geçiş dönemi için)
+      _buildMockData(); // Mevcut mock veriler
+
+      // Firebase'den gelen verileri ekle
+      for (var firebaseOrder in firebaseOrders) {
+        // Aynı ID'li sipariş varsa güncelle, yoksa ekle
+        int existingIndex =
+            _orders.indexWhere((order) => order.id == firebaseOrder.id);
+        if (existingIndex != -1) {
+          _orders[existingIndex] = firebaseOrder;
+        } else {
+          _orders.add(firebaseOrder);
+        }
+      }
+
+      _updateSummaries();
+      notifyListeners();
+
+      print('✅ Toplam ${_orders.length} siparis yuklendi (Firebase + Mock)');
+    } catch (e) {
+      print('❌ Siparisler yuklenirken hata: $e');
+      // Hata durumunda sadece mock verilerle devam et
+      _buildMockData();
+      notifyListeners();
+    }
+  }
+
+  // Sipariş ekleme - Firebase'e de kaydet
+  Future<void> addOrder(Order order) async {
+    // Önce local'e ekle (hızlı UI güncellemesi için)
     _orders.add(order);
     _updateSummaries();
     notifyListeners();
+
+    // Firebase'e kaydet (arka planda)
+    try {
+      await OrderService.saveOrder(order);
+      print('✅ Siparis Firebase\'e kaydedildi: ${order.id}');
+    } catch (e) {
+      print('❌ Siparis Firebase\'e kaydedilemedi: $e');
+    }
   }
 
   // Sipariş güncelleme
@@ -84,6 +167,13 @@ class OrderProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Provider dispose edildiğinde listener'ı temizle
+  @override
+  void dispose() {
+    stopListeningToOrders();
+    super.dispose();
+  }
+
   // Özetleri güncelleme
   void _updateSummaries() {
     _updateDailyProductSummary();
@@ -98,15 +188,14 @@ class OrderProvider extends ChangeNotifier {
     final Map<String, Map<String, int>> productFirmaCounts = {};
 
     // Bugün için olan siparişleri filtrele
-    final todayOrders =
-        _orders
-            .where(
-              (order) =>
-                  order.deliveryDate.day == DateTime.now().day &&
-                  order.deliveryDate.month == DateTime.now().month &&
-                  order.deliveryDate.year == DateTime.now().year,
-            )
-            .toList();
+    final todayOrders = _orders
+        .where(
+          (order) =>
+              order.deliveryDate.day == DateTime.now().day &&
+              order.deliveryDate.month == DateTime.now().month &&
+              order.deliveryDate.year == DateTime.now().year,
+        )
+        .toList();
 
     // Her bir sipariş öğesi için özet oluştur
     for (final order in todayOrders) {
@@ -220,22 +309,20 @@ class OrderProvider extends ChangeNotifier {
     }
 
     // Koleksiyon oranlarını hesapla
-    final List<CompanySummary> summaries =
-        summaryMap.values.map((summary) {
-          final collectionRate =
-              summary.totalAmount > 0
-                  ? (summary.paidAmount / summary.totalAmount) * 100
-                  : 0.0;
+    final List<CompanySummary> summaries = summaryMap.values.map((summary) {
+      final collectionRate = summary.totalAmount > 0
+          ? (summary.paidAmount / summary.totalAmount) * 100
+          : 0.0;
 
-          return CompanySummary(
-            company: summary.company,
-            totalAmount: summary.totalAmount,
-            paidAmount: summary.paidAmount,
-            pendingAmount: summary.pendingAmount,
-            totalOrders: summary.totalOrders,
-            collectionRate: collectionRate,
-          );
-        }).toList();
+      return CompanySummary(
+        company: summary.company,
+        totalAmount: summary.totalAmount,
+        paidAmount: summary.paidAmount,
+        pendingAmount: summary.pendingAmount,
+        totalOrders: summary.totalOrders,
+        collectionRate: collectionRate,
+      );
+    }).toList();
 
     // Toplam tutara göre sırala
     summaries.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));

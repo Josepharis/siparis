@@ -32,287 +32,320 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
         });
       }
     });
+
+    // Firebase real-time listener'ı başlat
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+      // Real-time listener'ı başlat
+      orderProvider.startListeningToOrders();
+      print('🔥 Müşteri dashboard: Firebase listener başlatıldı');
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final orderProvider = Provider.of<OrderProvider>(context);
-    final waitingOrders = orderProvider.waitingOrders;
-    final processingOrders = orderProvider.processingOrders;
-    final completedOrders = orderProvider.completedOrders;
+
+    // Müşteri adı - gerçek uygulamada kullanıcı bilgilerinden alınacak
+    const String currentCustomerPrefix =
+        'Müşteri →'; // Müşteri siparişlerinin prefix'i
+
+    // Sadece bu müşterinin siparişlerini filtrele
+    final allOrders = orderProvider.orders;
+    final customerOrders = allOrders
+        .where((order) =>
+                order.customer.name.startsWith(currentCustomerPrefix) ||
+                order.note == 'Müşteri siparişi' // Eski siparişler için
+            )
+        .toList();
+
+    // Müşteri siparişlerini duruma göre ayır
+    final waitingOrders = customerOrders
+        .where((order) => order.status == OrderStatus.waiting)
+        .toList();
+    final processingOrders = customerOrders
+        .where((order) => order.status == OrderStatus.processing)
+        .toList();
+    final completedOrders = customerOrders
+        .where((order) => order.status == OrderStatus.completed)
+        .toList();
 
     // Müşterinin aktif siparişleri
     final todayActiveOrders = [...waitingOrders, ...processingOrders];
 
+    // Debug: Sipariş sayılarını yazdır
+    print('🔍 Müşteri Dashboard Debug:');
+    print('   Toplam sipariş: ${allOrders.length}');
+    print('   Müşteri siparişleri: ${customerOrders.length}');
+    print('   Bekleyen: ${waitingOrders.length}');
+    print('   Hazırlanan: ${processingOrders.length}');
+    print('   Tamamlanan: ${completedOrders.length}');
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            // App Bar
-            SliverAppBar(
-              backgroundColor: Colors.transparent,
-              pinned: true,
-              floating: true,
-              centerTitle: false,
-              elevation: 0,
-              titleSpacing: 0,
-              automaticallyImplyLeading: false,
-              flexibleSpace: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.white,
-                      Colors.grey[50]!,
-                    ],
-                  ),
-                ),
-              ),
-              title: Padding(
-                padding: const EdgeInsets.only(left: 16, top: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                AppTheme.primaryColor,
-                                AppTheme.primaryColor.withBlue(255).withRed(60),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.primaryColor.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.dashboard_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Merhaba! 👋',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Text(
-                                'Sipariş Takip',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[800],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Bildirim ikonu
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(
-                            Icons.notifications_outlined,
-                            color: Colors.grey[600],
-                            size: 20,
-                          ),
-                        ),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            await Provider.of<OrderProvider>(context, listen: false)
+                .loadOrders();
+          },
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // App Bar
+              SliverAppBar(
+                backgroundColor: Colors.transparent,
+                pinned: true,
+                floating: true,
+                centerTitle: false,
+                elevation: 0,
+                titleSpacing: 0,
+                automaticallyImplyLeading: false,
+                flexibleSpace: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white,
+                        Colors.grey[50]!,
                       ],
                     ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Arama kutusu ve tarih
-            SliverToBoxAdapter(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.white,
-                      Colors.grey[50]!,
-                    ],
                   ),
                 ),
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: Column(
-                  children: [
-                    // Tarih göstergesi
-                    if (_isLocaleInitialized)
-                      Container(
-                        alignment: Alignment.centerLeft,
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: AppTheme.primaryColor.withOpacity(0.2),
+                title: Padding(
+                  padding: const EdgeInsets.only(left: 16, top: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppTheme.primaryColor,
+                                  AppTheme.primaryColor
+                                      .withBlue(255)
+                                      .withRed(60),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.primaryColor.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.dashboard_rounded,
+                              color: Colors.white,
+                              size: 20,
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.calendar_today_rounded,
-                                size: 14,
-                                color: AppTheme.primaryColor,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                _getTodayDateText(),
-                                style: TextStyle(
-                                  color: AppTheme.primaryColor,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Merhaba! 👋',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
-                            ],
+                                Text(
+                                  'Sipariş Takip',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[800],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ),
-
-                    // Arama kutusu
-                    Container(
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.grey[200]!),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
+                          // Bildirim ikonu
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              Icons.notifications_outlined,
+                              color: Colors.grey[600],
+                              size: 20,
+                            ),
                           ),
                         ],
                       ),
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Sipariş ara...',
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 16),
-                          prefixIcon: Container(
-                            padding: const EdgeInsets.all(12),
-                            child: Icon(
-                              Icons.search_rounded,
-                              color: AppTheme.primaryColor,
-                              size: 22,
+                    ],
+                  ),
+                ),
+              ),
+
+              // Arama kutusu ve tarih
+              SliverToBoxAdapter(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white,
+                        Colors.grey[50]!,
+                      ],
+                    ),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(
+                    children: [
+                      // Tarih göstergesi
+                      if (_isLocaleInitialized)
+                        Container(
+                          alignment: Alignment.centerLeft,
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: AppTheme.primaryColor.withOpacity(0.2),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.calendar_today_rounded,
+                                  size: 14,
+                                  color: AppTheme.primaryColor,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _getTodayDateText(),
+                                  style: TextStyle(
+                                    color: AppTheme.primaryColor,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          suffixIcon: Container(
-                            padding: const EdgeInsets.all(8),
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
+                        ),
+
+                      // Arama kutusu
+                      Container(
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey[200]!),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Sipariş ara...',
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 16),
+                            prefixIcon: Container(
+                              padding: const EdgeInsets.all(12),
                               child: Icon(
-                                Icons.tune_rounded,
+                                Icons.search_rounded,
                                 color: AppTheme.primaryColor,
-                                size: 16,
+                                size: 22,
                               ),
                             ),
-                          ),
-                          hintStyle: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                            suffixIcon: Container(
+                              padding: const EdgeInsets.all(8),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.tune_rounded,
+                                  color: AppTheme.primaryColor,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                            hintStyle: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
 
-            // Özet Bilgi Kartı
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
-                child: _buildSummaryCard(
-                  waiting: waitingOrders.length,
-                  processing: processingOrders.length,
-                  completed: completedOrders.length,
+              // Özet Bilgi Kartı
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
+                  child: _buildSummaryCard(
+                    waiting: waitingOrders.length,
+                    processing: processingOrders.length,
+                    completed: completedOrders.length,
+                  ),
                 ),
               ),
-            ),
 
-            // Aktif Siparişler Başlığı
-            SliverToBoxAdapter(
-              child: _buildSectionTitle(
-                'Devam Eden Siparişlerim',
-                Icons.pending_actions_rounded,
-                Colors.blue,
+              // Aktif Siparişler Başlığı
+              SliverToBoxAdapter(
+                child: _buildSectionTitle(
+                  'Devam Eden Siparişlerim',
+                  Icons.pending_actions_rounded,
+                  Colors.blue,
+                ),
               ),
-            ),
 
-            // Aktif Siparişler Listesi
-            todayActiveOrders.isEmpty
-                ? SliverToBoxAdapter(
-                    child: _buildEmptyState(
-                      icon: Icons.shopping_bag_outlined,
-                      message: 'Henüz devam eden siparişiniz yok',
-                      actionText: 'Yeni Sipariş Ver',
-                      onActionPressed: () {
-                        // Ana ekrandaki FAB'a benzer işlev
-                        _showNewOrderDialog();
-                      },
-                    ),
-                  )
-                : SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final order = todayActiveOrders[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 4,
-                          ),
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      OrderDetailScreen(order: order),
-                                ),
-                              );
-                            },
-                            child: CustomerOrderCard(
-                              order: order,
+              // Aktif Siparişler Listesi
+              todayActiveOrders.isEmpty
+                  ? SliverToBoxAdapter(
+                      child: _buildEmptyState(
+                        icon: Icons.shopping_bag_outlined,
+                        message: 'Henüz devam eden siparişiniz yok',
+                        actionText: 'Yeni Sipariş Ver',
+                        onActionPressed: () {
+                          // Ana ekrandaki FAB'a benzer işlev
+                          _showNewOrderDialog();
+                        },
+                      ),
+                    )
+                  : SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final order = todayActiveOrders[index];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 4,
+                            ),
+                            child: GestureDetector(
                               onTap: () {
                                 Navigator.push(
                                   context,
@@ -322,47 +355,47 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
                                   ),
                                 );
                               },
-                            ),
-                          ),
-                        );
-                      },
-                      childCount: min(todayActiveOrders.length, 5),
-                    ),
-                  ),
-
-            // Teslim Edilen Siparişler Başlığı
-            if (completedOrders.isNotEmpty)
-              SliverToBoxAdapter(
-                child: _buildSectionTitle(
-                  'Teslim Edilen Siparişlerim',
-                  Icons.check_circle_rounded,
-                  Colors.green,
-                ),
-              ),
-
-            // Son Siparişler Listesi
-            if (completedOrders.isNotEmpty)
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final order = completedOrders[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  OrderDetailScreen(order: order),
+                              child: CustomerOrderCard(
+                                order: order,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          OrderDetailScreen(order: order),
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
                           );
                         },
-                        child: CustomerOrderCard(
-                          order: order,
+                        childCount: min(todayActiveOrders.length, 5),
+                      ),
+                    ),
+
+              // Teslim Edilen Siparişler Başlığı
+              if (completedOrders.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: _buildSectionTitle(
+                    'Teslim Edilen Siparişlerim',
+                    Icons.check_circle_rounded,
+                    Colors.green,
+                  ),
+                ),
+
+              // Son Siparişler Listesi
+              if (completedOrders.isNotEmpty)
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final order = completedOrders[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 4,
+                        ),
+                        child: GestureDetector(
                           onTap: () {
                             Navigator.push(
                               context,
@@ -372,19 +405,31 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
                               ),
                             );
                           },
+                          child: CustomerOrderCard(
+                            order: order,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      OrderDetailScreen(order: order),
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  childCount: min(completedOrders.length, 3),
+                      );
+                    },
+                    childCount: min(completedOrders.length, 3),
+                  ),
                 ),
-              ),
 
-            // Alt boşluk
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 100),
-            ),
-          ],
+              // Alt boşluk
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 100),
+              ),
+            ],
+          ),
         ),
       ),
     );

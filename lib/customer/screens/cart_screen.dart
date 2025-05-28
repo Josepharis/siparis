@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:siparis/config/theme.dart';
 import 'package:siparis/providers/cart_provider.dart';
+import 'package:siparis/providers/order_provider.dart';
 import 'package:siparis/models/company_group.dart';
 import 'package:siparis/models/cart_item.dart';
+import 'package:siparis/models/order.dart' as order_models;
+import 'package:siparis/models/product.dart' as product_models;
+import 'package:siparis/services/order_service.dart';
 
 // Arka plan deseni için özel painter sınıfı
 class BackgroundPatternPainter extends CustomPainter {
@@ -624,243 +628,7 @@ class CartScreen extends StatelessWidget {
                             height: 56,
                             child: ElevatedButton(
                               onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => Dialog(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(24),
-                                    ),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(24),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          // Başlık
-                                          Row(
-                                            children: [
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.all(12),
-                                                decoration: BoxDecoration(
-                                                  color: AppTheme.primaryColor
-                                                      .withOpacity(0.1),
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                ),
-                                                child: Icon(
-                                                  Icons.shopping_bag_rounded,
-                                                  color: AppTheme.primaryColor,
-                                                  size: 24,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 16),
-                                              const Expanded(
-                                                child: Text(
-                                                  'Sipariş Özeti',
-                                                  style: TextStyle(
-                                                    fontSize: 24,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ),
-                                              IconButton(
-                                                onPressed: () =>
-                                                    Navigator.pop(context),
-                                                icon: const Icon(Icons.close),
-                                                color: Colors.grey[600],
-                                              ),
-                                            ],
-                                          ),
-                                          const Divider(height: 32),
-
-                                          // Firma ve Ürün Listesi
-                                          Container(
-                                            constraints: BoxConstraints(
-                                              maxHeight: MediaQuery.of(context)
-                                                      .size
-                                                      .height *
-                                                  0.4,
-                                            ),
-                                            child: SingleChildScrollView(
-                                              child: Column(
-                                                children:
-                                                    _groupItemsByCompany(cart
-                                                            .items.values
-                                                            .toList())
-                                                        .map(
-                                                            (companyGroup) =>
-                                                                Container(
-                                                                  margin:
-                                                                      const EdgeInsets
-                                                                          .only(
-                                                                          bottom:
-                                                                              16),
-                                                                  padding:
-                                                                      const EdgeInsets
-                                                                          .all(
-                                                                          16),
-                                                                  decoration:
-                                                                      BoxDecoration(
-                                                                    color: Colors
-                                                                        .grey[50],
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
-                                                                            16),
-                                                                  ),
-                                                                  child: Column(
-                                                                    crossAxisAlignment:
-                                                                        CrossAxisAlignment
-                                                                            .start,
-                                                                    children: [
-                                                                      // Firma Adı
-                                                                      Text(
-                                                                        companyGroup
-                                                                            .companyName,
-                                                                        style:
-                                                                            const TextStyle(
-                                                                          fontSize:
-                                                                              18,
-                                                                          fontWeight:
-                                                                              FontWeight.w600,
-                                                                        ),
-                                                                      ),
-                                                                      const SizedBox(
-                                                                          height:
-                                                                              12),
-                                                                      // Ürünler
-                                                                      ...companyGroup
-                                                                          .items
-                                                                          .map((item) =>
-                                                                              Padding(
-                                                                                padding: const EdgeInsets.only(bottom: 8),
-                                                                                child: Row(
-                                                                                  children: [
-                                                                                    Text(
-                                                                                      '${item.quantity}x',
-                                                                                      style: TextStyle(
-                                                                                        fontSize: 16,
-                                                                                        fontWeight: FontWeight.w600,
-                                                                                        color: AppTheme.primaryColor,
-                                                                                      ),
-                                                                                    ),
-                                                                                    const SizedBox(width: 8),
-                                                                                    Expanded(
-                                                                                      child: Text(
-                                                                                        item.product.name,
-                                                                                        style: const TextStyle(fontSize: 16),
-                                                                                      ),
-                                                                                    ),
-                                                                                    Text(
-                                                                                      '₺${(item.product.price * item.quantity).toStringAsFixed(2)}',
-                                                                                      style: const TextStyle(
-                                                                                        fontSize: 16,
-                                                                                        fontWeight: FontWeight.w600,
-                                                                                      ),
-                                                                                    ),
-                                                                                  ],
-                                                                                ),
-                                                                              )),
-                                                                      const Divider(),
-                                                                      // Firma Toplamı
-                                                                      Row(
-                                                                        mainAxisAlignment:
-                                                                            MainAxisAlignment.end,
-                                                                        children: [
-                                                                          Text(
-                                                                            'Toplam: ₺${_calculateCompanyTotal(companyGroup.items).toStringAsFixed(2)}',
-                                                                            style:
-                                                                                TextStyle(
-                                                                              fontSize: 16,
-                                                                              fontWeight: FontWeight.w600,
-                                                                              color: AppTheme.primaryColor,
-                                                                            ),
-                                                                          ),
-                                                                        ],
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                ))
-                                                        .toList(),
-                                              ),
-                                            ),
-                                          ),
-
-                                          const Divider(height: 32),
-
-                                          // Genel Toplam
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              const Text(
-                                                'Genel Toplam',
-                                                style: TextStyle(
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              Text(
-                                                '₺${cart.totalAmount.toStringAsFixed(2)}',
-                                                style: TextStyle(
-                                                  fontSize: 24,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: AppTheme.primaryColor,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 24),
-
-                                          // Onay Butonu
-                                          SizedBox(
-                                            width: double.infinity,
-                                            height: 56,
-                                            child: ElevatedButton(
-                                              onPressed: () {
-                                                // TODO: Sipariş onaylama işlemleri
-                                                Navigator.pop(context);
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
-                                                  SnackBar(
-                                                    content: const Text(
-                                                        'Siparişiniz başarıyla alındı!'),
-                                                    backgroundColor:
-                                                        Colors.green,
-                                                    behavior: SnackBarBehavior
-                                                        .floating,
-                                                    shape:
-                                                        RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              12),
-                                                    ),
-                                                  ),
-                                                );
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                    AppTheme.primaryColor,
-                                                foregroundColor: Colors.white,
-                                                elevation: 0,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(16),
-                                                ),
-                                              ),
-                                              child: const Text(
-                                                'Siparişi Onayla',
-                                                style: TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                );
+                                _confirmOrder(context, cart);
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.primaryColor,
@@ -874,7 +642,7 @@ class CartScreen extends StatelessWidget {
                                 ),
                               ),
                               child: const Text(
-                                'Sipariş Ver',
+                                'Siparişi Onayla',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w600,
@@ -938,5 +706,383 @@ class CartScreen extends StatelessWidget {
       ),
       onPressed: onPressed,
     );
+  }
+
+  void _confirmOrder(BuildContext context, CartProvider cart) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Başlık
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.shopping_bag_rounded,
+                      color: AppTheme.primaryColor,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Text(
+                      'Sipariş Özeti',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                    color: Colors.grey[600],
+                  ),
+                ],
+              ),
+              const Divider(height: 32),
+
+              // Firma ve Ürün Listesi
+              Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.4,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: _groupItemsByCompany(cart.items.values.toList())
+                        .map((companyGroup) => Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Firma Adı
+                                  Text(
+                                    companyGroup.companyName,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  // Ürünler
+                                  ...companyGroup.items.map((item) => Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 8),
+                                        child: Row(
+                                          children: [
+                                            Text(
+                                              '${item.quantity}x',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppTheme.primaryColor,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                item.product.name,
+                                                style: const TextStyle(
+                                                    fontSize: 16),
+                                              ),
+                                            ),
+                                            Text(
+                                              '₺${(item.product.price * item.quantity).toStringAsFixed(2)}',
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )),
+                                  const Divider(),
+                                  // Firma Toplamı
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        'Toplam: ₺${_calculateCompanyTotal(companyGroup.items).toStringAsFixed(2)}',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ))
+                        .toList(),
+                  ),
+                ),
+              ),
+
+              const Divider(height: 32),
+
+              // Genel Toplam
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Genel Toplam',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '₺${cart.totalAmount.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Onay Butonu
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: () {
+                    _saveOrderToDatabase(context, cart);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: const Text(
+                    'Siparişi Onayla',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _saveOrderToDatabase(BuildContext context, CartProvider cart) async {
+    try {
+      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+
+      // Sepetteki ürünleri firma bazında grupla
+      final companyGroups = _groupItemsByCompany(cart.items.values.toList());
+
+      // Oluşturulan siparişleri tutacak liste
+      List<order_models.Order> createdOrders = [];
+
+      // Her firma için ayrı sipariş oluştur
+      for (final companyGroup in companyGroups) {
+        // Gerçek kullanıcı bilgilerini al (şimdilik sabit, gerçek uygulamada AuthProvider'dan gelecek)
+        final customer = order_models.Customer(
+          name: 'Müşteri → ${companyGroup.companyName}', // Firma bilgisi dahil
+          phoneNumber: '0555 123 45 67', // Gerçek telefon numarası
+          email: 'musteri@oyunlab.com', // Gerçek email
+          address: 'İstanbul, Türkiye', // Gerçek adres
+        );
+
+        // Sipariş öğelerini oluştur
+        final orderItems = companyGroup.items.map((cartItem) {
+          // Cart Product'ını Order Product'ına dönüştür
+          final orderProduct = order_models.Product(
+            id: cartItem.product.id,
+            name: cartItem.product.name,
+            price: cartItem.product.price,
+            category: cartItem.product.category,
+            description: cartItem.product.description,
+            imageUrl: cartItem.product.imageUrl,
+          );
+
+          return order_models.OrderItem(
+            product: orderProduct,
+            quantity: cartItem.quantity,
+          );
+        }).toList();
+
+        // Teslimat tarihi (varsayılan olarak yarın)
+        final deliveryDate = DateTime.now().add(const Duration(days: 1));
+
+        // Sipariş oluştur
+        final order = order_models.Order(
+          customer: customer,
+          items: orderItems,
+          orderDate: DateTime.now(),
+          deliveryDate: deliveryDate,
+          status: order_models.OrderStatus.waiting,
+          paymentStatus: order_models.PaymentStatus.pending,
+          note:
+              'Müşteri siparişi - ${companyGroup.companyName} firmasından', // Firma bilgisi dahil not
+        );
+
+        // Debug: Sipariş bilgilerini yazdır
+        print('🔍 Sipariş Oluşturuldu:');
+        print('   Müşteri: ${customer.name}');
+        print('   Email: ${customer.email}');
+        print('   Adres: ${customer.address}');
+        print('   Telefon: ${customer.phoneNumber}');
+        print('   Firma: ${companyGroup.companyName}');
+        print('   Ürün sayısı: ${orderItems.length}');
+        print('   Toplam tutar: ₺${order.totalAmount}');
+
+        // Siparişi listeye ekle
+        createdOrders.add(order);
+
+        // ✅ Firebase listener otomatik olarak siparişleri güncelleyecek
+        print('🔥 Firebase listener siparişleri otomatik güncelleyecek');
+      }
+
+      // 🔥 TÜM SİPARİŞLERİ FİREBASE'E KAYDET 🔥
+      bool firebaseSaveSuccess =
+          await OrderService.saveMultipleOrders(createdOrders);
+
+      if (!firebaseSaveSuccess) {
+        throw Exception('Firebase kaydetme işlemi başarısız');
+      }
+
+      // Sepeti temizle
+      cart.clearCart();
+
+      // Dialog'u kapat
+      Navigator.pop(context);
+
+      // Başarı mesajı göster
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.check_circle_outline,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${companyGroups.length} adet sipariş alındı! 🎉',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const Text(
+                      'Siparişleriniz işleme alınmıştır',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+
+      // Ana sayfaya dön
+      Navigator.pop(context);
+    } catch (e) {
+      // Hata durumunda kullanıcıya bilgi ver
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.error_outline,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Sipariş alınamadı',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      'Lütfen tekrar deneyiniz',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 }
