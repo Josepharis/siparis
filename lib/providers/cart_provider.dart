@@ -56,4 +56,10 @@ class CartProvider with ChangeNotifier {
     _items.clear();
     notifyListeners();
   }
+
+  // Sepeti temizle
+  void clearCart() {
+    _items.clear();
+    notifyListeners();
+  }
 }
