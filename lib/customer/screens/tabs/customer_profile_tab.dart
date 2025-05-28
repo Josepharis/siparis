@@ -511,16 +511,50 @@ class _CustomerProfileTabState extends State<CustomerProfileTab>
   Widget _buildContactInfo(UserModel? user) {
     return Column(
       children: [
+        // E-posta
         _buildContactItem(
           Icons.email_outlined,
           user?.email ?? '',
           'E-posta adresiniz',
         ),
         const SizedBox(height: 16),
+
+        // Telefon
         _buildContactItem(
           Icons.phone_outlined,
-          user?.phone ?? '',
+          user?.phone ?? 'Telefon numarası belirtilmemiş',
           'Telefon numaranız',
+        ),
+
+        // Firma adı (varsa)
+        if (user?.companyName != null && user!.companyName!.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _buildContactItem(
+            Icons.business_outlined,
+            user.companyName!,
+            'Firma adınız',
+          ),
+        ],
+
+        // Firma adresi (varsa)
+        if (user?.companyAddress != null &&
+            user!.companyAddress!.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _buildContactItem(
+            Icons.location_on_outlined,
+            user.companyAddress!,
+            'Firma adresiniz',
+          ),
+        ],
+
+        // Kullanıcı rolü
+        const SizedBox(height: 16),
+        _buildContactItem(
+          user?.isProducer == true
+              ? Icons.factory_outlined
+              : Icons.store_outlined,
+          user?.isProducer == true ? 'Üretici' : 'Müşteri',
+          'Hesap türünüz',
         ),
       ],
     );

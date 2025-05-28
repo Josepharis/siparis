@@ -45,6 +45,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_formKey.currentState!.validate() && _acceptTerms) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
+      // Seçilen role göre string değer belirle
+      String roleString =
+          _selectedRole == UserRole.producer ? 'producer' : 'customer';
+
       final success = await authProvider.register(
         email: _emailController.text.trim(),
         password: _passwordController.text,
@@ -52,6 +56,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         phone: _phoneController.text.trim().isNotEmpty
             ? _phoneController.text.trim()
             : null,
+        companyName: _companyNameController.text.trim().isNotEmpty
+            ? _companyNameController.text.trim()
+            : null,
+        companyAddress: _companyAddressController.text.trim().isNotEmpty
+            ? _companyAddressController.text.trim()
+            : null,
+        role: roleString,
       );
 
       if (success && mounted) {

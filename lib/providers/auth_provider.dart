@@ -41,6 +41,9 @@ class AuthProvider with ChangeNotifier {
     required String password,
     required String name,
     String? phone,
+    String? companyName,
+    String? companyAddress,
+    required String role,
   }) async {
     _setLoading(true);
     _clearError();
@@ -51,6 +54,9 @@ class AuthProvider with ChangeNotifier {
         password: password,
         name: name,
         phone: phone,
+        companyName: companyName,
+        companyAddress: companyAddress,
+        role: role,
       );
 
       _setLoading(false);

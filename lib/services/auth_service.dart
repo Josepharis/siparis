@@ -18,6 +18,9 @@ class AuthService {
     required String password,
     required String name,
     String? phone,
+    String? companyName,
+    String? companyAddress,
+    required String role,
   }) async {
     try {
       // Firebase Auth'da kullanıcı oluştur
@@ -35,7 +38,11 @@ class AuthService {
           email: email,
           name: name,
           phone: phone,
+          companyName: companyName,
+          companyAddress: companyAddress,
+          role: role,
           createdAt: DateTime.now(),
+          isActive: true,
         );
 
         await _firestore
