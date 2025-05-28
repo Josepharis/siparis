@@ -633,12 +633,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           icon: Container(
                             width: 24,
                             height: 24,
-                            decoration: const BoxDecoration(
-                              image: DecorationImage(
-                                image: NetworkImage(
-                                  'https://developers.google.com/identity/images/g-logo.png',
-                                ),
-                              ),
+                            decoration: BoxDecoration(
+                              color: Colors.red[600],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Icon(
+                              Icons.g_mobiledata,
+                              color: Colors.white,
+                              size: 20,
                             ),
                           ),
                           label: Text(
