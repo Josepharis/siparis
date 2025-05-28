@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:siparis/config/theme.dart';
 import 'package:siparis/screens/auth/login_screen.dart';
+import 'package:siparis/customer/screens/customer_home_screen.dart';
+import 'package:siparis/providers/auth_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -59,14 +62,32 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Ana ekrana geçiş için zamanlayıcı
-    Future.delayed(const Duration(seconds: 3), () {
+    // Auth durumunu kontrol et ve yönlendir
+    _checkAuthAndNavigate();
+  }
+
+  Future<void> _checkAuthAndNavigate() async {
+    // Animasyonun tamamlanmasını bekle
+    await Future.delayed(const Duration(seconds: 3));
+
+    if (!mounted) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // Kullanıcı oturum açmışsa ana sayfaya, değilse login sayfasına yönlendir
+    if (authProvider.isAuthenticated) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const CustomerHomeScreen(),
+        ),
+      );
+    } else {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => const LoginScreen(),
         ),
       );
-    });
+    }
   }
 
   @override

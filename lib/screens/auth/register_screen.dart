@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:siparis/customer/screens/customer_home_screen.dart';
 import 'package:siparis/config/theme.dart';
+import 'package:siparis/providers/auth_provider.dart';
 
 enum UserRole { producer, customer }
 
@@ -24,7 +26,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
-  bool _isLoading = false;
   bool _acceptTerms = false;
   UserRole _selectedRole = UserRole.customer;
 
@@ -42,30 +43,63 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _register() async {
     if (_formKey.currentState!.validate() && _acceptTerms) {
-      setState(() {
-        _isLoading = true;
-      });
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-      // Simüle edilmiş kayıt işlemi
-      await Future.delayed(const Duration(seconds: 2));
+      final success = await authProvider.register(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        name: _nameController.text.trim(),
+        phone: _phoneController.text.trim().isNotEmpty
+            ? _phoneController.text.trim()
+            : null,
+      );
 
-      setState(() {
-        _isLoading = false;
-      });
-
-      // Ana ekrana yönlendir
-      if (mounted) {
+      if (success && mounted) {
+        // Başarılı kayıt - ana sayfaya yönlendir
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => const CustomerHomeScreen(),
+          ),
+        );
+
+        // Başarı mesajı göster
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Hesabınız başarıyla oluşturuldu!',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      } else if (mounted) {
+        // Hata durumunda snackbar göster
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              authProvider.errorMessage ?? 'Kayıt olurken bir hata oluştu',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
     } else if (!_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Kullanım şartlarını kabul etmelisiniz'),
-          backgroundColor: Colors.red.shade400,
+          content: Text(
+            'Kullanım şartlarını kabul etmelisiniz',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -588,58 +622,66 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               SizedBox(height: isSmallScreen ? 16 : 20),
 
                               // Kayıt ol butonu - Responsive
-                              Container(
-                                width: double.infinity,
-                                height: isSmallScreen ? 48 : 56,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      AppTheme.primaryColor,
-                                      const Color(0xFF0D47A1),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppTheme.primaryColor
-                                          .withOpacity(0.3),
-                                      spreadRadius: 1,
-                                      blurRadius: 15,
-                                      offset: const Offset(0, 8),
-                                    ),
-                                  ],
-                                ),
-                                child: ElevatedButton(
-                                  onPressed: _isLoading ? null : _register,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    foregroundColor: Colors.white,
-                                    shadowColor: Colors.transparent,
-                                    shape: RoundedRectangleBorder(
+                              Consumer<AuthProvider>(
+                                builder: (context, authProvider, child) {
+                                  return Container(
+                                    width: double.infinity,
+                                    height: isSmallScreen ? 48 : 56,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          AppTheme.primaryColor,
+                                          const Color(0xFF0D47A1),
+                                        ],
+                                      ),
                                       borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    elevation: 0,
-                                  ),
-                                  child: _isLoading
-                                      ? SizedBox(
-                                          width: isSmallScreen ? 20 : 24,
-                                          height: isSmallScreen ? 20 : 24,
-                                          child:
-                                              const CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : Text(
-                                          'Kayıt Ol',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: isSmallScreen ? 16 : 18,
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppTheme.primaryColor
+                                              .withOpacity(0.3),
+                                          spreadRadius: 1,
+                                          blurRadius: 15,
+                                          offset: const Offset(0, 8),
                                         ),
-                                ),
+                                      ],
+                                    ),
+                                    child: ElevatedButton(
+                                      onPressed: authProvider.isLoading
+                                          ? null
+                                          : _register,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        foregroundColor: Colors.white,
+                                        shadowColor: Colors.transparent,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                        ),
+                                        elevation: 0,
+                                      ),
+                                      child: authProvider.isLoading
+                                          ? SizedBox(
+                                              width: isSmallScreen ? 20 : 24,
+                                              height: isSmallScreen ? 20 : 24,
+                                              child:
+                                                  const CircularProgressIndicator(
+                                                color: Colors.white,
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : Text(
+                                              'Kayıt Ol',
+                                              style: GoogleFonts.poppins(
+                                                fontSize:
+                                                    isSmallScreen ? 16 : 18,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                    ),
+                                  );
+                                },
                               ),
 
                               SizedBox(height: isSmallScreen ? 16 : 20),

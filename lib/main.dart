@@ -7,6 +7,7 @@ import 'firebase_options.dart';
 import 'package:siparis/config/theme.dart';
 import 'package:siparis/models/order.dart';
 import 'package:siparis/providers/order_provider.dart';
+import 'package:siparis/providers/auth_provider.dart';
 import 'package:siparis/screens/home/home_screen.dart';
 import 'package:siparis/screens/splash_screen.dart';
 import 'package:siparis/screens/budget_screen.dart';
@@ -48,6 +49,7 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
         ChangeNotifierProvider(create: (_) => StockProvider()),
         ChangeNotifierProvider(create: (_) => CompanyProvider()),

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:siparis/config/theme.dart';
+import 'package:siparis/providers/auth_provider.dart';
+import 'package:siparis/screens/auth/login_screen.dart';
+import 'package:siparis/models/user_model.dart';
 import 'dart:ui';
 import 'package:flutter/services.dart';
 
@@ -313,78 +317,84 @@ class _CustomerProfileTabState extends State<CustomerProfileTab>
   }
 
   Widget _buildProfileCard() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(32),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 20,
-              spreadRadius: 10,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            // Dekoratif arka plan
-            Positioned(
-              right: -30,
-              top: -30,
-              child: Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppTheme.primaryColor.withOpacity(0.1),
-                      AppTheme.primaryColor.withOpacity(0.05),
-                    ],
-                  ),
-                  shape: BoxShape.circle,
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        final user = authProvider.currentUser;
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(32),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 20,
+                  spreadRadius: 10,
+                  offset: const Offset(0, 10),
                 ),
-              ),
+              ],
             ),
-
-            // Ana içerik
-            Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                children: [
-                  // Profil fotoğrafı
-                  _buildProfileImage(),
-                  const SizedBox(height: 24),
-
-                  // İsim ve rozet
-                  Column(
-                    children: [
-                      Text(
-                        _customerName,
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.grey[900],
-                          letterSpacing: -0.5,
-                          height: 1.2,
-                        ),
+            child: Stack(
+              children: [
+                // Dekoratif arka plan
+                Positioned(
+                  right: -30,
+                  top: -30,
+                  child: Container(
+                    width: 150,
+                    height: 150,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppTheme.primaryColor.withOpacity(0.1),
+                          AppTheme.primaryColor.withOpacity(0.05),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      _buildPremiumBadge(),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+
+                // Ana içerik
+                Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    children: [
+                      // Profil fotoğrafı
+                      _buildProfileImage(),
+                      const SizedBox(height: 24),
+
+                      // İsim ve rozet
+                      Column(
+                        children: [
+                          Text(
+                            user?.name ?? 'Kullanıcı',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.grey[900],
+                              letterSpacing: -0.5,
+                              height: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildPremiumBadge(),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+
+                      // İletişim bilgileri
+                      _buildContactInfo(user),
                     ],
                   ),
-                  const SizedBox(height: 32),
-
-                  // İletişim bilgileri
-                  _buildContactInfo(),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -498,18 +508,18 @@ class _CustomerProfileTabState extends State<CustomerProfileTab>
     );
   }
 
-  Widget _buildContactInfo() {
+  Widget _buildContactInfo(UserModel? user) {
     return Column(
       children: [
         _buildContactItem(
           Icons.email_outlined,
-          _customerEmail,
+          user?.email ?? '',
           'E-posta adresiniz',
         ),
         const SizedBox(height: 16),
         _buildContactItem(
           Icons.phone_outlined,
-          _customerPhone,
+          user?.phone ?? '',
           'Telefon numaranız',
         ),
       ],
@@ -1690,68 +1700,100 @@ class _CustomerProfileTabState extends State<CustomerProfileTab>
                     ),
                   ),
                   const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Icon(
-                                  Icons.check_rounded,
+                  Consumer<AuthProvider>(
+                    builder: (context, authProvider, child) {
+                      return ElevatedButton(
+                        onPressed: authProvider.isLoading
+                            ? null
+                            : () async {
+                                Navigator.pop(context);
+
+                                // Çıkış işlemi
+                                await authProvider.signOut();
+
+                                if (mounted) {
+                                  // Login sayfasına yönlendir
+                                  Navigator.of(context).pushAndRemoveUntil(
+                                    MaterialPageRoute(
+                                      builder: (context) => const LoginScreen(),
+                                    ),
+                                    (route) => false,
+                                  );
+
+                                  // Başarı mesajı göster
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  Colors.white.withOpacity(0.2),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(
+                                              Icons.check_rounded,
+                                              color: Colors.white,
+                                              size: 16,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          const Text(
+                                            'Çıkış yapıldı',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      backgroundColor: Colors.green[400],
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      margin: const EdgeInsets.all(24),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 12,
+                                      ),
+                                      duration: const Duration(seconds: 3),
+                                    ),
+                                  );
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[400],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 16,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: authProvider.isLoading
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
                                   color: Colors.white,
-                                  size: 16,
+                                  strokeWidth: 2,
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              const Text(
-                                'Çıkış yapıldı',
+                              )
+                            : const Text(
+                                'Çıkış Yap',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            ],
-                          ),
-                          backgroundColor: Colors.green[400],
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          margin: const EdgeInsets.all(24),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                          duration: const Duration(seconds: 3),
-                        ),
                       );
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red[400],
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 16,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Çıkış Yap',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
                   ),
                 ],
               ),
