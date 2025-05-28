@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:siparis/config/theme.dart';
 import 'package:siparis/screens/auth/login_screen.dart';
 import 'package:siparis/customer/screens/customer_home_screen.dart';
+import 'package:siparis/screens/home/home_screen.dart';
 import 'package:siparis/providers/auth_provider.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -68,11 +69,30 @@ class _SplashScreenState extends State<SplashScreen>
     if (_hasNavigated || !mounted) return;
     _hasNavigated = true;
 
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => const CustomerHomeScreen(),
-      ),
-    );
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.currentUser;
+
+    // Kullanıcı rolüne göre yönlendirme
+    if (user != null) {
+      if (user.isProducer) {
+        // Üretici ise screens/home/home_screen.dart'a git
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const HomeScreen(),
+          ),
+        );
+      } else {
+        // Müşteri ise customer/screens/customer_home_screen.dart'a git
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const CustomerHomeScreen(),
+          ),
+        );
+      }
+    } else {
+      // Kullanıcı bilgisi yoksa login'e yönlendir
+      _navigateToLogin();
+    }
   }
 
   void _navigateToLogin() {

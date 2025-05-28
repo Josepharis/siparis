@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:siparis/customer/screens/customer_home_screen.dart';
+import 'package:siparis/screens/home/home_screen.dart';
 import 'package:siparis/config/theme.dart';
 import 'package:siparis/providers/auth_provider.dart';
 
@@ -66,40 +67,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (success && mounted) {
-        // Başarılı kayıt - ana sayfaya yönlendir
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const CustomerHomeScreen(),
-          ),
-        );
+        final user = authProvider.currentUser;
 
-        // Başarı mesajı göster
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Hesabınız başarıyla oluşturuldu!',
-              style: GoogleFonts.poppins(),
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
+        if (user != null) {
+          if (user.isProducer) {
+            // Üretici ise screens/home/home_screen.dart'a git
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => const HomeScreen(),
+              ),
+            );
+          } else {
+            // Müşteri ise customer/screens/customer_home_screen.dart'a git
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => const CustomerHomeScreen(),
+              ),
+            );
+          }
+        }
       } else if (mounted) {
-        // Hata durumunda snackbar göster
+        // Hata mesajı göster
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              authProvider.errorMessage ?? 'Kayıt olurken bir hata oluştu',
-              style: GoogleFonts.poppins(),
-            ),
+            content: Text(authProvider.errorMessage ?? 'Kayıt başarısız'),
             backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
           ),
         );
       }
