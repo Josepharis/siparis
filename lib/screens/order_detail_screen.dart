@@ -480,6 +480,12 @@ class OrderDetailScreen extends StatelessWidget {
 
   // Müşteri bilgi kartı
   Widget _buildCustomerCard(BuildContext context, Color statusColor) {
+    // Müşteri telefon numarasını al ve temizle
+    String? customerPhone = order.customer.phoneNumber;
+    if (customerPhone != null && customerPhone.isNotEmpty) {
+      customerPhone = _formatPhoneNumber(customerPhone);
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
@@ -511,14 +517,24 @@ class OrderDetailScreen extends StatelessWidget {
 
           const Divider(height: 24),
 
+          // Müşteri Adı
+          _buildInfoRow(
+            icon: Icons.business_rounded,
+            title: 'Firma Adı',
+            value: order.customer.name,
+            color: statusColor,
+          ),
+
           // İletişim Bilgileri
-          if (order.customer.phoneNumber != null)
+          if (customerPhone != null && customerPhone.isNotEmpty) ...[
+            const SizedBox(height: 12),
             _buildInfoRow(
               icon: Icons.phone_rounded,
               title: 'Telefon',
-              value: order.customer.phoneNumber!,
+              value: customerPhone,
               color: Colors.blue,
             ),
+          ],
 
           if (order.customer.email != null) ...[
             const SizedBox(height: 12),
@@ -537,6 +553,62 @@ class OrderDetailScreen extends StatelessWidget {
               title: 'Adres',
               value: order.customer.address!,
               color: Colors.orange,
+            ),
+          ],
+
+          // ✅ Arama ve WhatsApp butonları (telefon varsa)
+          if (customerPhone != null && customerPhone.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                // Arama butonu
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _makePhoneCall(customerPhone!),
+                    icon: const Icon(Icons.call_rounded, size: 18),
+                    label: const Text(
+                      'WP Ara',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade600,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Mesaj butonu
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _sendWhatsAppMessage(customerPhone!),
+                    icon: const Icon(Icons.message_rounded, size: 18),
+                    label: const Text(
+                      'Mesaj',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade600,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ],
@@ -1347,6 +1419,50 @@ class OrderDetailScreen extends StatelessWidget {
           ),
         );
       }
+    }
+  }
+
+  // Müşteri telefon numarasını temizleme metodu
+  String? _formatPhoneNumber(String phoneNumber) {
+    // Telefon numarasını temizleme işlemleri
+    String cleanedNumber = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+
+    // Türkiye için +90 ekleme kontrolü
+    if (cleanedNumber.startsWith('0')) {
+      cleanedNumber = '90${cleanedNumber.substring(1)}';
+    } else if (!cleanedNumber.startsWith('90')) {
+      cleanedNumber = '90$cleanedNumber';
+    }
+
+    return cleanedNumber;
+  }
+
+  // Müşteriye WhatsApp mesajı gönderme metodu
+  Future<void> _sendWhatsAppMessage(String phoneNumber) async {
+    // Telefon numarasını temizleme işlemleri
+    String cleanedNumber = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+
+    // Türkiye için +90 ekleme kontrolü
+    if (cleanedNumber.startsWith('0')) {
+      cleanedNumber = '90${cleanedNumber.substring(1)}';
+    } else if (!cleanedNumber.startsWith('90')) {
+      cleanedNumber = '90$cleanedNumber';
+    }
+
+    final String message = 'Merhaba, sipariş konusunda bilgi almak istiyorum.';
+    final Uri whatsappUri = Uri.parse(
+        'https://wa.me/$cleanedNumber?text=${Uri.encodeComponent(message)}');
+
+    try {
+      if (await canLaunchUrl(whatsappUri)) {
+        await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+      } else {
+        // WhatsApp yüklü değilse tarayıcıda açmaya çalış
+        await launchUrl(whatsappUri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      // Context hatası için genel bir mesaj
+      print('WhatsApp mesajı gönderilemedi: $e');
     }
   }
 }
