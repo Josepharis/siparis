@@ -22,12 +22,19 @@ class OrderListItem extends StatelessWidget {
     final formatter = DateFormat('HH:mm');
     final deliveryTime = formatter.format(order.deliveryDate);
 
-    // Teslimat tarihinden kalan gün hesabı
-    final int daysLeft = order.deliveryDate.difference(DateTime.now()).inDays;
-    final String timeIndicator =
-        daysLeft > 0
-            ? '$daysLeft gün'
-            : daysLeft == 0
+    // Teslimat tarihinden kalan gün hesabı - DÜZELTME
+    final now = DateTime.now();
+    final deliveryDate = order.deliveryDate;
+
+    // Sadece tarih kısmını karşılaştır (saat bilgisini yok say)
+    final today = DateTime(now.year, now.month, now.day);
+    final orderDeliveryDate =
+        DateTime(deliveryDate.year, deliveryDate.month, deliveryDate.day);
+
+    final int daysLeft = orderDeliveryDate.difference(today).inDays;
+    final String timeIndicator = daysLeft > 0
+        ? '$daysLeft gün'
+        : daysLeft == 0
             ? 'Bugün'
             : '${daysLeft.abs()} gün geçti';
     final bool isUrgent =
@@ -54,27 +61,26 @@ class OrderListItem extends StatelessWidget {
       ),
       child: Material(
         color: Colors.transparent,
-      child: InkWell(
-        onTap:
-            onTap ??
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => OrderDetailScreen(order: order),
-                ),
-              );
-            },
-        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap ??
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OrderDetailScreen(order: order),
+                  ),
+                );
+              },
+          borderRadius: BorderRadius.circular(12),
           child: Ink(
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: statusColor.withOpacity(0.3), width: 1),
             ),
-          child: Column(
+            child: Column(
               mainAxisSize: MainAxisSize.min,
-            children: [
+              children: [
                 // Üst kısım: Statü barı ve müşteri bilgisi
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -107,9 +113,9 @@ class OrderListItem extends StatelessWidget {
                             order.customer.name.isNotEmpty
                                 ? order.customer.name[0].toUpperCase()
                                 : '?',
-                              style: const TextStyle(
+                            style: const TextStyle(
                               fontSize: 14,
-                                fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
                           ),
@@ -140,12 +146,12 @@ class OrderListItem extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             // Fiyat alanı
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
                                     _getPaymentStatusColor(
@@ -156,7 +162,7 @@ class OrderListItem extends StatelessWidget {
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
-                          borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(8),
                                 boxShadow: [
                                   BoxShadow(
                                     color: _getPaymentStatusColor(
@@ -164,20 +170,20 @@ class OrderListItem extends StatelessWidget {
                                     ).withOpacity(0.2),
                                     blurRadius: 2,
                                     offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
+                                  ),
+                                ],
+                              ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                  Text(
+                                  Text(
                                     '₺${order.totalAmount.toStringAsFixed(0)}',
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                                      fontSize: 12,
                                       color: Colors.white,
-                  ),
-              ),
+                                    ),
+                                  ),
                                   const SizedBox(width: 4),
                                   Icon(
                                     _getPaymentStatusIcon(order.paymentStatus),
@@ -203,7 +209,7 @@ class OrderListItem extends StatelessWidget {
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
-                children: [
+                                  children: [
                                     Icon(
                                       _getStatusIcon(order.status),
                                       color: Colors.white,
@@ -211,24 +217,24 @@ class OrderListItem extends StatelessWidget {
                                     ),
                                     const SizedBox(width: 2),
                                     Flexible(
-                    child: Text(
+                                      child: Text(
                                         statusText,
-                      style: const TextStyle(
-                        color: Colors.white,
+                                        style: const TextStyle(
+                                          color: Colors.white,
                                           fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                   ],
                                 ),
-                          ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
                     ],
                   ),
                 ),
@@ -254,12 +260,11 @@ class OrderListItem extends StatelessWidget {
                                       ? Icons.timer
                                       : Icons.event_available,
                                   size: 14,
-                                  color:
-                                      isUrgent
-                                          ? Colors.red.shade700
-                                          : Colors.blue.shade700,
+                                  color: isUrgent
+                                      ? Colors.red.shade700
+                                      : Colors.blue.shade700,
                                 ),
-                      Text(
+                                Text(
                                   DateFormat(
                                     'd MMM',
                                     'tr_TR',
@@ -268,9 +273,9 @@ class OrderListItem extends StatelessWidget {
                                     color: Colors.grey.shade700,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      Text(
+                                  ),
+                                ),
+                                Text(
                                   deliveryTime,
                                   style: TextStyle(
                                     color: Colors.grey.shade600,
@@ -283,51 +288,47 @@ class OrderListItem extends StatelessWidget {
                                     vertical: 1,
                                   ),
                                   decoration: BoxDecoration(
-                                    color:
-                                        isUrgent
-                                            ? Colors.red.shade50
-                                            : Colors.blue.shade50,
+                                    color: isUrgent
+                                        ? Colors.red.shade50
+                                        : Colors.blue.shade50,
                                     borderRadius: BorderRadius.circular(3),
                                     border: Border.all(
-                                      color:
-                                          isUrgent
-                                              ? Colors.red.shade200
-                                              : Colors.blue.shade200,
+                                      color: isUrgent
+                                          ? Colors.red.shade200
+                                          : Colors.blue.shade200,
                                       width: 1,
                                     ),
                                   ),
                                   child: Text(
                                     timeIndicator,
-                        style: TextStyle(
-                          color:
-                                          isUrgent
-                                              ? Colors.red.shade800
-                                              : Colors.blue.shade800,
+                                    style: TextStyle(
+                                      color: isUrgent
+                                          ? Colors.red.shade800
+                                          : Colors.blue.shade800,
                                       fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                  ),
-                ],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-              ),
+                          ),
 
                           // Durum değiştirme butonları - burada olacak sadece durumu hazır değilse
-              if (order.status != OrderStatus.completed &&
-                  order.status != OrderStatus.cancelled)
+                          if (order.status != OrderStatus.completed &&
+                              order.status != OrderStatus.cancelled)
                             Expanded(
                               flex: 2,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
                                 mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // İptal butonu
+                                children: [
+                                  // İptal butonu
                                   Flexible(
                                     child: OutlinedButton(
-                                      onPressed:
-                                          () => onStatusChanged(
-                                            OrderStatus.cancelled,
-                                          ),
+                                      onPressed: () => onStatusChanged(
+                                        OrderStatus.cancelled,
+                                      ),
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor: Colors.red.shade600,
                                         side: BorderSide(
@@ -346,13 +347,13 @@ class OrderListItem extends StatelessWidget {
                                         minimumSize: const Size(0, 24),
                                         tapTargetSize:
                                             MaterialTapTargetSize.shrinkWrap,
-                        ),
+                                      ),
                                       child: FittedBox(
                                         fit: BoxFit.scaleDown,
                                         child: const Text(
                                           'İptal',
                                           style: TextStyle(fontSize: 11),
-                      ),
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -377,20 +378,17 @@ class OrderListItem extends StatelessWidget {
                                         ],
                                       ),
                                       child: ElevatedButton(
-                        onPressed:
-                            () => onStatusChanged(
-                                              order.status ==
-                                                      OrderStatus.waiting
-                                  ? OrderStatus.processing
-                                  : OrderStatus.completed,
-                            ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                                              order.status ==
-                                                      OrderStatus.waiting
-                                                  ? Colors.orange.shade600
-                                                  : Colors.green.shade600,
-                          foregroundColor: Colors.white,
+                                        onPressed: () => onStatusChanged(
+                                          order.status == OrderStatus.waiting
+                                              ? OrderStatus.processing
+                                              : OrderStatus.completed,
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: order.status ==
+                                                  OrderStatus.waiting
+                                              ? Colors.orange.shade600
+                                              : Colors.green.shade600,
+                                          foregroundColor: Colors.white,
                                           elevation: 0,
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(
@@ -400,17 +398,17 @@ class OrderListItem extends StatelessWidget {
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 4,
                                             vertical: 0,
-                        ),
+                                          ),
                                           minimumSize: const Size(0, 24),
                                           tapTargetSize:
                                               MaterialTapTargetSize.shrinkWrap,
                                         ),
                                         child: FittedBox(
                                           fit: BoxFit.scaleDown,
-                        child: Text(
-                          order.status == OrderStatus.waiting
+                                          child: Text(
+                                            order.status == OrderStatus.waiting
                                                 ? 'Hazırla'
-                              : 'Tamamla',
+                                                : 'Tamamla',
                                             style: const TextStyle(
                                               fontSize: 11,
                                             ),
@@ -465,32 +463,31 @@ class OrderListItem extends StatelessWidget {
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              children:
-                                  order.items.map((item) {
-                                    return Padding(
-                                      padding: const EdgeInsets.only(bottom: 2),
-                                      child: RichText(
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        text: TextSpan(
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.grey.shade800,
-                                          ),
-                                          children: [
-                                            TextSpan(
-                                              text: '${item.quantity}x ',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: statusColor,
-                                              ),
-                                            ),
-                                            TextSpan(text: item.product.name),
-                                          ],
-                                        ),
+                              children: order.items.map((item) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 2),
+                                  child: RichText(
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    text: TextSpan(
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade800,
                                       ),
-                                    );
-                                  }).toList(),
+                                      children: [
+                                        TextSpan(
+                                          text: '${item.quantity}x ',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: statusColor,
+                                          ),
+                                        ),
+                                        TextSpan(text: item.product.name),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
                             ),
                           ),
                         ],
@@ -498,7 +495,7 @@ class OrderListItem extends StatelessWidget {
                     ],
                   ),
                 ),
-            ],
+              ],
             ),
           ),
         ),

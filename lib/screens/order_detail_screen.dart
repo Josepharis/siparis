@@ -175,8 +175,12 @@ class OrderDetailScreen extends StatelessWidget {
                   radius: 24,
                   backgroundColor: statusColor.withOpacity(0.2),
                   child: Text(
-                    order.customer.name.isNotEmpty
-                        ? order.customer.name[0].toUpperCase()
+                    order.customer.name
+                            .replaceFirst('Müşteri → ', '')
+                            .isNotEmpty
+                        ? order.customer.name
+                            .replaceFirst('Müşteri → ', '')[0]
+                            .toUpperCase()
                         : '?',
                     style: TextStyle(
                       fontSize: 20,
@@ -198,12 +202,32 @@ class OrderDetailScreen extends StatelessWidget {
                       tag: 'order_card_name_${order.id}',
                       child: Material(
                         color: Colors.transparent,
-                        child: Text(
-                          order.customer.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Firma adını çıkar
+                            Text(
+                              order.customer.name
+                                  .replaceFirst('Müşteri → ', ''),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            // Müşteri telefon numarası varsa göster
+                            if (order.customer.phoneNumber != null &&
+                                order.customer.phoneNumber!.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                order.customer.phoneNumber!,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     ),

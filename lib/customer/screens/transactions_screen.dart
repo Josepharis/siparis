@@ -254,6 +254,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
               // Üst Kısım - Firma ve Sipariş Bilgileri
               Row(
                 children: [
+                  
                   // Firma Avatar
                   Container(
                     width: 44,

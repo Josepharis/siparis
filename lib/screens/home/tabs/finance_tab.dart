@@ -46,8 +46,8 @@ class _FinanceTabState extends State<FinanceTab>
                 Text(
                   'Finansal Takip',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: AppTheme.textPrimaryColor,
-                  ),
+                        color: AppTheme.textPrimaryColor,
+                      ),
                 ),
                 const Spacer(),
                 // Tarih filtresi
@@ -67,8 +67,8 @@ class _FinanceTabState extends State<FinanceTab>
                       Text(
                         'Bu Ay',
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppTheme.textPrimaryColor,
-                        ),
+                              color: AppTheme.textPrimaryColor,
+                            ),
                       ),
                       const SizedBox(width: 4),
                       const Icon(Icons.arrow_drop_down, size: 20),
@@ -171,14 +171,12 @@ class _FinanceTabState extends State<FinanceTab>
     }
 
     // Ödenmiş ve ödenmemiş siparişleri grupla
-    final paidOrders =
-        orders
-            .where((order) => order.paymentStatus == PaymentStatus.paid)
-            .toList();
-    final unpaidOrders =
-        orders
-            .where((order) => order.paymentStatus != PaymentStatus.paid)
-            .toList();
+    final paidOrders = orders
+        .where((order) => order.paymentStatus == PaymentStatus.paid)
+        .toList();
+    final unpaidOrders = orders
+        .where((order) => order.paymentStatus != PaymentStatus.paid)
+        .toList();
 
     return DefaultTabController(
       length: 2,
@@ -293,10 +291,9 @@ class _FinanceTabState extends State<FinanceTab>
                   '₺${order.totalAmount.toStringAsFixed(2)}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color:
-                        isUnpaid
-                            ? AppTheme.primaryColor
-                            : AppTheme.successColor,
+                    color: isUnpaid
+                        ? AppTheme.primaryColor
+                        : AppTheme.successColor,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -306,20 +303,18 @@ class _FinanceTabState extends State<FinanceTab>
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color:
-                        isUnpaid
-                            ? Colors.orange.shade100
-                            : Colors.green.shade100,
+                    color: isUnpaid
+                        ? Colors.orange.shade100
+                        : Colors.green.shade100,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     isUnpaid ? 'Ödenmedi' : 'Tamamlandı',
                     style: TextStyle(
                       fontSize: 12,
-                      color:
-                          isUnpaid
-                              ? Colors.orange.shade800
-                              : Colors.green.shade800,
+                      color: isUnpaid
+                          ? Colors.orange.shade800
+                          : Colors.green.shade800,
                     ),
                   ),
                 ),

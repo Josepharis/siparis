@@ -4,6 +4,11 @@ import 'package:siparis/models/order.dart';
 import 'package:provider/provider.dart';
 import 'package:siparis/providers/order_provider.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final DailyProductSummary product;
@@ -280,6 +285,280 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       default:
         return null;
     }
+  }
+
+  // WhatsApp mesaj gönderme
+  Future<void> _sendWhatsAppMessage(
+      String firmaAdi, String telefon, int adet) async {
+    // Telefon numarasını temizle (sadece rakamlar)
+    final cleanPhone = telefon.replaceAll(RegExp(r'[^\d]'), '');
+
+    // Mesaj içeriği
+    final message = 'Merhaba $firmaAdi,\n\n'
+        '${widget.product.productName} ürününüz için $adet adetlik siparişiniz hazırlanıyor.\n\n'
+        'Teslimat tarihi: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}\n\n'
+        'Teşekkürler.';
+
+    // Farklı WhatsApp URL formatlarını dene
+    final List<Map<String, String>> whatsappUrls = [
+      {
+        'url':
+            'whatsapp://send?phone=$cleanPhone&text=${Uri.encodeComponent(message)}',
+        'name': 'WhatsApp Native'
+      },
+      {
+        'url':
+            'https://api.whatsapp.com/send?phone=$cleanPhone&text=${Uri.encodeComponent(message)}',
+        'name': 'WhatsApp API'
+      },
+      {
+        'url': 'https://wa.me/$cleanPhone?text=${Uri.encodeComponent(message)}',
+        'name': 'WhatsApp Web'
+      },
+    ];
+
+    bool success = false;
+    String lastError = '';
+
+    for (var urlData in whatsappUrls) {
+      try {
+        final uri = Uri.parse(urlData['url']!);
+        print('Deneniyor: ${urlData['name']} - ${urlData['url']}');
+
+        if (await canLaunchUrl(uri)) {
+          print('${urlData['name']} destekleniyor, açılıyor...');
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          success = true;
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${urlData['name']} ile açıldı'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+          break;
+        } else {
+          print('${urlData['name']} desteklenmiyor');
+          lastError = '${urlData['name']} desteklenmiyor';
+        }
+      } catch (e) {
+        print('${urlData['name']} hatası: $e');
+        lastError = '${urlData['name']} hatası: $e';
+        continue;
+      }
+    }
+
+    if (!success && mounted) {
+      print('Hiçbir WhatsApp URL\'i çalışmadı. Son hata: $lastError');
+      // Hiçbir URL çalışmadıysa, kopyalama seçeneği sun
+      _showWhatsAppFallbackDialog(firmaAdi, cleanPhone, message, lastError);
+    }
+  }
+
+  // WhatsApp açılamazsa alternatif dialog
+  void _showWhatsAppFallbackDialog(
+      String firmaAdi, String telefon, String message, String error) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('WhatsApp Açılamadı'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('$firmaAdi ile iletişim kurmak için:'),
+            const SizedBox(height: 8),
+            if (error.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'Hata: $error',
+                  style: TextStyle(fontSize: 11, color: Colors.red[700]),
+                ),
+              ),
+            const SizedBox(height: 16),
+            Text('Telefon: +90$telefon',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            const Text('Mesaj:'),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(message, style: const TextStyle(fontSize: 12)),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'WhatsApp\'ı manuel olarak açıp yukarıdaki numarayı arayabilirsiniz.',
+              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              // Mesajı panoya kopyala
+              Clipboard.setData(ClipboardData(text: message));
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Mesaj panoya kopyalandı'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            child: const Text('Mesajı Kopyala'),
+          ),
+          TextButton(
+            onPressed: () {
+              // Telefon numarasını panoya kopyala
+              Clipboard.setData(ClipboardData(text: '+90$telefon'));
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Telefon numarası panoya kopyalandı'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            child: const Text('Numarayı Kopyala'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tamam'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // WhatsApp arama
+  Future<void> _makeWhatsAppCall(String firmaAdi, String telefon) async {
+    // Telefon numarasını temizle
+    final cleanPhone = telefon.replaceAll(RegExp(r'[^\d]'), '');
+
+    // Farklı WhatsApp arama URL formatlarını dene
+    final List<Map<String, String>> whatsappCallUrls = [
+      {
+        'url': 'whatsapp://call?phone=$cleanPhone',
+        'name': 'WhatsApp Native Call'
+      },
+      {
+        'url': 'whatsapp://send?phone=$cleanPhone',
+        'name': 'WhatsApp Chat (Arama için)'
+      },
+      {'url': 'https://wa.me/$cleanPhone', 'name': 'WhatsApp Web (Arama için)'},
+    ];
+
+    bool success = false;
+    String lastError = '';
+
+    for (var urlData in whatsappCallUrls) {
+      try {
+        final uri = Uri.parse(urlData['url']!);
+        print('Arama deneniyor: ${urlData['name']} - ${urlData['url']}');
+
+        if (await canLaunchUrl(uri)) {
+          print('${urlData['name']} destekleniyor, açılıyor...');
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          success = true;
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content:
+                    Text('$firmaAdi ile WhatsApp üzerinden iletişim kuruluyor'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+          break;
+        } else {
+          print('${urlData['name']} desteklenmiyor');
+          lastError = '${urlData['name']} desteklenmiyor';
+        }
+      } catch (e) {
+        print('${urlData['name']} hatası: $e');
+        lastError = '${urlData['name']} hatası: $e';
+        continue;
+      }
+    }
+
+    if (!success && mounted) {
+      print('Hiçbir WhatsApp arama URL\'i çalışmadı. Son hata: $lastError');
+      // WhatsApp açılamazsa fallback dialog
+      _showWhatsAppCallFallbackDialog(firmaAdi, cleanPhone, lastError);
+    }
+  }
+
+  // WhatsApp arama açılamazsa alternatif dialog
+  void _showWhatsAppCallFallbackDialog(
+      String firmaAdi, String telefon, String error) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('WhatsApp Arama Açılamadı'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('$firmaAdi ile arama yapmak için:'),
+            const SizedBox(height: 8),
+            if (error.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'Hata: $error',
+                  style: TextStyle(fontSize: 11, color: Colors.red[700]),
+                ),
+              ),
+            const SizedBox(height: 16),
+            Text('Telefon: +90$telefon',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            const Text(
+              'WhatsApp\'ı manuel olarak açıp yukarıdaki numarayı arayabilirsiniz.',
+              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              // Telefon numarasını panoya kopyala
+              Clipboard.setData(ClipboardData(text: '+90$telefon'));
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Telefon numarası panoya kopyalandı'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            child: const Text('Numarayı Kopyala'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tamam'),
+          ),
+        ],
+      ),
+    );
   }
 
   // Daha kompakt bilgi kartları - gerçek verilerle düzenlendi
@@ -927,14 +1206,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   children: [
                     if (firma.telefon != null)
                       InkWell(
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                '${firma.firmaAdi} aranıyor: ${firma.telefon}',
-                              ),
-                            ),
-                          );
+                        onTap: () async {
+                          HapticFeedback.lightImpact();
+                          await _makeWhatsAppCall(
+                              firma.firmaAdi, firma.telefon!);
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
@@ -942,23 +1217,28 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
+                            color: Colors.green.shade50,
                             borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.green.shade200,
+                              width: 1,
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                Icons.phone_outlined,
+                                Icons.call,
                                 size: 14,
-                                color: Colors.grey.shade700,
+                                color: Colors.green.shade700,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 'Ara',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey.shade700,
+                                  color: Colors.green.shade700,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ],
@@ -967,14 +1247,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                     const SizedBox(width: 8),
                     InkWell(
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              '${firma.firmaAdi} için mesaj gönderiliyor...',
+                      onTap: () async {
+                        HapticFeedback.lightImpact();
+                        if (firma.telefon != null) {
+                          await _sendWhatsAppMessage(
+                            firma.firmaAdi,
+                            firma.telefon!,
+                            firma.adet,
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Telefon numarası bulunamadı'),
+                              backgroundColor: Colors.orange,
                             ),
-                          ),
-                        );
+                          );
+                        }
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -982,23 +1270,28 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
+                          color: Colors.green.shade50,
                           borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.green.shade200,
+                            width: 1,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Icons.message_outlined,
+                              Icons.chat_bubble_outline,
                               size: 14,
-                              color: Colors.grey.shade700,
+                              color: Colors.green.shade700,
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'Mesaj',
+                              'WhatsApp',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey.shade700,
+                                color: Colors.green.shade700,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
@@ -1008,6 +1301,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     const SizedBox(width: 8),
                     InkWell(
                       onTap: () {
+                        HapticFeedback.lightImpact();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
@@ -1022,8 +1316,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
+                          color: Colors.blue.shade50,
                           borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.blue.shade200,
+                            width: 1,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -1031,14 +1329,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             Icon(
                               Icons.history_outlined,
                               size: 14,
-                              color: Colors.grey.shade700,
+                              color: Colors.blue.shade700,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               'Geçmiş',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey.shade700,
+                                color: Colors.blue.shade700,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],

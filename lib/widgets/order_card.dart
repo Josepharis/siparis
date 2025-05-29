@@ -26,13 +26,15 @@ class OrderCard extends StatelessWidget {
     final dateFormat = DateFormat('d MMM', 'tr_TR');
     final deliveryDate = dateFormat.format(order.deliveryDate);
 
-    // Teslimat tarihinden kalan gün hesabı
+    // Teslimat tarihinden kalan gün hesabı - DÜZELTME
     final now = DateTime.now();
-    final orderDeliveryDate = DateTime(order.deliveryDate.year,
-        order.deliveryDate.month, order.deliveryDate.day);
+    final orderDeliveryDateTime = order.deliveryDate;
 
     // Sadece tarih kısmını karşılaştır (saat bilgisini yok say)
     final today = DateTime(now.year, now.month, now.day);
+    final orderDeliveryDate = DateTime(orderDeliveryDateTime.year,
+        orderDeliveryDateTime.month, orderDeliveryDateTime.day);
+
     final int daysLeft = orderDeliveryDate.difference(today).inDays;
     final String timeIndicator = daysLeft > 0
         ? '$daysLeft gün'

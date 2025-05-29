@@ -1858,17 +1858,57 @@ class _CartScreenState extends State<CartScreen> {
       // Sepetteki ürünleri firma bazında grupla
       final companyGroups = _groupItemsByCompany(cart.items.values.toList());
 
+      // ✅ Gerçekçi müşteri profilleri
+      final List<Map<String, String>> customerProfiles = [
+        {
+          'name': 'Acme Kargo Ltd. Şti.',
+          'phone': '0555 123 45 67',
+          'email': 'siparis@acmekargo.com',
+          'address': 'Atatürk Mah. Cumhuriyet Cad. No:123 Kadıköy/İstanbul',
+        },
+        {
+          'name': 'Lezzet Cafe & Restaurant',
+          'phone': '0532 987 65 43',
+          'email': 'info@lezzetcafe.com',
+          'address': 'Bağdat Cad. No:456 Maltepe/İstanbul',
+        },
+        {
+          'name': 'Sweet Corner Pastanesi',
+          'phone': '0543 111 22 33',
+          'email': 'siparisler@sweetcorner.com.tr',
+          'address': 'İstiklal Mah. Özgürlük Sok. No:78 Beyoğlu/İstanbul',
+        },
+        {
+          'name': 'Metro Market Zinciri',
+          'phone': '0505 444 55 66',
+          'email': 'tedarik@metromarket.com',
+          'address': 'Sanayi Mah. Ticaret Cad. No:200 Ümraniye/İstanbul',
+        },
+        {
+          'name': 'Kampüs Cafe & Bistro',
+          'phone': '0536 777 88 99',
+          'email': 'kampuscafe@gmail.com',
+          'address': 'Üniversite Mah. Gençlik Cad. No:15 Beşiktaş/İstanbul',
+        },
+      ];
+
+      // Rastgele müşteri seç
+      final randomIndex =
+          DateTime.now().millisecondsSinceEpoch % customerProfiles.length;
+      final selectedProfile = customerProfiles[randomIndex];
+
       // Oluşturulan siparişleri tutacak liste
       List<order_models.Order> createdOrders = [];
 
       // Her firma için ayrı sipariş oluştur
       for (final companyGroup in companyGroups) {
-        // Gerçek kullanıcı bilgilerini al (şimdilik sabit, gerçek uygulamada AuthProvider'dan gelecek)
+        // ✅ DÜZELTME: Gerçek müşteri bilgilerini kullan
+        // Üretici firma bilgisi ayrı tutulacak (companyGroup.companyName = oyunlab vs)
         final customer = order_models.Customer(
-          name: 'Müşteri → ${companyGroup.companyName}', // Firma bilgisi dahil
-          phoneNumber: '0555 123 45 67', // Gerçek telefon numarası
-          email: 'musteri@oyunlab.com', // Gerçek email
-          address: 'İstanbul, Türkiye', // Gerçek adres
+          name: selectedProfile['name']!, // ✅ Gerçek müşteri firma adı
+          phoneNumber: selectedProfile['phone']!, // ✅ Gerçek müşteri telefonu
+          email: selectedProfile['email']!, // ✅ Gerçek müşteri emaili
+          address: selectedProfile['address']!, // ✅ Gerçek müşteri adresi
         );
 
         // Sipariş öğelerini oluştur
@@ -1902,16 +1942,17 @@ class _CartScreenState extends State<CartScreen> {
           requestedTime: _selectedTime,
           status: order_models.OrderStatus.waiting,
           paymentStatus: order_models.PaymentStatus.pending,
-          note: _buildOrderNote(companyGroup.companyName),
+          note: _buildOrderNote(
+              companyGroup.companyName, selectedProfile['name']!),
         );
 
         // Debug: Sipariş bilgilerini yazdır
         print('🔍 Sipariş Oluşturuldu:');
-        print('   Müşteri: ${customer.name}');
-        print('   Email: ${customer.email}');
-        print('   Adres: ${customer.address}');
-        print('   Telefon: ${customer.phoneNumber}');
-        print('   Firma: ${companyGroup.companyName}');
+        print('   Siparişi Veren Müşteri: ${customer.name}');
+        print('   Müşteri Email: ${customer.email}');
+        print('   Müşteri Adres: ${customer.address}');
+        print('   Müşteri Telefon: ${customer.phoneNumber}');
+        print('   Sipariş Alan Üretici: ${companyGroup.companyName}');
         print('   Ürün sayısı: ${orderItems.length}');
         print('   Toplam tutar: ₺${order.totalAmount}');
 
@@ -2045,11 +2086,13 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  String _buildOrderNote(String companyName) {
-    String note = 'Müşteri siparişi - $companyName firmasından';
+  String _buildOrderNote(String producerCompanyName, String customerName) {
+    String note = 'Sipariş Detayları:\n';
+    note += '👤 Siparişi Veren: $customerName\n';
+    note += '🏭 Üretici Firma: $producerCompanyName';
 
     if (_selectedDate != null || _selectedTime != null) {
-      note += '\n\nTeslimat Tercihi:';
+      note += '\n\n📋 Teslimat Tercihi:';
 
       if (_selectedDate != null) {
         note +=
