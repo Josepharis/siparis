@@ -137,6 +137,8 @@ class Order {
   final List<OrderItem> items;
   final DateTime orderDate;
   final DateTime deliveryDate;
+  final DateTime? requestedDate; // Müşterinin istediği tarih
+  final TimeOfDay? requestedTime; // Müşterinin istediği saat
   final OrderStatus status;
   final PaymentStatus paymentStatus;
   final double totalAmount;
@@ -149,6 +151,8 @@ class Order {
     required this.items,
     required this.orderDate,
     required this.deliveryDate,
+    this.requestedDate,
+    this.requestedTime,
     this.status = OrderStatus.waiting,
     this.paymentStatus = PaymentStatus.pending,
     this.paidAmount,
@@ -169,6 +173,15 @@ class Order {
           .toList(),
       orderDate: DateTime.parse(json['orderDate']),
       deliveryDate: DateTime.parse(json['deliveryDate']),
+      requestedDate: json['requestedDate'] != null
+          ? DateTime.parse(json['requestedDate'])
+          : null,
+      requestedTime: json['requestedTime'] != null
+          ? TimeOfDay(
+              hour: json['requestedTime']['hour'],
+              minute: json['requestedTime']['minute'],
+            )
+          : null,
       status: OrderStatus.values[json['status']],
       paymentStatus: PaymentStatus.values[json['paymentStatus']],
       paidAmount: json['paidAmount']?.toDouble(),
@@ -183,6 +196,13 @@ class Order {
       'items': items.map((item) => item.toJson()).toList(),
       'orderDate': orderDate.toIso8601String(),
       'deliveryDate': deliveryDate.toIso8601String(),
+      'requestedDate': requestedDate?.toIso8601String(),
+      'requestedTime': requestedTime != null
+          ? {
+              'hour': requestedTime!.hour,
+              'minute': requestedTime!.minute,
+            }
+          : null,
       'status': status.index,
       'paymentStatus': paymentStatus.index,
       'totalAmount': totalAmount,

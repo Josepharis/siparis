@@ -19,6 +19,7 @@ class CustomerDashboardTab extends StatefulWidget {
 
 class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
   bool _isLocaleInitialized = false;
+  String _sortOption = 'delivery_asc'; // 'delivery_asc', 'delivery_desc'
 
   @override
   void initState() {
@@ -42,36 +43,46 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
     });
   }
 
+  // Siparişleri sıralama fonksiyonu
+  List<Order> _sortOrders(List<Order> orders) {
+    List<Order> sortedOrders = List.from(orders);
+
+    switch (_sortOption) {
+      case 'delivery_asc':
+        sortedOrders.sort((a, b) => a.deliveryDate.compareTo(b.deliveryDate));
+        break;
+      case 'delivery_desc':
+        sortedOrders.sort((a, b) => b.deliveryDate.compareTo(a.deliveryDate));
+        break;
+    }
+
+    return sortedOrders;
+  }
+
   @override
   Widget build(BuildContext context) {
     final orderProvider = Provider.of<OrderProvider>(context);
 
-    // Müşteri adı - gerçek uygulamada kullanıcı bilgilerinden alınacak
-    const String currentCustomerPrefix =
-        'Müşteri →'; // Müşteri siparişlerinin prefix'i
-
-    // Sadece bu müşterinin siparişlerini filtrele
+    // Müşteri siparişlerini filtrele - "Müşteri →" ile başlayan customer name'leri
     final allOrders = orderProvider.orders;
     final customerOrders = allOrders
-        .where((order) =>
-                order.customer.name.startsWith(currentCustomerPrefix) ||
-                order.note == 'Müşteri siparişi' // Eski siparişler için
-            )
+        .where((order) => order.customer.name.startsWith('Müşteri →'))
         .toList();
 
-    // Müşteri siparişlerini duruma göre ayır
-    final waitingOrders = customerOrders
+    // Müşteri siparişlerini duruma göre ayır ve sırala
+    final waitingOrders = _sortOrders(customerOrders
         .where((order) => order.status == OrderStatus.waiting)
-        .toList();
-    final processingOrders = customerOrders
+        .toList());
+    final processingOrders = _sortOrders(customerOrders
         .where((order) => order.status == OrderStatus.processing)
-        .toList();
-    final completedOrders = customerOrders
+        .toList());
+    final completedOrders = _sortOrders(customerOrders
         .where((order) => order.status == OrderStatus.completed)
-        .toList();
+        .toList());
 
-    // Müşterinin aktif siparişleri
-    final todayActiveOrders = [...waitingOrders, ...processingOrders];
+    // Müşterinin aktif siparişleri (sıralı)
+    final todayActiveOrders =
+        _sortOrders([...waitingOrders, ...processingOrders]);
 
     // Debug: Sipariş sayılarını yazdır
     print('🔍 Müşteri Dashboard Debug:');
@@ -80,6 +91,7 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
     print('   Bekleyen: ${waitingOrders.length}');
     print('   Hazırlanan: ${processingOrders.length}');
     print('   Tamamlanan: ${completedOrders.length}');
+    print('   Sıralama: $_sortOption');
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
@@ -320,6 +332,7 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
                   'Devam Eden Siparişlerim',
                   Icons.pending_actions_rounded,
                   Colors.blue,
+                  showSortOptions: customerOrders.isNotEmpty,
                 ),
               ),
 
@@ -746,7 +759,8 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
     );
   }
 
-  Widget _buildSectionTitle(String title, IconData icon, Color color) {
+  Widget _buildSectionTitle(String title, IconData icon, Color color,
+      {bool showSortOptions = false}) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 24, 16, 12),
       padding: const EdgeInsets.all(16),
@@ -809,11 +823,82 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
               ],
             ),
           ),
-          Icon(
-            Icons.chevron_right_rounded,
-            color: Colors.grey[400],
-            size: 20,
-          ),
+          if (showSortOptions) ...[
+            // Kompakt sıralama dropdown'ı
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppTheme.primaryColor.withOpacity(0.2),
+                ),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _sortOption,
+                  isDense: true,
+                  icon: Icon(
+                    Icons.sort_rounded,
+                    color: AppTheme.primaryColor,
+                    size: 16,
+                  ),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.primaryColor,
+                  ),
+                  dropdownColor: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  elevation: 8,
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        _sortOption = newValue;
+                      });
+                    }
+                  },
+                  items: [
+                    DropdownMenuItem<String>(
+                      value: 'delivery_asc',
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.schedule_rounded,
+                            size: 14,
+                            color: Colors.orange[600],
+                          ),
+                          const SizedBox(width: 6),
+                          const Text('Yakın Teslimat'),
+                        ],
+                      ),
+                    ),
+                    DropdownMenuItem<String>(
+                      value: 'delivery_desc',
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.event_rounded,
+                            size: 14,
+                            color: Colors.purple[600],
+                          ),
+                          const SizedBox(width: 6),
+                          const Text('Uzak Teslimat'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ] else
+            Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.grey[400],
+              size: 20,
+            ),
         ],
       ),
     );

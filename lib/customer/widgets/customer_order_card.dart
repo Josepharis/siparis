@@ -37,19 +37,25 @@ class CustomerOrderCard extends StatelessWidget {
     print('   Çıkarılan firma: $companyName');
     print('   Not: ${order.note}');
 
-    // Saat formatı ve bilgileri
+    // Saat formatı ve bilgileri - Sipariş saati için orderDate kullan
     final timeFormat = DateFormat('HH:mm');
-    final deliveryTime = timeFormat.format(order.deliveryDate);
+    final orderTime = timeFormat.format(order.orderDate); // Sipariş saati
     final dateFormat = DateFormat('d MMM', 'tr_TR');
-    final deliveryDate = dateFormat.format(order.deliveryDate);
+    final orderDateFormatted =
+        dateFormat.format(order.orderDate); // Sipariş tarihi
 
-    // Teslimat tarihinden kalan gün hesabı
-    final int daysLeft = order.deliveryDate.difference(DateTime.now()).inDays;
+    // Teslimat tarihinden kalan gün hesabı - deliveryDate kullan
+    final DateTime today = DateTime.now();
+    final DateTime deliveryDateOnly = DateTime(order.deliveryDate.year,
+        order.deliveryDate.month, order.deliveryDate.day);
+    final DateTime todayOnly = DateTime(today.year, today.month, today.day);
+
+    final int daysLeft = deliveryDateOnly.difference(todayOnly).inDays;
     final String timeIndicator = daysLeft > 0
         ? '$daysLeft gün kaldı'
         : daysLeft == 0
             ? 'Bugün teslim'
-            : '${daysLeft.abs()} gün önce teslim edildi';
+            : '${daysLeft.abs()} gün geçti';
     final bool isUrgent =
         daysLeft <= 1 && order.status != OrderStatus.completed;
 
@@ -111,42 +117,33 @@ class CustomerOrderCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
 
-                      // Sipariş ID ve durum
+                      // Firma adı ve durum (Sipariş numarasını kaldırdım)
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Sipariş #${order.id.length > 8 ? order.id.substring(0, 8) : order.id}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
                             Row(
                               children: [
                                 Icon(
                                   Icons.store_rounded,
-                                  color: Colors.white.withOpacity(0.8),
-                                  size: 12,
+                                  color: Colors.white.withOpacity(0.9),
+                                  size: 14,
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
                                     companyName,
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 4),
                             Text(
                               statusText,
                               style: TextStyle(
@@ -189,24 +186,20 @@ class CustomerOrderCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Teslimat bilgisi
+                      // Sipariş saati bilgisi (Teslimat yerine)
                       Row(
                         children: [
                           Container(
                             width: 36,
                             height: 36,
                             decoration: BoxDecoration(
-                              color: isUrgent
-                                  ? Colors.red.shade50
-                                  : mainColor.withOpacity(0.1),
+                              color: mainColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(
-                              isUrgent
-                                  ? Icons.schedule_rounded
-                                  : Icons.event_rounded,
+                              Icons.access_time_rounded,
                               size: 20,
-                              color: isUrgent ? Colors.red : mainColor,
+                              color: mainColor,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -217,14 +210,14 @@ class CustomerOrderCard extends StatelessWidget {
                                 Row(
                                   children: [
                                     Text(
-                                      'Teslimat: ',
+                                      'Sipariş Saati: ',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.grey[600],
                                       ),
                                     ),
                                     Text(
-                                      '$deliveryDate, $deliveryTime',
+                                      '$orderDateFormatted, $orderTime',
                                       style: TextStyle(
                                         fontWeight: FontWeight.w600,
                                         fontSize: 13,
@@ -267,6 +260,59 @@ class CustomerOrderCard extends StatelessWidget {
                       ),
 
                       const SizedBox(height: 12),
+
+                      // Müşteri Tercihi (tek satırda, kompakt)
+                      if (order.requestedDate != null ||
+                          order.requestedTime != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.blue.shade200,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.schedule_rounded,
+                                size: 14,
+                                color: Colors.blue.shade600,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Müşteri Tercihi: ',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                  color: Colors.blue.shade700,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  [
+                                    if (order.requestedDate != null)
+                                      DateFormat('d MMM', 'tr_TR')
+                                          .format(order.requestedDate!),
+                                    if (order.requestedTime != null)
+                                      '${order.requestedTime!.hour.toString().padLeft(2, '0')}:${order.requestedTime!.minute.toString().padLeft(2, '0')}',
+                                  ].join(' - '),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.blue.shade700,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
 
                       // Sipariş içeriği
                       Container(

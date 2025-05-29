@@ -57,6 +57,11 @@ class OrderDetailScreen extends StatelessWidget {
                   // Sipariş İçeriği (Üstte)
                   _buildOrderItems(context),
 
+                  // Müşteri Tercihi Kartı (Yeni)
+                  if (order.requestedDate != null ||
+                      order.requestedTime != null)
+                    _buildCustomerPreferenceCard(context, statusColor),
+
                   // Müşteri Bilgileri (Altta)
                   _buildCustomerCard(context, statusColor),
 
@@ -301,10 +306,9 @@ class OrderDetailScreen extends StatelessWidget {
           Expanded(
             child: _buildTimelineItem(
               title: 'Teslim Edildi',
-              date:
-                  isCompleted
-                      ? DateFormat('d MMM', 'tr_TR').format(order.deliveryDate)
-                      : '-',
+              date: isCompleted
+                  ? DateFormat('d MMM', 'tr_TR').format(order.deliveryDate)
+                  : '-',
               time: isCompleted ? 'Tamamlandı' : '-',
               isCompleted: isCompleted,
               color: Colors.green,
@@ -349,17 +353,16 @@ class OrderDetailScreen extends StatelessWidget {
             color: isCompleted ? color : Colors.grey[200],
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white, width: 2),
-            boxShadow:
-                isCompleted
-                    ? [
-                      BoxShadow(
-                        color: color.withOpacity(0.3),
-                        blurRadius: 5,
-                        spreadRadius: 0,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                    : null,
+            boxShadow: isCompleted
+                ? [
+                    BoxShadow(
+                      color: color.withOpacity(0.3),
+                      blurRadius: 5,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
           ),
           child: Icon(
             icon,
@@ -690,13 +693,12 @@ class OrderDetailScreen extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             shrinkWrap: true,
             itemCount: order.items.length,
-            separatorBuilder:
-                (context, index) => Divider(
-                  height: 1,
-                  color: Colors.grey[200],
-                  indent: 16,
-                  endIndent: 16,
-                ),
+            separatorBuilder: (context, index) => Divider(
+              height: 1,
+              color: Colors.grey[200],
+              indent: 16,
+              endIndent: 16,
+            ),
             itemBuilder: (context, index) {
               final item = order.items[index];
               final categoryColor = _getCategoryColor(item.product.category);
@@ -968,17 +970,16 @@ class OrderDetailScreen extends StatelessWidget {
   void _showStatusDialog(BuildContext context, Color statusColor) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Sipariş Durumunu Güncelle'),
-            content: const Text('Bu işlev yakında eklenecek.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Tamam'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('Sipariş Durumunu Güncelle'),
+        content: const Text('Bu işlev yakında eklenecek.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tamam'),
           ),
+        ],
+      ),
     );
   }
 
@@ -1012,5 +1013,144 @@ class OrderDetailScreen extends StatelessWidget {
       default:
         return Icons.fastfood;
     }
+  }
+
+  // Müşteri Tercihi Kartı (Yeni)
+  Widget _buildCustomerPreferenceCard(BuildContext context, Color statusColor) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Başlık
+          Row(
+            children: [
+              Icon(Icons.schedule_rounded, size: 18, color: statusColor),
+              const SizedBox(width: 8),
+              const Text(
+                'Müşteri Tercihi',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+
+          const Divider(height: 24),
+
+          // Tarih ve Saat Bilgileri
+          Row(
+            children: [
+              // Tercih edilen tarih
+              if (order.requestedDate != null)
+                Expanded(
+                  child: _buildPreferenceInfoItem(
+                    icon: Icons.calendar_today_rounded,
+                    title: 'Tercih Edilen Tarih',
+                    value: DateFormat('d MMMM yyyy', 'tr_TR')
+                        .format(order.requestedDate!),
+                    color: Colors.blue,
+                  ),
+                ),
+
+              if (order.requestedDate != null && order.requestedTime != null)
+                const SizedBox(width: 16),
+
+              // Tercih edilen saat
+              if (order.requestedTime != null)
+                Expanded(
+                  child: _buildPreferenceInfoItem(
+                    icon: Icons.access_time_rounded,
+                    title: 'Tercih Edilen Saat',
+                    value:
+                        '${order.requestedTime!.hour.toString().padLeft(2, '0')}:${order.requestedTime!.minute.toString().padLeft(2, '0')}',
+                    color: Colors.orange,
+                  ),
+                ),
+            ],
+          ),
+
+          // Bilgi notu
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.amber.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.amber.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: Colors.amber[700]),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Bu bilgiler müşterinin tercihi olup, kesin teslimat zamanı değildir.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.amber[700],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Tercih bilgi öğesi
+  Widget _buildPreferenceInfoItem({
+    required IconData icon,
+    required String title,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(color: color.withOpacity(0.8), fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+              color: Colors.grey[800],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
