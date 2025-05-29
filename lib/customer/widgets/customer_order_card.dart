@@ -20,20 +20,29 @@ class CustomerOrderCard extends StatelessWidget {
 
     // Firma adını çıkar
     String companyName = 'Bilinmeyen Firma';
-    if (order.customer.name.contains('→')) {
+
+    // ✅ Önce yeni producerCompanyName alanını kontrol et
+    if (order.producerCompanyName != null &&
+        order.producerCompanyName!.isNotEmpty) {
+      companyName = order.producerCompanyName!;
+    } else if (order.customer.name.contains('→')) {
       companyName = order.customer.name.split('→').last.trim();
-    } else if (order.note != null && order.note!.contains('firmasından')) {
-      // Note'tan firma adını çıkarmaya çalış
-      final noteWords = order.note!.split(' ');
-      final firmaIndex = noteWords.indexOf('firmasından');
-      if (firmaIndex > 0) {
-        companyName = noteWords[firmaIndex - 1];
+    } else if (order.note != null &&
+        order.note!.contains('🏭 Üretici Firma:')) {
+      // Note'tan üretici firma adını çıkarmaya çalış
+      final noteLines = order.note!.split('\n');
+      for (final line in noteLines) {
+        if (line.contains('🏭 Üretici Firma:')) {
+          companyName = line.split('🏭 Üretici Firma:').last.trim();
+          break;
+        }
       }
     }
 
     // Debug: Firma adı çıkarma işlemini kontrol et
     print('🔍 CustomerOrderCard Debug:');
     print('   Müşteri adı: ${order.customer.name}');
+    print('   Üretici firma adı: ${order.producerCompanyName}');
     print('   Çıkarılan firma: $companyName');
     print('   Not: ${order.note}');
 
@@ -52,9 +61,9 @@ class CustomerOrderCard extends StatelessWidget {
 
     final int daysLeft = deliveryDateOnly.difference(todayOnly).inDays;
     final String timeIndicator = daysLeft > 0
-        ? '$daysLeft gün kaldı'
+        ? '$daysLeft gün'
         : daysLeft == 0
-            ? 'Bugün teslim'
+            ? 'Bugün'
             : '${daysLeft.abs()} gün geçti';
     final bool isUrgent =
         daysLeft <= 1 && order.status != OrderStatus.completed;

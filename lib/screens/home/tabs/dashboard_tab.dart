@@ -930,7 +930,7 @@ class _DashboardTabState extends State<DashboardTab> {
 
     final int daysLeft = orderDeliveryDate.difference(today).inDays;
     final String timeIndicator = daysLeft > 0
-        ? '$daysLeft gün kaldı'
+        ? '$daysLeft gün'
         : daysLeft == 0
             ? 'Bugün'
             : '${daysLeft.abs()} gün geçti';

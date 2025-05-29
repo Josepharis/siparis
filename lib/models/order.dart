@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:siparis/config/theme.dart';
 import 'package:uuid/uuid.dart';
+import 'package:siparis/config/theme.dart';
 
 // Sipariş durumları
 enum OrderStatus { waiting, processing, completed, cancelled }
@@ -144,6 +144,8 @@ class Order {
   final double totalAmount;
   final double? paidAmount;
   final String? note;
+  final String? producerCompanyName; // ✅ Üretici firma adı
+  final String? producerCompanyId; // ✅ Üretici firma ID'si
 
   Order({
     String? id,
@@ -157,6 +159,8 @@ class Order {
     this.paymentStatus = PaymentStatus.pending,
     this.paidAmount,
     this.note,
+    this.producerCompanyName, // ✅ Üretici firma adı
+    this.producerCompanyId, // ✅ Üretici firma ID'si
   })  : id = id ?? const Uuid().v4(),
         totalAmount = items.fold(0, (sum, item) => sum + item.total);
 
@@ -186,6 +190,8 @@ class Order {
       paymentStatus: PaymentStatus.values[json['paymentStatus']],
       paidAmount: json['paidAmount']?.toDouble(),
       note: json['note'],
+      producerCompanyName: json['producerCompanyName'], // ✅ Üretici firma adı
+      producerCompanyId: json['producerCompanyId'], // ✅ Üretici firma ID'si
     );
   }
 
@@ -208,6 +214,8 @@ class Order {
       'totalAmount': totalAmount,
       'paidAmount': paidAmount,
       'note': note,
+      'producerCompanyName': producerCompanyName, // ✅ Üretici firma adı
+      'producerCompanyId': producerCompanyId, // ✅ Üretici firma ID'si
     };
   }
 
@@ -359,4 +367,144 @@ class CompanySummary {
     required this.totalOrders,
     required this.collectionRate,
   });
+}
+
+// Partnerlik Durumları
+enum PartnershipStatus {
+  notPartner, // Partner değil
+  pending, // İstek bekliyor
+  approved, // Onaylandı (Partner)
+  rejected, // Reddedildi
+}
+
+// Partnerlik İsteği
+class PartnershipRequest {
+  final String id;
+  final String customerId; // İstek gönderen müşteri
+  final String companyId; // İstek gönderilen firma
+  final String customerName; // Müşteri adı
+  final String companyName; // Firma adı
+  final String? message; // İstek mesajı
+  final DateTime requestDate; // İstek tarihi
+  final PartnershipStatus status;
+  final String? responseMessage; // Yanıt mesajı
+  final DateTime? responseDate; // Yanıt tarihi
+
+  PartnershipRequest({
+    String? id,
+    required this.customerId,
+    required this.companyId,
+    required this.customerName,
+    required this.companyName,
+    this.message,
+    required this.requestDate,
+    this.status = PartnershipStatus.pending,
+    this.responseMessage,
+    this.responseDate,
+  }) : id = id ?? const Uuid().v4();
+
+  factory PartnershipRequest.fromJson(Map<String, dynamic> json) {
+    return PartnershipRequest(
+      id: json['id'],
+      customerId: json['customerId'],
+      companyId: json['companyId'],
+      customerName: json['customerName'],
+      companyName: json['companyName'],
+      message: json['message'],
+      requestDate: DateTime.parse(json['requestDate']),
+      status: PartnershipStatus.values[json['status']],
+      responseMessage: json['responseMessage'],
+      responseDate: json['responseDate'] != null
+          ? DateTime.parse(json['responseDate'])
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'customerId': customerId,
+      'companyId': companyId,
+      'customerName': customerName,
+      'companyName': companyName,
+      'message': message,
+      'requestDate': requestDate.toIso8601String(),
+      'status': status.index,
+      'responseMessage': responseMessage,
+      'responseDate': responseDate?.toIso8601String(),
+    };
+  }
+
+  // Durum rengini al
+  static Color getStatusColor(PartnershipStatus status) {
+    switch (status) {
+      case PartnershipStatus.notPartner:
+        return Colors.grey;
+      case PartnershipStatus.pending:
+        return Colors.orange;
+      case PartnershipStatus.approved:
+        return Colors.green;
+      case PartnershipStatus.rejected:
+        return Colors.red;
+    }
+  }
+
+  // Durum metnini al
+  static String getStatusText(PartnershipStatus status) {
+    switch (status) {
+      case PartnershipStatus.notPartner:
+        return 'Partner Değil';
+      case PartnershipStatus.pending:
+        return 'İstek Bekliyor';
+      case PartnershipStatus.approved:
+        return 'Partner';
+      case PartnershipStatus.rejected:
+        return 'Reddedildi';
+    }
+  }
+}
+
+// Partnerlik İlişkisi
+class Partnership {
+  final String id;
+  final String customerId; // Müşteri ID
+  final String companyId; // Firma ID
+  final String customerName; // Müşteri adı
+  final String companyName; // Firma adı
+  final DateTime startDate; // Ortaklık başlangıç tarihi
+  final bool isActive; // Aktif mi?
+
+  Partnership({
+    String? id,
+    required this.customerId,
+    required this.companyId,
+    required this.customerName,
+    required this.companyName,
+    required this.startDate,
+    this.isActive = true,
+  }) : id = id ?? const Uuid().v4();
+
+  factory Partnership.fromJson(Map<String, dynamic> json) {
+    return Partnership(
+      id: json['id'],
+      customerId: json['customerId'],
+      companyId: json['companyId'],
+      customerName: json['customerName'],
+      companyName: json['companyName'],
+      startDate: DateTime.parse(json['startDate']),
+      isActive: json['isActive'] ?? true,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'customerId': customerId,
+      'companyId': companyId,
+      'customerName': customerName,
+      'companyName': companyName,
+      'startDate': startDate.toIso8601String(),
+      'isActive': isActive,
+    };
+  }
 }

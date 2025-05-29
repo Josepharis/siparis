@@ -141,6 +141,83 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
+  // Müşteri ödemelerini güncelleme - Sadece Firebase
+  Future<void> processCustomerPayment(
+      String customerId, double paymentAmount) async {
+    print('🔄 Ödeme işlemi başlatıldı: $customerId, Tutar: $paymentAmount');
+
+    // Müşterinin ödenmemiş siparişlerini bul
+    final customerOrders = _orders
+        .where((order) =>
+            order.customer.id == customerId &&
+            order.paymentStatus != PaymentStatus.paid)
+        .toList();
+
+    if (customerOrders.isEmpty) {
+      print('❌ Müşteri için ödenmemiş sipariş bulunamadı: $customerId');
+      return;
+    }
+
+    // Ödeme tutarını dağıt
+    double remainingPayment = paymentAmount;
+    List<Order> ordersToUpdate = [];
+
+    for (final order in customerOrders) {
+      if (remainingPayment <= 0) break;
+
+      final remainingOrderAmount = order.totalAmount - (order.paidAmount ?? 0);
+
+      if (remainingOrderAmount > 0) {
+        final paymentForThisOrder = remainingPayment >= remainingOrderAmount
+            ? remainingOrderAmount
+            : remainingPayment;
+
+        final newPaidAmount = (order.paidAmount ?? 0) + paymentForThisOrder;
+        PaymentStatus newPaymentStatus;
+
+        if (newPaidAmount >= order.totalAmount) {
+          newPaymentStatus = PaymentStatus.paid;
+        } else if (newPaidAmount > 0) {
+          newPaymentStatus = PaymentStatus.partial;
+        } else {
+          newPaymentStatus = PaymentStatus.pending;
+        }
+
+        // Güncellenmiş sipariş oluştur
+        final updatedOrder = Order(
+          id: order.id,
+          customer: order.customer,
+          items: order.items,
+          orderDate: order.orderDate,
+          deliveryDate: order.deliveryDate,
+          requestedDate: order.requestedDate,
+          requestedTime: order.requestedTime,
+          status: order.status,
+          paymentStatus: newPaymentStatus,
+          paidAmount: newPaidAmount,
+          note: order.note,
+        );
+
+        ordersToUpdate.add(updatedOrder);
+        remainingPayment -= paymentForThisOrder;
+
+        print(
+            '📝 Sipariş güncellenecek: ${order.id}, Yeni ödenen: $newPaidAmount, Durum: $newPaymentStatus');
+      }
+    }
+
+    // Sadece Firebase'e kaydet - Firebase listener UI'ı otomatik güncelleyecek
+    try {
+      for (final order in ordersToUpdate) {
+        await OrderService.updateOrder(order);
+      }
+      print('✅ Tüm ödeme güncellemeleri Firebase\'e kaydedildi');
+    } catch (e) {
+      print('❌ Ödeme Firebase\'e kaydedilemedi: $e');
+      throw Exception('Ödeme kaydedilemedi: $e');
+    }
+  }
+
   // Sipariş silme
   void deleteOrder(String orderId) {
     _orders.removeWhere((order) => order.id == orderId);

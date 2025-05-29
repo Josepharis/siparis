@@ -9,6 +9,7 @@ import 'package:siparis/widgets/status_summary_card.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'dart:math';
+import 'package:siparis/providers/auth_provider.dart';
 
 class CustomerDashboardTab extends StatefulWidget {
   const CustomerDashboardTab({super.key});
@@ -62,12 +63,27 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
   @override
   Widget build(BuildContext context) {
     final orderProvider = Provider.of<OrderProvider>(context);
+    final authProvider = Provider.of<AuthProvider>(context);
 
-    // Müşteri siparişlerini filtrele - "Müşteri →" ile başlayan customer name'leri
+    // Oturum açmış kullanıcının firma adını al
+    final currentUser = authProvider.currentUser;
+    final currentUserCompanyName = currentUser?.companyName ?? '';
+
+    // Müşteri siparişlerini filtrele - oturum açmış kullanıcının firma adıyla eşleşenler
     final allOrders = orderProvider.orders;
-    final customerOrders = allOrders
-        .where((order) => order.customer.name.startsWith('Müşteri →'))
-        .toList();
+    List<Order> customerOrders = [];
+
+    if (currentUserCompanyName.isNotEmpty) {
+      // Kullanıcının firma adıyla eşleşen siparişleri bul
+      customerOrders = allOrders
+          .where((order) => order.customer.name == currentUserCompanyName)
+          .toList();
+    } else {
+      // Fallback: Eski sistem için "Müşteri →" ile başlayanları göster
+      customerOrders = allOrders
+          .where((order) => order.customer.name.startsWith('Müşteri →'))
+          .toList();
+    }
 
     // Müşteri siparişlerini duruma göre ayır ve sırala
     final waitingOrders = _sortOrders(customerOrders
@@ -86,6 +102,7 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
 
     // Debug: Sipariş sayılarını yazdır
     print('🔍 Müşteri Dashboard Debug:');
+    print('   Oturum açan kullanıcı firma adı: $currentUserCompanyName');
     print('   Toplam sipariş: ${allOrders.length}');
     print('   Müşteri siparişleri: ${customerOrders.length}');
     print('   Bekleyen: ${waitingOrders.length}');

@@ -4,6 +4,7 @@ import 'package:siparis/config/theme.dart';
 import 'package:siparis/providers/order_provider.dart';
 import 'package:siparis/models/order.dart';
 import 'package:intl/intl.dart';
+import 'package:siparis/providers/auth_provider.dart';
 
 // Firma borç bilgisi sınıfı
 class CompanyDebtInfo {
@@ -157,15 +158,32 @@ class _TransactionsScreenState extends State<TransactionsScreen>
   }
 
   Widget _buildOrdersTab() {
-    return Consumer<OrderProvider>(
-      builder: (context, orderProvider, child) {
-        // Müşteri siparişlerini filtrele (Müşteri → ile başlayanlar)
-        final customerOrders = orderProvider.orders
-            .where((order) => order.customer.name.startsWith('Müşteri →'))
-            .toList();
+    return Consumer2<OrderProvider, AuthProvider>(
+      builder: (context, orderProvider, authProvider, child) {
+        // Oturum açmış kullanıcının firma adını al
+        final currentUser = authProvider.currentUser;
+        final currentUserCompanyName = currentUser?.companyName ?? '';
+
+        // Müşteri siparişlerini filtrele - oturum açmış kullanıcının firma adıyla eşleşenler
+        List<Order> customerOrders = [];
+
+        if (currentUserCompanyName.isNotEmpty) {
+          customerOrders = orderProvider.orders
+              .where((order) => order.customer.name == currentUserCompanyName)
+              .toList();
+        } else {
+          // Fallback: Eski sistem için "Müşteri →" ile başlayanları göster
+          customerOrders = orderProvider.orders
+              .where((order) => order.customer.name.startsWith('Müşteri →'))
+              .toList();
+        }
 
         // Tarihe göre sırala (en yeni önce)
         customerOrders.sort((a, b) => b.orderDate.compareTo(a.orderDate));
+
+        print('🔍 Transactions Debug:');
+        print('   Kullanıcı firma adı: $currentUserCompanyName');
+        print('   Filtrelenmiş sipariş sayısı: ${customerOrders.length}');
 
         return ListView(
           padding: const EdgeInsets.all(16),
@@ -221,8 +239,33 @@ class _TransactionsScreenState extends State<TransactionsScreen>
     final paymentStatusText = _getPaymentStatusText(order.paymentStatus);
     final paymentColor = _getPaymentStatusColor(order.paymentStatus);
 
-    // Firma adından "Müşteri → " kısmını çıkar
-    final companyName = order.customer.name.replaceFirst('Müşteri → ', '');
+    // ✅ Üretici firma adını çıkar
+    String companyName = 'Bilinmeyen Firma';
+
+    // Önce yeni producerCompanyName alanını kontrol et
+    if (order.producerCompanyName != null &&
+        order.producerCompanyName!.isNotEmpty) {
+      companyName = order.producerCompanyName!;
+    } else if (order.note != null &&
+        order.note!.contains('🏭 Üretici Firma:')) {
+      // Note'tan üretici firma adını çıkarmaya çalış
+      final noteLines = order.note!.split('\n');
+      for (final line in noteLines) {
+        if (line.contains('🏭 Üretici Firma:')) {
+          companyName = line.split('🏭 Üretici Firma:').last.trim();
+          break;
+        }
+      }
+    } else {
+      // Fallback: Müşteri adından "Müşteri → " kısmını çıkar
+      companyName = order.customer.name.replaceFirst('Müşteri → ', '');
+    }
+
+    // Debug: Firma adı çıkarma işlemini kontrol et
+    print('🔍 TransactionsScreen Debug:');
+    print('   Üretici firma adı: ${order.producerCompanyName}');
+    print('   Çıkarılan firma: $companyName');
+    print('   Not: ${order.note}');
 
     // Ürün listesi oluştur
     final items = order.items
@@ -254,7 +297,6 @@ class _TransactionsScreenState extends State<TransactionsScreen>
               // Üst Kısım - Firma ve Sipariş Bilgileri
               Row(
                 children: [
-                  
                   // Firma Avatar
                   Container(
                     width: 44,
@@ -843,12 +885,25 @@ class _TransactionsScreenState extends State<TransactionsScreen>
   }
 
   Widget _buildPaymentsTab() {
-    return Consumer<OrderProvider>(
-      builder: (context, orderProvider, child) {
+    return Consumer2<OrderProvider, AuthProvider>(
+      builder: (context, orderProvider, authProvider, child) {
+        // Oturum açmış kullanıcının firma adını al
+        final currentUser = authProvider.currentUser;
+        final currentUserCompanyName = currentUser?.companyName ?? '';
+
         // Müşteri siparişlerini filtrele
-        final customerOrders = orderProvider.orders
-            .where((order) => order.customer.name.startsWith('Müşteri →'))
-            .toList();
+        List<Order> customerOrders = [];
+
+        if (currentUserCompanyName.isNotEmpty) {
+          customerOrders = orderProvider.orders
+              .where((order) => order.customer.name == currentUserCompanyName)
+              .toList();
+        } else {
+          // Fallback: Eski sistem için "Müşteri →" ile başlayanları göster
+          customerOrders = orderProvider.orders
+              .where((order) => order.customer.name.startsWith('Müşteri →'))
+              .toList();
+        }
 
         // Firma bazında borç hesaplamaları
         final Map<String, CompanyDebtInfo> companyDebts = {};
@@ -856,8 +911,9 @@ class _TransactionsScreenState extends State<TransactionsScreen>
         double totalPaidAmount = 0;
 
         for (final order in customerOrders) {
-          final companyName =
-              order.customer.name.replaceFirst('Müşteri → ', '');
+          final companyName = currentUserCompanyName.isNotEmpty
+              ? currentUserCompanyName
+              : order.customer.name.replaceFirst('Müşteri → ', '');
           final orderAmount = order.totalAmount;
           final paidAmount = order.paidAmount ?? 0.0;
 

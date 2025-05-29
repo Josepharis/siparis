@@ -338,6 +338,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                                 SizedBox(height: isSmallScreen ? 12 : 16),
                                 _buildResponsiveInputField(
+                                  controller: _companyAddressController,
+                                  label: 'Firma Adresi',
+                                  hint: 'Firmanızın tam adresini girin',
+                                  icon: Icons.location_on_outlined,
+                                  maxLines: 2,
+                                  isSmallScreen: isSmallScreen,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Firma adresi gerekli';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                SizedBox(height: isSmallScreen ? 12 : 16),
+                                _buildResponsiveInputField(
                                   controller: _emailController,
                                   label: 'E-posta',
                                   hint: 'ornek@email.com',

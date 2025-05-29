@@ -10,6 +10,7 @@ import 'package:siparis/models/product.dart' as product_models;
 import 'package:siparis/services/order_service.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
+import 'package:siparis/providers/auth_provider.dart';
 
 // Arka plan deseni için özel painter sınıfı
 class BackgroundPatternPainter extends CustomPainter {
@@ -1305,6 +1306,237 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  void _saveOrderToDatabase(BuildContext context, CartProvider cart) async {
+    try {
+      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      // Sepetteki ürünleri firma bazında grupla
+      final companyGroups = _groupItemsByCompany(cart.items.values.toList());
+
+      // ✅ Oturum açmış kullanıcının gerçek bilgilerini al
+      final currentUser = authProvider.currentUser;
+
+      if (currentUser == null) {
+        throw Exception('Kullanıcı oturum açmamış');
+      }
+
+      // Oluşturulan siparişleri tutacak liste
+      List<order_models.Order> createdOrders = [];
+
+      // Her firma için ayrı sipariş oluştur
+      for (final companyGroup in companyGroups) {
+        // ✅ Gerçek oturum açmış kullanıcının bilgilerini kullan
+        final customer = order_models.Customer(
+          name: currentUser.companyName ??
+              'Firma Adı Girilmemiş', // ✅ Oturum açan kullanıcının firma adı
+          phoneNumber: currentUser.phone ??
+              'Telefon Girilmemiş', // ✅ Kullanıcının telefonu
+          email: currentUser.email, // ✅ Kullanıcının emaili
+          address: currentUser.companyAddress ??
+              'Adres Girilmemiş', // ✅ Kullanıcının adresi
+        );
+
+        // Sipariş öğelerini oluştur
+        final orderItems = companyGroup.items.map((cartItem) {
+          // Cart Product'ını Order Product'ına dönüştür
+          final orderProduct = order_models.Product(
+            id: cartItem.product.id,
+            name: cartItem.product.name,
+            price: cartItem.product.price,
+            category: cartItem.product.category,
+            description: cartItem.product.description,
+            imageUrl: cartItem.product.imageUrl,
+          );
+
+          return order_models.OrderItem(
+            product: orderProduct,
+            quantity: cartItem.quantity,
+          );
+        }).toList();
+
+        // Teslimat tarihi - seçilen tarih (artık zorunlu)
+        final deliveryDate = _selectedDate!;
+
+        // Sipariş oluştur
+        final order = order_models.Order(
+          customer: customer,
+          items: orderItems,
+          orderDate: DateTime.now(),
+          deliveryDate: deliveryDate,
+          requestedDate: _selectedDate,
+          requestedTime: _selectedTime,
+          status: order_models.OrderStatus.waiting,
+          paymentStatus: order_models.PaymentStatus.pending,
+          note: _buildOrderNote(companyGroup.companyName,
+              currentUser.companyName ?? 'Bilinmeyen Firma'),
+          producerCompanyName: companyGroup.companyName,
+          producerCompanyId: companyGroup.companyId,
+        );
+
+        // Debug: Sipariş bilgilerini yazdır
+        print('🔍 Sipariş Oluşturuldu:');
+        print('   Siparişi Veren Müşteri: ${customer.name}');
+        print('   Müşteri Email: ${customer.email}');
+        print('   Müşteri Adres: ${customer.address}');
+        print('   Müşteri Telefon: ${customer.phoneNumber}');
+        print('   Sipariş Alan Üretici: ${companyGroup.companyName}');
+        print('   Ürün sayısı: ${orderItems.length}');
+        print('   Toplam tutar: ₺${order.totalAmount}');
+
+        // Siparişi listeye ekle
+        createdOrders.add(order);
+      }
+
+      // 🔥 TÜM SİPARİŞLERİ FİREBASE'E KAYDET 🔥
+      bool firebaseSaveSuccess =
+          await OrderService.saveMultipleOrders(createdOrders);
+
+      if (!firebaseSaveSuccess) {
+        throw Exception('Firebase kaydetme işlemi başarısız');
+      }
+
+      // ✅ Firebase listener otomatik olarak siparişleri OrderProvider'a ekleyecek
+      // Manuel olarak ekleme işlemi kaldırıldı (duplikasyon önlemi)
+      print('🔥 Firebase listener siparişleri otomatik olarak yükleyecek');
+
+      // Sepeti temizle
+      cart.clearCart();
+
+      // Dialog'u kapat
+      Navigator.pop(context);
+
+      // Başarı mesajı göster
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.check_circle_outline,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${companyGroups.length} adet sipariş alındı! 🎉',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const Text(
+                      'Siparişleriniz işleme alınmıştır',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+
+      // Ana sayfaya dön
+      Navigator.pop(context);
+    } catch (e) {
+      // Hata durumunda kullanıcıya bilgi ver
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.error_outline,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Sipariş alınamadı',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      'Hata: $e',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  String _buildOrderNote(String producerCompanyName, String customerName) {
+    String note = 'Sipariş Detayları:\n';
+    note += '👤 Siparişi Veren: $customerName\n';
+    note += '🏭 Üretici Firma: $producerCompanyName';
+
+    if (_selectedDate != null || _selectedTime != null) {
+      note += '\n\n📋 Teslimat Tercihi:';
+
+      if (_selectedDate != null) {
+        note +=
+            '\n📅 Tarih: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}';
+      }
+
+      if (_selectedTime != null) {
+        note +=
+            '\n🕐 Saat: ${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}';
+      }
+    }
+
+    return note;
+  }
+
   void _confirmOrder(BuildContext context, CartProvider cart) {
     showDialog(
       context: context,
@@ -1818,12 +2050,19 @@ class _CartScreenState extends State<CartScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Onay Butonu
+                // Onay Butonu - ✅ Burada kontrol yapılacak
                 SizedBox(
                   width: double.infinity,
                   height: 48,
                   child: ElevatedButton(
                     onPressed: () {
+                      // ✅ Tarih ve saat seçim kontrolü
+                      if (_selectedDate == null || _selectedTime == null) {
+                        // Dialog içinde uyarı göster
+                        setDialogState(() {});
+                        return; // Sipariş işlemini durdur
+                      }
+
                       _saveOrderToDatabase(context, cart);
                     },
                     style: ElevatedButton.styleFrom(
@@ -1843,268 +2082,61 @@ class _CartScreenState extends State<CartScreen> {
                     ),
                   ),
                 ),
+
+                // ✅ Uyarı mesajı (tarih/saat eksikse göster)
+                if (_selectedDate == null || _selectedTime == null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.red.shade300,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.warning_rounded,
+                          color: Colors.red.shade600,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Teslimat bilgileri eksik',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: Colors.red.shade700,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Lütfen ${_selectedDate == null ? 'tarih' : ''}${_selectedDate == null && _selectedTime == null ? ' ve ' : ''}${_selectedTime == null ? 'saat' : ''} seçiniz',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.red.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         ),
       ),
     );
-  }
-
-  void _saveOrderToDatabase(BuildContext context, CartProvider cart) async {
-    try {
-      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-
-      // Sepetteki ürünleri firma bazında grupla
-      final companyGroups = _groupItemsByCompany(cart.items.values.toList());
-
-      // ✅ Gerçekçi müşteri profilleri
-      final List<Map<String, String>> customerProfiles = [
-        {
-          'name': 'Acme Kargo Ltd. Şti.',
-          'phone': '0555 123 45 67',
-          'email': 'siparis@acmekargo.com',
-          'address': 'Atatürk Mah. Cumhuriyet Cad. No:123 Kadıköy/İstanbul',
-        },
-        {
-          'name': 'Lezzet Cafe & Restaurant',
-          'phone': '0532 987 65 43',
-          'email': 'info@lezzetcafe.com',
-          'address': 'Bağdat Cad. No:456 Maltepe/İstanbul',
-        },
-        {
-          'name': 'Sweet Corner Pastanesi',
-          'phone': '0543 111 22 33',
-          'email': 'siparisler@sweetcorner.com.tr',
-          'address': 'İstiklal Mah. Özgürlük Sok. No:78 Beyoğlu/İstanbul',
-        },
-        {
-          'name': 'Metro Market Zinciri',
-          'phone': '0505 444 55 66',
-          'email': 'tedarik@metromarket.com',
-          'address': 'Sanayi Mah. Ticaret Cad. No:200 Ümraniye/İstanbul',
-        },
-        {
-          'name': 'Kampüs Cafe & Bistro',
-          'phone': '0536 777 88 99',
-          'email': 'kampuscafe@gmail.com',
-          'address': 'Üniversite Mah. Gençlik Cad. No:15 Beşiktaş/İstanbul',
-        },
-      ];
-
-      // Rastgele müşteri seç
-      final randomIndex =
-          DateTime.now().millisecondsSinceEpoch % customerProfiles.length;
-      final selectedProfile = customerProfiles[randomIndex];
-
-      // Oluşturulan siparişleri tutacak liste
-      List<order_models.Order> createdOrders = [];
-
-      // Her firma için ayrı sipariş oluştur
-      for (final companyGroup in companyGroups) {
-        // ✅ DÜZELTME: Gerçek müşteri bilgilerini kullan
-        // Üretici firma bilgisi ayrı tutulacak (companyGroup.companyName = oyunlab vs)
-        final customer = order_models.Customer(
-          name: selectedProfile['name']!, // ✅ Gerçek müşteri firma adı
-          phoneNumber: selectedProfile['phone']!, // ✅ Gerçek müşteri telefonu
-          email: selectedProfile['email']!, // ✅ Gerçek müşteri emaili
-          address: selectedProfile['address']!, // ✅ Gerçek müşteri adresi
-        );
-
-        // Sipariş öğelerini oluştur
-        final orderItems = companyGroup.items.map((cartItem) {
-          // Cart Product'ını Order Product'ına dönüştür
-          final orderProduct = order_models.Product(
-            id: cartItem.product.id,
-            name: cartItem.product.name,
-            price: cartItem.product.price,
-            category: cartItem.product.category,
-            description: cartItem.product.description,
-            imageUrl: cartItem.product.imageUrl,
-          );
-
-          return order_models.OrderItem(
-            product: orderProduct,
-            quantity: cartItem.quantity,
-          );
-        }).toList();
-
-        // Teslimat tarihi (varsayılan olarak yarın)
-        final deliveryDate = DateTime.now().add(const Duration(days: 1));
-
-        // Sipariş oluştur
-        final order = order_models.Order(
-          customer: customer,
-          items: orderItems,
-          orderDate: DateTime.now(),
-          deliveryDate: deliveryDate,
-          requestedDate: _selectedDate,
-          requestedTime: _selectedTime,
-          status: order_models.OrderStatus.waiting,
-          paymentStatus: order_models.PaymentStatus.pending,
-          note: _buildOrderNote(
-              companyGroup.companyName, selectedProfile['name']!),
-        );
-
-        // Debug: Sipariş bilgilerini yazdır
-        print('🔍 Sipariş Oluşturuldu:');
-        print('   Siparişi Veren Müşteri: ${customer.name}');
-        print('   Müşteri Email: ${customer.email}');
-        print('   Müşteri Adres: ${customer.address}');
-        print('   Müşteri Telefon: ${customer.phoneNumber}');
-        print('   Sipariş Alan Üretici: ${companyGroup.companyName}');
-        print('   Ürün sayısı: ${orderItems.length}');
-        print('   Toplam tutar: ₺${order.totalAmount}');
-
-        // Siparişi listeye ekle
-        createdOrders.add(order);
-
-        // ✅ Firebase listener otomatik olarak siparişleri güncelleyecek
-        print('🔥 Firebase listener siparişleri otomatik güncelleyecek');
-      }
-
-      // 🔥 TÜM SİPARİŞLERİ FİREBASE'E KAYDET 🔥
-      bool firebaseSaveSuccess =
-          await OrderService.saveMultipleOrders(createdOrders);
-
-      if (!firebaseSaveSuccess) {
-        throw Exception('Firebase kaydetme işlemi başarısız');
-      }
-
-      // Sepeti temizle
-      cart.clearCart();
-
-      // Dialog'u kapat
-      Navigator.pop(context);
-
-      // Başarı mesajı göster
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.check_circle_outline,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${companyGroups.length} adet sipariş alındı! 🎉',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const Text(
-                      'Siparişleriniz işleme alınmıştır',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          margin: const EdgeInsets.all(16),
-          duration: const Duration(seconds: 4),
-        ),
-      );
-
-      // Ana sayfaya dön
-      Navigator.pop(context);
-    } catch (e) {
-      // Hata durumunda kullanıcıya bilgi ver
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.error_outline,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Sipariş alınamadı',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      'Lütfen tekrar deneyiniz',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          margin: const EdgeInsets.all(16),
-          duration: const Duration(seconds: 4),
-        ),
-      );
-    }
-  }
-
-  String _buildOrderNote(String producerCompanyName, String customerName) {
-    String note = 'Sipariş Detayları:\n';
-    note += '👤 Siparişi Veren: $customerName\n';
-    note += '🏭 Üretici Firma: $producerCompanyName';
-
-    if (_selectedDate != null || _selectedTime != null) {
-      note += '\n\n📋 Teslimat Tercihi:';
-
-      if (_selectedDate != null) {
-        note +=
-            '\n📅 Tarih: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}';
-      }
-
-      if (_selectedTime != null) {
-        note +=
-            '\n🕐 Saat: ${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}';
-      }
-    }
-
-    return note;
   }
 }

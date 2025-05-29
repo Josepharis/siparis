@@ -3,6 +3,10 @@ import 'package:siparis/config/theme.dart';
 import 'package:siparis/models/order.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:provider/provider.dart';
+import 'package:siparis/providers/auth_provider.dart';
+import 'package:siparis/providers/company_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class OrderDetailScreen extends StatelessWidget {
   final Order order;
@@ -38,13 +42,46 @@ class OrderDetailScreen extends StatelessWidget {
         statusText = 'Bilinmiyor';
     }
 
+    // Kullanıcının rolünü kontrol et
+    final authProvider = Provider.of<AuthProvider>(context);
+    final currentUser = authProvider.currentUser;
+    final isCustomer = currentUser?.role == 'customer';
+
+    // ✅ Üretici firma adını çıkar (ana sayfadaki mantık)
+    String producerCompanyName = 'Bilinmeyen Firma';
+
+    // Önce yeni producerCompanyName alanını kontrol et
+    if (order.producerCompanyName != null &&
+        order.producerCompanyName!.isNotEmpty) {
+      producerCompanyName = order.producerCompanyName!;
+    } else if (order.customer.name.contains('→')) {
+      producerCompanyName = order.customer.name.split('→').last.trim();
+    } else if (order.note != null &&
+        order.note!.contains('🏭 Üretici Firma:')) {
+      // Note'tan üretici firma adını çıkarmaya çalış
+      final noteLines = order.note!.split('\n');
+      for (final line in noteLines) {
+        if (line.contains('🏭 Üretici Firma:')) {
+          producerCompanyName = line.split('🏭 Üretici Firma:').last.trim();
+          break;
+        }
+      }
+    }
+
+    // Debug: Firma adı çıkarma işlemini kontrol et
+    print('🔍 OrderDetailScreen Debug:');
+    print('   Üretici firma adı (model): ${order.producerCompanyName}');
+    print('   Çıkarılan firma: $producerCompanyName');
+    print('   Not: ${order.note}');
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
             // Üst başlık bölümü
-            _buildHeader(context, statusColor, statusText, statusIcon),
+            _buildHeader(context, statusColor, statusText, statusIcon,
+                isCustomer, producerCompanyName),
 
             // İçerik
             Expanded(
@@ -57,15 +94,14 @@ class OrderDetailScreen extends StatelessWidget {
                   // Sipariş İçeriği (Üstte)
                   _buildOrderItems(context),
 
-                  // Müşteri Tercihi Kartı (Yeni)
-                  if (order.requestedDate != null ||
-                      order.requestedTime != null)
-                    _buildCustomerPreferenceCard(context, statusColor),
+                  // ✅ Müşteri ise üretici bilgilerini, üretici ise müşteri bilgilerini göster
+                  if (isCustomer)
+                    _buildProducerCard(
+                        context, statusColor, producerCompanyName)
+                  else
+                    _buildCustomerCard(context, statusColor),
 
-                  // Müşteri Bilgileri (Altta)
-                  _buildCustomerCard(context, statusColor),
-
-                  // Teslimat Detayları (Altta)
+                  // Teslimat Detayları (müşteri tercihi dahil)
                   _buildDeliveryInfoCard(context, statusColor),
 
                   const SizedBox(height: 100), // Alt boşluk
@@ -75,7 +111,8 @@ class OrderDetailScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomSheet: _buildBottomBar(context, statusColor),
+      // ✅ Müşteri ise bottom bar gösterme
+      bottomSheet: !isCustomer ? _buildBottomBar(context, statusColor) : null,
     );
   }
 
@@ -85,6 +122,8 @@ class OrderDetailScreen extends StatelessWidget {
     Color statusColor,
     String statusText,
     IconData statusIcon,
+    bool isCustomer,
+    String producerCompanyName,
   ) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -165,23 +204,27 @@ class OrderDetailScreen extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // Sipariş ve müşteri bilgileri
+          // Sipariş ve firma bilgileri (müşteri/üretici göre farklı)
           Row(
             children: [
-              // Müşteri avatarı
+              // ✅ Avatar - müşteri ise üreticiyi, üretici ise müşteriyi göster
               Hero(
                 tag: 'order_card_avatar_${order.id}',
                 child: CircleAvatar(
                   radius: 24,
                   backgroundColor: statusColor.withOpacity(0.2),
                   child: Text(
-                    order.customer.name
-                            .replaceFirst('Müşteri → ', '')
-                            .isNotEmpty
-                        ? order.customer.name
-                            .replaceFirst('Müşteri → ', '')[0]
-                            .toUpperCase()
-                        : '?',
+                    isCustomer
+                        ? (producerCompanyName.isNotEmpty
+                            ? producerCompanyName[0].toUpperCase()
+                            : 'Ü')
+                        : (order.customer.name
+                                .replaceFirst('Müşteri → ', '')
+                                .isNotEmpty
+                            ? order.customer.name
+                                .replaceFirst('Müşteri → ', '')[0]
+                                .toUpperCase()
+                            : '?'),
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -192,12 +235,12 @@ class OrderDetailScreen extends StatelessWidget {
               ),
               const SizedBox(width: 12),
 
-              // Müşteri ve sipariş bilgileri
+              // Firma bilgileri
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Müşteri adı
+                    // ✅ Firma adı - müşteri ise üreticiyi, üretici ise müşteriyi göster
                     Hero(
                       tag: 'order_card_name_${order.id}',
                       child: Material(
@@ -205,28 +248,29 @@ class OrderDetailScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Firma adını çıkar
                             Text(
-                              order.customer.name
-                                  .replaceFirst('Müşteri → ', ''),
+                              isCustomer
+                                  ? producerCompanyName
+                                  : order.customer.name
+                                      .replaceFirst('Müşteri → ', ''),
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
                             ),
-                            // Müşteri telefon numarası varsa göster
-                            if (order.customer.phoneNumber != null &&
-                                order.customer.phoneNumber!.isNotEmpty) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                order.customer.phoneNumber!,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.w500,
-                                ),
+                            // ✅ Alt bilgi - müşteri ise üretici, üretici ise müşteri telefonu
+                            const SizedBox(height: 2),
+                            Text(
+                              isCustomer
+                                  ? 'Üretici Firma'
+                                  : (order.customer.phoneNumber ??
+                                      'Telefon bilgisi yok'),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
                               ),
-                            ],
+                            ),
                           ],
                         ),
                       ),
@@ -533,35 +577,93 @@ class OrderDetailScreen extends StatelessWidget {
 
           const Divider(height: 24),
 
-          // Teslimat tarihi ve tutarı (iki yan yana)
-          Row(
-            children: [
-              // Teslimat tarihi
-              Expanded(
-                child: _buildDeliveryInfoItem(
-                  icon: Icons.calendar_today_rounded,
-                  title: 'Teslimat Tarihi',
-                  value: DateFormat(
-                    'd MMMM yyyy',
-                    'tr_TR',
-                  ).format(order.deliveryDate),
-                  color: Colors.indigo,
-                ),
-              ),
+          // ✅ Sadece Müşteri Tercihi
+          if (order.requestedDate != null || order.requestedTime != null) ...[
+            // Müşteri tercihi detayları
+            Row(
+              children: [
+                // Tercih edilen tarih
+                if (order.requestedDate != null)
+                  Expanded(
+                    child: _buildDeliveryInfoItem(
+                      icon: Icons.calendar_today_rounded,
+                      title: 'Tercih Edilen Tarih',
+                      value: DateFormat('d MMMM yyyy', 'tr_TR')
+                          .format(order.requestedDate!),
+                      color: Colors.indigo,
+                    ),
+                  ),
 
-              const SizedBox(width: 16),
+                if (order.requestedDate != null && order.requestedTime != null)
+                  const SizedBox(width: 16),
 
-              // Sipariş tutarı
-              Expanded(
-                child: _buildDeliveryInfoItem(
-                  icon: Icons.attach_money_rounded,
-                  title: 'Toplam Tutar',
-                  value: '₺${order.totalAmount.toStringAsFixed(2)}',
-                  color: Colors.green,
-                ),
+                // Tercih edilen saat
+                if (order.requestedTime != null)
+                  Expanded(
+                    child: _buildDeliveryInfoItem(
+                      icon: Icons.access_time_rounded,
+                      title: 'Tercih Edilen Saat',
+                      value:
+                          '${order.requestedTime!.hour.toString().padLeft(2, '0')}:${order.requestedTime!.minute.toString().padLeft(2, '0')}',
+                      color: Colors.orange,
+                    ),
+                  ),
+              ],
+            ),
+
+            // Bilgi notu
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.withOpacity(0.3)),
               ),
-            ],
-          ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Colors.amber[700]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Bu bilgiler müşterinin tercihi olup, kesin teslimat zamanı değildir.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.amber[700],
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            // Müşteri tercihi yoksa
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Müşteri herhangi bir teslimat tercihi belirtmemiştir.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1039,142 +1141,212 @@ class OrderDetailScreen extends StatelessWidget {
     }
   }
 
-  // Müşteri Tercihi Kartı (Yeni)
-  Widget _buildCustomerPreferenceCard(BuildContext context, Color statusColor) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Başlık
-          Row(
-            children: [
-              Icon(Icons.schedule_rounded, size: 18, color: statusColor),
-              const SizedBox(width: 8),
-              const Text(
-                'Müşteri Tercihi',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+  // Üretici bilgi kartı
+  Widget _buildProducerCard(
+      BuildContext context, Color statusColor, String producerCompanyName) {
+    return Consumer<CompanyProvider>(
+      builder: (context, companyProvider, child) {
+        // Üretici firma telefon numarasını bul
+        String? producerPhone;
+
+        // Önce Firestore companies'den ara
+        final firestoreCompany = companyProvider.firestoreCompanies
+            .where((company) => company.name == producerCompanyName)
+            .firstOrNull;
+
+        if (firestoreCompany != null) {
+          producerPhone = firestoreCompany.phone;
+        } else {
+          // Firestore'da bulunamazsa sample companies'den ara
+          final sampleCompany = companyProvider.companies
+              .where((company) => company.name == producerCompanyName)
+              .firstOrNull;
+          producerPhone = sampleCompany?.phone;
+        }
+
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-
-          const Divider(height: 24),
-
-          // Tarih ve Saat Bilgileri
-          Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Tercih edilen tarih
-              if (order.requestedDate != null)
-                Expanded(
-                  child: _buildPreferenceInfoItem(
-                    icon: Icons.calendar_today_rounded,
-                    title: 'Tercih Edilen Tarih',
-                    value: DateFormat('d MMMM yyyy', 'tr_TR')
-                        .format(order.requestedDate!),
-                    color: Colors.blue,
+              // Başlık
+              Row(
+                children: [
+                  Icon(Icons.factory_rounded, size: 18, color: statusColor),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Üretici Bilgileri',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
-                ),
+                ],
+              ),
 
-              if (order.requestedDate != null && order.requestedTime != null)
-                const SizedBox(width: 16),
+              const Divider(height: 24),
 
-              // Tercih edilen saat
-              if (order.requestedTime != null)
-                Expanded(
-                  child: _buildPreferenceInfoItem(
-                    icon: Icons.access_time_rounded,
-                    title: 'Tercih Edilen Saat',
-                    value:
-                        '${order.requestedTime!.hour.toString().padLeft(2, '0')}:${order.requestedTime!.minute.toString().padLeft(2, '0')}',
-                    color: Colors.orange,
-                  ),
-                ),
-            ],
-          ),
+              // Üretici firma adı
+              _buildInfoRow(
+                icon: Icons.business_rounded,
+                title: 'Firma Adı',
+                value: producerCompanyName,
+                color: Colors.blue,
+              ),
 
-          // Bilgi notu
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.amber.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.amber.withOpacity(0.3)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, size: 16, color: Colors.amber[700]),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Bu bilgiler müşterinin tercihi olup, kesin teslimat zamanı değildir.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.amber[700],
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
+              // Telefon numarası (varsa)
+              if (producerPhone != null && producerPhone.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _buildInfoRow(
+                  icon: Icons.phone_rounded,
+                  title: 'Telefon',
+                  value: producerPhone,
+                  color: Colors.green,
                 ),
               ],
-            ),
+
+              // Üretici ID (varsa)
+              if (order.producerCompanyId != null &&
+                  order.producerCompanyId!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _buildInfoRow(
+                  icon: Icons.tag_rounded,
+                  title: 'Firma ID',
+                  value: order.producerCompanyId!,
+                  color: Colors.purple,
+                ),
+              ],
+
+              // ✅ Arama ve WhatsApp butonları (telefon varsa)
+              if (producerPhone != null && producerPhone.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    // Arama butonu
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _makePhoneCall(producerPhone!),
+                        icon: const Icon(Icons.call_rounded, size: 18),
+                        label: const Text(
+                          'WP Ara',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF25D366),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // WhatsApp butonu
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _openWhatsApp(context, producerPhone!),
+                        icon: const Icon(Icons.chat_rounded, size: 18),
+                        label: const Text(
+                          'Mesaj',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF25D366),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  // Tercih bilgi öğesi
-  Widget _buildPreferenceInfoItem({
-    required IconData icon,
-    required String title,
-    required String value,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(color: color.withOpacity(0.8), fontSize: 12),
-                ),
-              ),
-            ],
+  // ✅ WhatsApp sesli arama metodu
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    // Telefon numarasını temizle (+90 gibi prefix'leri kaldır)
+    String cleanedNumber = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+
+    // Türkiye için +90 ekleme kontrolü
+    if (cleanedNumber.startsWith('0')) {
+      cleanedNumber = '90${cleanedNumber.substring(1)}';
+    } else if (!cleanedNumber.startsWith('90')) {
+      cleanedNumber = '90$cleanedNumber';
+    }
+
+    // WhatsApp sesli arama URL'si
+    final Uri whatsappCallUri = Uri.parse('https://wa.me/$cleanedNumber?call');
+
+    try {
+      if (await canLaunchUrl(whatsappCallUri)) {
+        await launchUrl(whatsappCallUri, mode: LaunchMode.externalApplication);
+      } else {
+        // WhatsApp yüklü değilse tarayıcıda açmaya çalış
+        await launchUrl(whatsappCallUri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      print('WhatsApp sesli arama hatası: $e');
+    }
+  }
+
+  // ✅ WhatsApp açma metodu
+  Future<void> _openWhatsApp(BuildContext context, String phoneNumber) async {
+    // Telefon numarasını temizle (+90 gibi prefix'leri kaldır)
+    String cleanedNumber = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+
+    // Türkiye için +90 ekleme kontrolü
+    if (cleanedNumber.startsWith('0')) {
+      cleanedNumber = '90${cleanedNumber.substring(1)}';
+    } else if (!cleanedNumber.startsWith('90')) {
+      cleanedNumber = '90$cleanedNumber';
+    }
+
+    final String message = 'Merhaba, sipariş konusunda bilgi almak istiyorum.';
+    final Uri whatsappUri = Uri.parse(
+        'https://wa.me/$cleanedNumber?text=${Uri.encodeComponent(message)}');
+
+    try {
+      if (await canLaunchUrl(whatsappUri)) {
+        await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+      } else {
+        // WhatsApp yüklü değilse tarayıcıda açmaya çalış
+        await launchUrl(whatsappUri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('WhatsApp açılamadı: $e'),
+            backgroundColor: Colors.red,
           ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-              color: Colors.grey[800],
-            ),
-          ),
-        ],
-      ),
-    );
+        );
+      }
+    }
   }
 }

@@ -22,6 +22,23 @@ class OrderService {
     }
   }
 
+  /// Siparişi Firebase Firestore'da güncelle
+  static Future<bool> updateOrder(order_models.Order order) async {
+    try {
+      // Siparişi Firestore'da güncelle
+      await _firestore
+          .collection(_ordersCollection)
+          .doc(order.id)
+          .update(order.toJson());
+
+      print('✅ Sipariş güncellendi: ${order.id}');
+      return true;
+    } catch (e) {
+      print('❌ Sipariş güncellenirken hata: $e');
+      return false;
+    }
+  }
+
   /// Birden fazla siparişi Firebase'e kaydet
   static Future<bool> saveMultipleOrders(
       List<order_models.Order> orders) async {

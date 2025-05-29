@@ -233,16 +233,11 @@ class WorkRequestProvider with ChangeNotifier {
                 print(
                     'DEBUG: İş ortaklığı başarıyla oluşturuldu: ${partnership.id}');
 
-                // Local partnered companies listesini güncelle
-                // Müşteri için: gönderen firmayı partner olarak ekle
-                if (!_partneredCompanies.contains(senderCompany.id)) {
-                  _partneredCompanies.add(senderCompany.id);
-                  print(
-                      'DEBUG: Partner firma eklendi (gönderen): ${senderCompany.name} (${senderCompany.id})');
-                }
-
+                // 🔄 Firebase'den partnership verilerini yeniden yükle
                 print(
-                    'DEBUG: Güncel partner firma listesi: $_partneredCompanies');
+                    'DEBUG: Partnership verileri Firebase\'den yeniden yükleniyor...');
+                await loadUserPartnerships(request.fromUserId);
+                print('DEBUG: Partnership verileri güncellendi');
               } else {
                 print('DEBUG: İş ortaklığı oluşturulamadı');
               }
@@ -404,19 +399,19 @@ class WorkRequestProvider with ChangeNotifier {
 
         for (var userCompany in userCompanies) {
           // Bu kullanıcının firması bu iş ortaklığında var mı?
-          if (partnership.companyAId == userCompany.id) {
-            // Partner firma B'dir
-            if (!_partneredCompanies.contains(partnership.companyBId)) {
-              _partneredCompanies.add(partnership.companyBId);
+          if (partnership.customerId == userCompany.id) {
+            // Partner firma companyId'dir
+            if (!_partneredCompanies.contains(partnership.companyId)) {
+              _partneredCompanies.add(partnership.companyId);
               print(
-                  'DEBUG: Partner firma eklendi: ${partnership.companyBName} (${partnership.companyBId})');
+                  'DEBUG: Partner firma eklendi: ${partnership.companyName} (${partnership.companyId})');
             }
-          } else if (partnership.companyBId == userCompany.id) {
-            // Partner firma A'dır
-            if (!_partneredCompanies.contains(partnership.companyAId)) {
-              _partneredCompanies.add(partnership.companyAId);
+          } else if (partnership.companyId == userCompany.id) {
+            // Partner firma customerId'dir
+            if (!_partneredCompanies.contains(partnership.customerId)) {
+              _partneredCompanies.add(partnership.customerId);
               print(
-                  'DEBUG: Partner firma eklendi: ${partnership.companyAName} (${partnership.companyAId})');
+                  'DEBUG: Partner firma eklendi: ${partnership.customerName} (${partnership.customerId})');
             }
           }
         }

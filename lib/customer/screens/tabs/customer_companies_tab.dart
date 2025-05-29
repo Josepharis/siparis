@@ -7,6 +7,10 @@ import 'package:siparis/providers/company_provider.dart';
 import 'package:siparis/providers/work_request_provider.dart';
 import 'package:siparis/customer/screens/company_detail_screen.dart';
 import 'package:siparis/customer/screens/partner_company_detail_screen.dart';
+import 'package:siparis/services/partnership_service.dart';
+import 'package:siparis/models/order.dart';
+import 'package:siparis/services/company_service.dart';
+import 'package:siparis/providers/auth_provider.dart';
 
 class CustomerCompaniesTab extends StatefulWidget {
   const CustomerCompaniesTab({super.key});
@@ -17,6 +21,25 @@ class CustomerCompaniesTab extends StatefulWidget {
 
 class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
   String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPartnerships();
+  }
+
+  Future<void> _loadPartnerships() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final workRequestProvider =
+        Provider.of<WorkRequestProvider>(context, listen: false);
+
+    final currentUser = authProvider.currentUser;
+    if (currentUser != null) {
+      print('DEBUG: Partnership verileri Firebase\'den yükleniyor...');
+      await workRequestProvider.loadUserPartnerships(currentUser.uid);
+      print('DEBUG: Partnership verileri yüklendi');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -510,7 +533,7 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(20),
         child: InkWell(
-          onTap: () => _navigateToCompanyDetail(company),
+          onTap: () => _navigateToPartnerCompanyDetail(company),
           borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -855,7 +878,590 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
     }).toList();
   }
 
-  void _navigateToCompanyDetail(Company company) {
+  void _navigateToCompanyDetail(Company company) async {
+    // Oturum açmış kullanıcının bilgilerini al
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUser = authProvider.currentUser;
+
+    String currentCustomerId = currentUser?.uid ?? 'customer_001';
+    String currentCustomerName = 'Test Müşteri'; // Varsayılan
+
+    // Önce oturum açmış kullanıcının kayıt sırasında girdiği firma adını kullan
+    if (currentUser?.companyName != null &&
+        currentUser!.companyName!.isNotEmpty) {
+      currentCustomerName = currentUser.companyName!;
+      print(
+          'DEBUG: Kullanıcının kayıt firma adı kullanılıyor: $currentCustomerName');
+    } else {
+      // Eğer kayıt sırasında firma adı girilmemişse Firebase'den al
+      try {
+        final userCompanies =
+            await CompanyService.getUserCompanies(currentCustomerId);
+        if (userCompanies.isNotEmpty) {
+          currentCustomerName = userCompanies.first.name;
+          print('DEBUG: Firebase firma adı kullanılıyor: $currentCustomerName');
+        } else {
+          // Son seçenek olarak mevcut Firebase firmalarından birini al
+          final companyProvider =
+              Provider.of<CompanyProvider>(context, listen: false);
+          final firestoreCompanies = companyProvider.activeFirestoreCompanies;
+          if (firestoreCompanies.isNotEmpty) {
+            currentCustomerName = firestoreCompanies.first.name;
+            print(
+                'DEBUG: Yedek Firebase firma adı kullanılıyor: $currentCustomerName');
+          }
+        }
+      } catch (e) {
+        print('DEBUG: Firma adı alınamadı, varsayılan kullanılıyor: $e');
+      }
+    }
+
+    print(
+        'DEBUG: Çalışma isteği gönderilecek - Kimden: $currentCustomerName, Kime: ${company.name}');
+
+    try {
+      // Partnerlik durumunu kontrol et
+      final partnershipStatus = await PartnershipService.getPartnershipStatus(
+        currentCustomerId,
+        company.id,
+      );
+
+      if (!mounted) return;
+
+      switch (partnershipStatus) {
+        case PartnershipStatus.approved:
+          // Partner - ürünleri göster
+          Navigator.push(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) =>
+                  PartnerCompanyDetailScreen(company: company),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                const begin = Offset(1.0, 0.0);
+                const end = Offset.zero;
+                const curve = Curves.easeInOutCubic;
+
+                var tween = Tween(begin: begin, end: end).chain(
+                  CurveTween(curve: curve),
+                );
+
+                return SlideTransition(
+                  position: animation.drive(tween),
+                  child: child,
+                );
+              },
+              transitionDuration: const Duration(milliseconds: 300),
+            ),
+          );
+          break;
+
+        case PartnershipStatus.pending:
+          // İstek bekliyor - bilgi göster
+          _showPartnershipStatusDialog(
+            company,
+            'İstek Bekliyor',
+            'Bu firmaya gönderdiğiniz partnerlik isteği henüz değerlendirilmedi. İsteğiniz onaylandıktan sonra ürünleri görüntüleyebileceksiniz.',
+            Colors.orange,
+            Icons.schedule_rounded,
+            currentCustomerId: currentCustomerId,
+            currentCustomerName: currentCustomerName,
+          );
+          break;
+
+        case PartnershipStatus.rejected:
+          // İstek reddedildi - yeniden istek gönderebilir
+          _showPartnershipStatusDialog(
+            company,
+            'İstek Reddedildi',
+            'Bu firmaya gönderdiğiniz partnerlik isteği maalesef reddedilmiştir. Yeniden partnerlik isteği gönderebilirsiniz.',
+            Colors.red,
+            Icons.block_rounded,
+            showRequestButton: true,
+            currentCustomerId: currentCustomerId,
+            currentCustomerName: currentCustomerName,
+          );
+          break;
+
+        case PartnershipStatus.notPartner:
+        default:
+          // Partner değil - partnerlik isteği gönder
+          _showPartnershipRequestDialog(
+              company, currentCustomerId, currentCustomerName);
+          break;
+      }
+    } catch (e) {
+      print('❌ Partnerlik durumu kontrol edilemedi: $e');
+      // Hata durumunda default davranış - partnerlik isteği gönder
+      _showPartnershipRequestDialog(
+          company, currentCustomerId, currentCustomerName);
+    }
+  }
+
+  // Partnerlik durumu dialog'u
+  void _showPartnershipStatusDialog(
+    Company company,
+    String title,
+    String message,
+    Color color,
+    IconData icon, {
+    bool showRequestButton = false,
+    required String currentCustomerId,
+    required String currentCustomerName,
+  }) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(20),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // İkon
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 40,
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Başlık
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1F2937),
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 12),
+
+              // Firma adı
+              Text(
+                company.name,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primaryColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 16),
+
+              // Mesaj
+              Text(
+                message,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF6B7280),
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 24),
+
+              // Butonlar
+              Row(
+                children: [
+                  // Kapat butonu
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.grey.shade100,
+                        foregroundColor: Colors.grey.shade700,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Tamam',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  if (showRequestButton) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          _showPartnershipRequestDialog(
+                              company, currentCustomerId, currentCustomerName);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: AppTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Yeniden İstek Gönder',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Partnerlik isteği dialog'u
+  void _showPartnershipRequestDialog(
+      Company company, String customerId, String customerName) {
+    final TextEditingController messageController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(20),
+        child: Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(maxWidth: 400),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Başlık bölümü
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppTheme.primaryColor,
+                      AppTheme.primaryColor.withOpacity(0.8),
+                    ],
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    // İkon
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.handshake_rounded,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Başlık
+                    const Text(
+                      'Partnerlik İsteği',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // Alt başlık
+                    Text(
+                      '${company.name} firmasına çalışma isteği gönderin',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+
+              // İçerik bölümü
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Açıklama
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline_rounded,
+                            color: Colors.orange.shade700,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Firmanın ürünlerini görüntüleyebilmeniz için partner olmanız gerekmektedir.',
+                              style: TextStyle(
+                                color: Colors.orange.shade800,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Mesaj alanı
+                    const Text(
+                      'İsteğe mesaj ekleyin (İsteğe bağlı)',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF374151),
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: TextField(
+                        controller: messageController,
+                        maxLines: 3,
+                        style: const TextStyle(fontSize: 14),
+                        decoration: const InputDecoration(
+                          contentPadding: EdgeInsets.all(16),
+                          border: InputBorder.none,
+                          hintText:
+                              'Firmayla çalışmak isteme nedeninizi kısaca açıklayın...',
+                          hintStyle: TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Butonlar
+                    Row(
+                      children: [
+                        // İptal butonu
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: Colors.grey.shade100,
+                              foregroundColor: Colors.grey.shade700,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'İptal',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 12),
+
+                        // Gönder butonu
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              await _sendPartnershipRequest(
+                                ctx,
+                                company,
+                                customerId,
+                                customerName,
+                                messageController.text,
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'İstek Gönder',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Partnerlik isteği gönderme
+  Future<void> _sendPartnershipRequest(
+    BuildContext dialogContext,
+    Company company,
+    String customerId,
+    String customerName,
+    String message,
+  ) async {
+    try {
+      // 1. Partnerlik isteği gönder
+      final request = PartnershipRequest(
+        customerId: customerId,
+        companyId: company.id,
+        customerName: customerName,
+        companyName: company.name,
+        message: message.isNotEmpty ? message : null,
+        requestDate: DateTime.now(),
+      );
+
+      await PartnershipService.sendPartnershipRequest(request);
+
+      // 2. Aynı zamanda WorkRequest olarak da gönder (üreticinin görebilmesi için)
+      final workRequestProvider =
+          Provider.of<WorkRequestProvider>(context, listen: false);
+      await workRequestProvider.sendWorkRequest(
+        fromUserId: customerId,
+        toCompanyId: company.id,
+        fromUserName: customerName,
+        toCompanyName: company.name,
+        message: message.isNotEmpty ? message : 'Partnerlik isteği',
+      );
+
+      if (mounted && dialogContext.mounted) {
+        // Dialog'u kapat
+        Navigator.of(dialogContext).pop();
+
+        // Başarı mesajı göster
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                      '${company.name} firmasına partnerlik isteği gönderildi!'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Partnerlik isteği gönderilemedi: $e');
+
+      if (mounted && dialogContext.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                const Expanded(
+                    child: Text('İstek gönderilemedi. Lütfen tekrar deneyin.')),
+              ],
+            ),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    }
+  }
+
+  // Partner firma için direkt ürün sayfasına git
+  void _navigateToPartnerCompanyDetail(Company company) {
+    print('DEBUG: Partner firmaya navigasyon: ${company.name}');
     Navigator.push(
       context,
       PageRouteBuilder(
