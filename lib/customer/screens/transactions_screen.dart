@@ -176,44 +176,37 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                   child: _buildRealOrderCard(order),
                 )),
 
-            // Taslak veriler (örnek gösterim için)
-            if (customerOrders.isEmpty) ...[
-              _buildSectionHeader('Örnek Siparişler'),
-              const SizedBox(height: 8),
-            ],
-
-            _buildOrderCard(
-              orderNo: 'SP123456',
-              date: '12 Mart 2024',
-              status: 'Tamamlandı',
-              statusColor: Colors.green,
-              companyName: 'Anadolu Gıda',
-              amount: 450.90,
-              items: [
-                'Organik Tam Yağlı Süt x2',
-                'Taze Kaşar Peyniri x1',
-                'Dana Antrikot x1',
-              ],
-              paymentStatus: 'Kısmi Ödeme',
-              paymentColor: Colors.orange,
-              paidAmount: 200.00,
-            ),
-            const SizedBox(height: 12),
-            _buildOrderCard(
-              orderNo: 'SP123455',
-              date: '10 Mart 2024',
-              status: 'Tamamlandı',
-              statusColor: Colors.green,
-              companyName: 'Doğal Tarım',
-              amount: 234.50,
-              items: [
-                'Organik Çeri Domates x3',
-                'Yerli Muz x2',
-              ],
-              paymentStatus: 'Ödendi',
-              paymentColor: Colors.green,
-              paidAmount: 234.50,
-            ),
+            // Eğer hiç sipariş yoksa boş durum mesajı
+            if (customerOrders.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.receipt_long_outlined,
+                      size: 64,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Henüz sipariş bulunmuyor',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'İlk siparişinizi verin ve burada görün',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         );
       },
@@ -295,59 +288,48 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Firma ismini büyük ve öne çıkan şekilde göster
+                        Text(
+                          companyName,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF1F2937),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
                         Row(
                           children: [
-                            Text(
-                              order.id.substring(0, 8).toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF1F2937),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
+                                horizontal: 8,
+                                vertical: 3,
                               ),
                               decoration: BoxDecoration(
                                 color: statusColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 statusText,
                                 style: TextStyle(
                                   color: statusColor,
-                                  fontSize: 10,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Text(
-                              companyName,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey[700],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 12),
                             Icon(
-                              Icons.circle,
-                              size: 4,
-                              color: Colors.grey[400],
+                              Icons.calendar_today,
+                              size: 14,
+                              color: Colors.grey[500],
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 4),
                             Text(
                               formatter.format(order.orderDate),
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
                                 color: Colors.grey[600],
                               ),
                             ),
@@ -579,282 +561,6 @@ class _TransactionsScreenState extends State<TransactionsScreen>
       case PaymentStatus.paid:
         return Colors.green;
     }
-  }
-
-  Widget _buildOrderCard({
-    required String orderNo,
-    required String date,
-    required String status,
-    required Color statusColor,
-    required String companyName,
-    required double amount,
-    required List<String> items,
-    required String paymentStatus,
-    required Color paymentColor,
-    required double paidAmount,
-  }) {
-    return InkWell(
-      onTap: () => _showOrderDetails(
-        orderNo: orderNo,
-        companyName: companyName,
-        items: items,
-        amount: amount,
-        paidAmount: paidAmount,
-      ),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-          border: Border.all(
-            color: Colors.grey[100]!,
-            width: 1,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Üst Kısım - Firma ve Sipariş Bilgileri
-              Row(
-                children: [
-                  // Firma Avatar
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          AppTheme.primaryColor.withOpacity(0.1),
-                          AppTheme.primaryColor.withOpacity(0.05),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Text(
-                        companyName.substring(0, 2).toUpperCase(),
-                        style: TextStyle(
-                          color: AppTheme.primaryColor,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Sipariş Bilgileri
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              orderNo,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF1F2937),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                status,
-                                style: TextStyle(
-                                  color: statusColor,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Text(
-                              companyName,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey[700],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              Icons.circle,
-                              size: 4,
-                              color: Colors.grey[400],
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              date,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Fiyat ve Ödeme Durumu
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '₺${amount.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: paymentColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          paymentStatus,
-                          style: TextStyle(
-                            color: paymentColor,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Ürün Listesi - Kompakt
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  children: [
-                    // İlk 2 ürünü göster
-                    ...items.take(2).map(
-                          (item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    color:
-                                        AppTheme.primaryColor.withOpacity(0.6),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    item,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF1F2937),
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                    // Eğer daha fazla ürün varsa göster
-                    if (items.length > 2)
-                      Row(
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[400],
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '+${items.length - 2} ürün daha',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Alt Kısım - Ödeme Özeti
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildPaymentSummaryItem(
-                      'Ödenen',
-                      paidAmount,
-                      Colors.green,
-                      Icons.check_circle_outline,
-                    ),
-                  ),
-                  Container(
-                    width: 1,
-                    height: 24,
-                    color: Colors.grey[200],
-                    margin: const EdgeInsets.symmetric(horizontal: 12),
-                  ),
-                  Expanded(
-                    child: _buildPaymentSummaryItem(
-                      'Kalan',
-                      amount - paidAmount,
-                      amount - paidAmount > 0 ? Colors.orange : Colors.green,
-                      amount - paidAmount > 0
-                          ? Icons.pending_outlined
-                          : Icons.check_circle_outline,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildPaymentSummaryItem(
@@ -1187,7 +893,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
           children: [
             // Özet Kartı
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -1198,12 +904,12 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                     const Color(0xFF1E40AF),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.primaryColor.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
+                    color: AppTheme.primaryColor.withOpacity(0.2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),
@@ -1212,22 +918,22 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                 children: [
                   // Başlık
                   Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(8),
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Icon(
                             Icons.account_balance_wallet_rounded,
                             color: Colors.white,
-                            size: 20,
+                            size: 16,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1236,16 +942,15 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                                 'Ödeme Özeti',
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.9),
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              const SizedBox(height: 2),
                               Text(
                                 'Toplam Finansal Durum',
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 18,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1257,37 +962,38 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                   ),
                   // İstatistikler
                   Container(
-                    padding: const EdgeInsets.all(6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildPaymentStat(
-                          'Toplam Sipariş',
+                        _buildCompactPaymentStat(
+                          'Sipariş',
                           customerOrders.length.toString(),
                           Icons.shopping_bag_rounded,
                         ),
                         Container(
                           width: 1,
-                          height: 40,
+                          height: 30,
                           color: Colors.white.withOpacity(0.2),
                         ),
-                        _buildPaymentStat(
+                        _buildCompactPaymentStat(
                           'Ödenen',
-                          '₺${totalPaidAmount.toStringAsFixed(2)}',
+                          '₺${totalPaidAmount.toStringAsFixed(0)}',
                           Icons.check_circle_rounded,
                         ),
                         Container(
                           width: 1,
-                          height: 40,
+                          height: 30,
                           color: Colors.white.withOpacity(0.2),
                         ),
-                        _buildPaymentStat(
+                        _buildCompactPaymentStat(
                           'Kalan',
-                          '₺${totalRemainingDebt.toStringAsFixed(2)}',
+                          '₺${totalRemainingDebt.toStringAsFixed(0)}',
                           Icons.pending_rounded,
                         ),
                       ],
@@ -1304,25 +1010,38 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                   child: _buildRealCompanyDebtCard(companyInfo),
                 )),
 
-            // Taslak veriler (eğer gerçek veri yoksa)
-            if (companyDebts.isEmpty) ...[
-              _buildSectionHeader('Örnek Ödemeler'),
-              const SizedBox(height: 8),
-              _buildCompanyDebtCard(
-                companyName: 'Anadolu Gıda',
-                totalDebt: 450.90,
-                paidAmount: 200.00,
-                lastPaymentDate: '12 Mart 2024',
+            // Eğer hiç firma borcu yoksa boş durum mesajı
+            if (companyDebts.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.account_balance_wallet_outlined,
+                      size: 64,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Henüz ödeme bulunmuyor',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Siparişleriniz tamamlandıkça ödemeler burada görünecek',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[500],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              _buildCompanyDebtCard(
-                companyName: 'Doğal Tarım',
-                totalDebt: 234.50,
-                paidAmount: 234.50,
-                lastPaymentDate: '10 Mart 2024',
-                isPaid: true,
-              ),
-            ],
           ],
         );
       },
@@ -1529,12 +1248,23 @@ class _TransactionsScreenState extends State<TransactionsScreen>
     final formatter = DateFormat('d MMMM yyyy', 'tr_TR');
     final remainingDebt = companyInfo.totalDebt - companyInfo.paidAmount;
 
+    // Bu firmaya ait siparişleri al
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final companyOrders = orderProvider.orders
+        .where((order) =>
+            order.customer.name.replaceFirst('Müşteri → ', '') ==
+            companyInfo.companyName)
+        .toList();
+
+    // Tarihe göre sırala (en yeni önce)
+    companyOrders.sort((a, b) => b.orderDate.compareTo(a.orderDate));
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
+        height: MediaQuery.of(context).size.height * 0.85,
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(
@@ -1556,7 +1286,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
               child: Row(
                 children: [
                   Text(
-                    'Borç Detayı',
+                    '${companyInfo.companyName} - Borç Detayı',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
@@ -1577,40 +1307,130 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Firma Bilgileri
-                    _buildDetailSection(
-                      title: 'Firma Bilgileri',
-                      content: [
-                        _buildDetailRow('Firma', companyInfo.companyName),
-                        _buildDetailRow(
-                            'Toplam Sipariş', '${companyInfo.orderCount} adet'),
-                        _buildDetailRow(
-                          'Toplam Borç',
-                          '₺${companyInfo.totalDebt.toStringAsFixed(2)}',
+                    // Firma Özeti
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppTheme.primaryColor.withOpacity(0.1),
+                            AppTheme.primaryColor.withOpacity(0.05),
+                          ],
                         ),
-                        _buildDetailRow(
-                          'Ödenen',
-                          '₺${companyInfo.paidAmount.toStringAsFixed(2)}',
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppTheme.primaryColor.withOpacity(0.2),
                         ),
-                        _buildDetailRow(
-                          'Kalan',
-                          '₺${remainingDebt.toStringAsFixed(2)}',
-                          isHighlighted: true,
-                        ),
-                      ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppTheme.primaryColor,
+                                  AppTheme.primaryColor.withOpacity(0.8),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Text(
+                                companyInfo.companyName.length >= 2
+                                    ? companyInfo.companyName
+                                        .substring(0, 2)
+                                        .toUpperCase()
+                                    : companyInfo.companyName.toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  companyInfo.companyName,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF1F2937),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${companyInfo.orderCount} sipariş • ${formatter.format(companyInfo.lastPaymentDate)}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '₺${remainingDebt.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  color: remainingDebt > 0
+                                      ? Colors.orange[700]
+                                      : Colors.green[700],
+                                ),
+                              ),
+                              Text(
+                                'Kalan Borç',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
+
                     const SizedBox(height: 24),
-                    // Son Ödeme Bilgisi
-                    _buildDetailSection(
-                      title: 'Son Ödeme',
-                      content: [
-                        _buildPaymentHistoryItem(
-                          date: formatter.format(companyInfo.lastPaymentDate),
-                          amount: companyInfo.paidAmount,
-                          type: 'Toplam Ödenen',
+
+                    // Siparişler Başlığı
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.receipt_long_rounded,
+                          color: AppTheme.primaryColor,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Sipariş Detayları',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.primaryColor,
+                          ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+
+                    // Siparişler Listesi
+                    ...companyOrders.map(
+                        (order) => _buildOrderDetailCard(order, formatter)),
                   ],
                 ),
               ),
@@ -1621,29 +1441,282 @@ class _TransactionsScreenState extends State<TransactionsScreen>
     );
   }
 
-  Widget _buildPaymentStat(String label, String value, IconData icon) {
+  // Sipariş detay kartı
+  Widget _buildOrderDetailCard(Order order, DateFormat formatter) {
+    final remainingAmount = order.totalAmount - (order.paidAmount ?? 0.0);
+    final isPaid = remainingAmount <= 0;
+    final statusText = _getStatusText(order.status);
+    final statusColor = _getStatusColor(order.status);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isPaid ? Colors.green[200]! : Colors.orange[200]!,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Üst kısım - Sipariş bilgileri
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: statusColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            statusText,
+                            style: TextStyle(
+                              color: statusColor,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.calendar_today,
+                          size: 14,
+                          color: Colors.grey[500],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          formatter.format(order.orderDate),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Teslimat: ${formatter.format(order.deliveryDate)}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '₺${order.totalAmount.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1F2937),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: isPaid ? Colors.green[100] : Colors.orange[100],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      isPaid
+                          ? 'Ödendi'
+                          : '₺${remainingAmount.toStringAsFixed(2)} kalan',
+                      style: TextStyle(
+                        color: isPaid ? Colors.green[700] : Colors.orange[700],
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // Ürünler
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Ürünler:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ...order.items.take(3).map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 4,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${item.product.name} x${item.quantity}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF1F2937),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+                if (order.items.length > 3)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      '+${order.items.length - 3} ürün daha',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[600],
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Ödeme detayları
+          Row(
+            children: [
+              Expanded(
+                child: _buildPaymentDetailItem(
+                  'Toplam',
+                  order.totalAmount,
+                  Colors.blue,
+                  Icons.account_balance_wallet,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildPaymentDetailItem(
+                  'Ödenen',
+                  order.paidAmount ?? 0.0,
+                  Colors.green,
+                  Icons.check_circle,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildPaymentDetailItem(
+                  'Kalan',
+                  remainingAmount,
+                  remainingAmount > 0 ? Colors.orange : Colors.green,
+                  remainingAmount > 0 ? Icons.pending : Icons.check_circle,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Ödeme detay item'ı
+  Widget _buildPaymentDetailItem(
+      String label, double amount, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            color: color,
+            size: 16,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '₺${amount.toStringAsFixed(2)}',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: color.withOpacity(0.8),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactPaymentStat(String label, String value, IconData icon) {
     return Column(
       children: [
         Icon(
           icon,
           color: Colors.white.withOpacity(0.9),
-          size: 20,
+          size: 16,
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Text(
           value,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 16,
+            fontSize: 13,
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
             color: Colors.white.withOpacity(0.7),
-            fontSize: 12,
+            fontSize: 10,
           ),
         ),
       ],
@@ -1778,209 +1851,6 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                 ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Taslak firma borç kartı (eski veriler için)
-  Widget _buildCompanyDebtCard({
-    required String companyName,
-    required double totalDebt,
-    required double paidAmount,
-    required String lastPaymentDate,
-    bool isPaid = false,
-  }) {
-    final remainingDebt = totalDebt - paidAmount;
-
-    return InkWell(
-      onTap: () => _showOrderDetails(
-        orderNo: 'SP123456',
-        companyName: companyName,
-        items: ['Örnek Ürün x1'],
-        amount: totalDebt,
-        paidAmount: paidAmount,
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-          border: Border.all(
-            color: isPaid ? Colors.green[100]! : Colors.orange[100]!,
-            width: 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            // Üst Kısım
-            Container(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      // Firma Avatar
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              isPaid ? Colors.green[100]! : Colors.orange[100]!,
-                              isPaid ? Colors.green[50]! : Colors.orange[50]!,
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Center(
-                          child: Text(
-                            companyName.length >= 2
-                                ? companyName.substring(0, 2).toUpperCase()
-                                : companyName.toUpperCase(),
-                            style: TextStyle(
-                              color: isPaid
-                                  ? Colors.green[700]
-                                  : Colors.orange[700],
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      // Firma Bilgileri
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              companyName,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF1F2937),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isPaid
-                                        ? Colors.green.withOpacity(0.1)
-                                        : Colors.orange.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        isPaid
-                                            ? Icons.check_circle_rounded
-                                            : Icons.pending_rounded,
-                                        color: isPaid
-                                            ? Colors.green
-                                            : Colors.orange,
-                                        size: 12,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        isPaid ? 'Ödendi' : 'Bekliyor',
-                                        style: TextStyle(
-                                          color: isPaid
-                                              ? Colors.green
-                                              : Colors.orange,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Son Ödeme: $lastPaymentDate',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Toplam Borç
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '₺${totalDebt.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: AppTheme.primaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Toplam',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            // Alt Kısım - Ödeme Detayları
-            if (!isPaid) ...[
-              Container(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildDebtStat(
-                          'Toplam',
-                          '₺${totalDebt.toStringAsFixed(2)}',
-                          Icons.account_balance_wallet_rounded,
-                        ),
-                        _buildDebtStat(
-                          'Ödenen',
-                          '₺${paidAmount.toStringAsFixed(2)}',
-                          Icons.check_circle_rounded,
-                        ),
-                        _buildDebtStat(
-                          'Kalan',
-                          '₺${remainingDebt.toStringAsFixed(2)}',
-                          Icons.pending_rounded,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ],
         ),
       ),
