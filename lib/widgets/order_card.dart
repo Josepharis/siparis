@@ -27,11 +27,16 @@ class OrderCard extends StatelessWidget {
     final deliveryDate = dateFormat.format(order.deliveryDate);
 
     // Teslimat tarihinden kalan gün hesabı
-    final int daysLeft = order.deliveryDate.difference(DateTime.now()).inDays;
-    final String timeIndicator =
-        daysLeft > 0
-            ? '$daysLeft gün'
-            : daysLeft == 0
+    final now = DateTime.now();
+    final orderDeliveryDate = DateTime(order.deliveryDate.year,
+        order.deliveryDate.month, order.deliveryDate.day);
+
+    // Sadece tarih kısmını karşılaştır (saat bilgisini yok say)
+    final today = DateTime(now.year, now.month, now.day);
+    final int daysLeft = orderDeliveryDate.difference(today).inDays;
+    final String timeIndicator = daysLeft > 0
+        ? '$daysLeft gün'
+        : daysLeft == 0
             ? 'Bugün'
             : '${daysLeft.abs()} gün geçti';
     final bool isUrgent =
@@ -201,8 +206,8 @@ class OrderCard extends StatelessWidget {
                           children: [
                             // İptal butonu
                             OutlinedButton.icon(
-                              onPressed:
-                                  () => onStatusChanged(OrderStatus.cancelled),
+                              onPressed: () =>
+                                  onStatusChanged(OrderStatus.cancelled),
                               icon: const Icon(Icons.cancel_outlined, size: 14),
                               label: const Text(
                                 'İptal',
@@ -230,12 +235,11 @@ class OrderCard extends StatelessWidget {
 
                             // İlerleme butonu
                             ElevatedButton.icon(
-                              onPressed:
-                                  () => onStatusChanged(
-                                    order.status == OrderStatus.waiting
-                                        ? OrderStatus.processing
-                                        : OrderStatus.completed,
-                                  ),
+                              onPressed: () => onStatusChanged(
+                                order.status == OrderStatus.waiting
+                                    ? OrderStatus.processing
+                                    : OrderStatus.completed,
+                              ),
                               icon: Icon(
                                 order.status == OrderStatus.waiting
                                     ? Icons.play_arrow_rounded
@@ -279,10 +283,9 @@ class OrderCard extends StatelessWidget {
                             width: 32,
                             height: 32,
                             decoration: BoxDecoration(
-                              color:
-                                  isUrgent
-                                      ? Colors.red.shade50
-                                      : mainColor.withOpacity(0.08),
+                              color: isUrgent
+                                  ? Colors.red.shade50
+                                  : mainColor.withOpacity(0.08),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
@@ -324,16 +327,14 @@ class OrderCard extends StatelessWidget {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color:
-                                      isUrgent
-                                          ? Colors.red.shade50
-                                          : mainColor.withOpacity(0.08),
+                                  color: isUrgent
+                                      ? Colors.red.shade50
+                                      : mainColor.withOpacity(0.08),
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
-                                    color:
-                                        isUrgent
-                                            ? Colors.red.shade300
-                                            : mainColor.withOpacity(0.3),
+                                    color: isUrgent
+                                        ? Colors.red.shade300
+                                        : mainColor.withOpacity(0.3),
                                     width: 1,
                                   ),
                                 ),
@@ -402,62 +403,61 @@ class OrderCard extends StatelessWidget {
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              children:
-                                  order.items.map((item) {
-                                    return Padding(
-                                      padding: const EdgeInsets.only(bottom: 3),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 4,
-                                              vertical: 1,
+                              children: order.items.map((item) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 3),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 4,
+                                          vertical: 1,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: mainColor.withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                          border: Border.all(
+                                            color: mainColor.withOpacity(
+                                              0.3,
                                             ),
-                                            decoration: BoxDecoration(
-                                              color: mainColor.withOpacity(0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                              border: Border.all(
-                                                color: mainColor.withOpacity(
-                                                  0.3,
-                                                ),
-                                                width: 1,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              '${item.quantity}x',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: mainColor,
-                                              ),
-                                            ),
+                                            width: 1,
                                           ),
-                                          const SizedBox(width: 6),
-                                          Expanded(
-                                            child: Text(
-                                              item.product.name,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey.shade800,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
+                                        ),
+                                        child: Text(
+                                          '${item.quantity}x',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: mainColor,
                                           ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            '₺${(item.product.price * item.quantity).toStringAsFixed(0)}',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.grey.shade700,
-                                            ),
-                                          ),
-                                        ],
+                                        ),
                                       ),
-                                    );
-                                  }).toList(),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          item.product.name,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade800,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '₺${(item.product.price * item.quantity).toStringAsFixed(0)}',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
                             ),
                           ),
                         ],

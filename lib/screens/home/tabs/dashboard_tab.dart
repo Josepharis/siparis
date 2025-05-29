@@ -11,6 +11,7 @@ import 'package:siparis/widgets/status_summary_card.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'dart:math'; // min fonksiyonu için eklendi
+import 'package:siparis/screens/all_daily_products_screen.dart';
 
 class DashboardTab extends StatefulWidget {
   const DashboardTab({super.key});
@@ -21,6 +22,7 @@ class DashboardTab extends StatefulWidget {
 
 class _DashboardTabState extends State<DashboardTab> {
   bool _isLocaleInitialized = false;
+  String _selectedSortOption = 'Yakın Teslimat'; // Varsayılan sıralama
 
   @override
   void initState() {
@@ -44,8 +46,41 @@ class _DashboardTabState extends State<DashboardTab> {
     final completedOrders = orderProvider.completedOrders;
     final dailyProducts = orderProvider.dailyProductSummary;
 
-    // Filtrelenmiş günün siparişleri
-    final todayActiveOrders = [...waitingOrders, ...processingOrders];
+    // Bugünün tarihini hesapla
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // Bugüne ait aktif siparişleri filtrele
+    final todayActiveOrders =
+        [...waitingOrders, ...processingOrders].where((order) {
+      final orderDeliveryDate = DateTime(
+        order.deliveryDate.year,
+        order.deliveryDate.month,
+        order.deliveryDate.day,
+      );
+      return orderDeliveryDate.isAtSameMomentAs(today);
+    }).toList();
+
+    // Sıralama uygula
+    _applySorting(todayActiveOrders);
+
+    // Bugünün sipariş durumlarını hesapla
+    final todayWaitingOrders = todayActiveOrders
+        .where((order) => order.status == OrderStatus.waiting)
+        .length;
+    final todayProcessingOrders = todayActiveOrders
+        .where((order) => order.status == OrderStatus.processing)
+        .length;
+
+    // Bugün tamamlanan siparişleri de hesapla
+    final todayCompletedOrders = completedOrders.where((order) {
+      final orderDeliveryDate = DateTime(
+        order.deliveryDate.year,
+        order.deliveryDate.month,
+        order.deliveryDate.day,
+      );
+      return orderDeliveryDate.isAtSameMomentAs(today);
+    }).length;
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
@@ -149,9 +184,9 @@ class _DashboardTabState extends State<DashboardTab> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
                 child: _buildSummaryCard(
-                  waiting: waitingOrders.length,
-                  processing: processingOrders.length,
-                  completed: completedOrders.length,
+                  waiting: todayWaitingOrders,
+                  processing: todayProcessingOrders,
+                  completed: todayCompletedOrders,
                 ),
               ),
             ),
@@ -162,6 +197,44 @@ class _DashboardTabState extends State<DashboardTab> {
                 'Günlük Üretilecekler',
                 Icons.bakery_dining_rounded,
                 Colors.orange,
+                trailing: dailyProducts.isNotEmpty
+                    ? GestureDetector(
+                        onTap: () =>
+                            _showAllDailyProducts(context, dailyProducts),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.orange.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Hepsini Gör',
+                                style: TextStyle(
+                                  color: Colors.orange[700],
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                color: Colors.orange[700],
+                                size: 12,
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : null,
               ),
             ),
 
@@ -443,26 +516,75 @@ class _DashboardTabState extends State<DashboardTab> {
             // Aktif Siparişler Başlığı
             SliverToBoxAdapter(
               child: _buildSectionTitle(
-                'Aktif Siparişler',
+                'Bugünün Siparişleri',
                 Icons.receipt_rounded,
                 AppTheme.primaryColor,
-                trailing: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: Text(
-                    '${todayActiveOrders.length} Sipariş',
-                    style: TextStyle(
-                      color: AppTheme.primaryColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Sıralama dropdown'ı
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: AppTheme.primaryColor.withOpacity(0.3)),
+                      ),
+                      child: DropdownButton<String>(
+                        value: _selectedSortOption,
+                        underline: const SizedBox(),
+                        icon: Icon(
+                          Icons.sort_rounded,
+                          color: AppTheme.primaryColor,
+                          size: 16,
+                        ),
+                        style: TextStyle(
+                          color: AppTheme.primaryColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'Yakın Teslimat',
+                            child: Text('Yakın Teslimat'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Uzak Teslimat',
+                            child: Text('Uzak Teslimat'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() {
+                              _selectedSortOption = value;
+                            });
+                          }
+                        },
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    // Sipariş sayısı
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: Text(
+                        '${todayActiveOrders.length} Sipariş',
+                        style: TextStyle(
+                          color: AppTheme.primaryColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -798,7 +920,15 @@ class _DashboardTabState extends State<DashboardTab> {
         order.items.length > 1 ? '${order.items.length} ürün' : '1 ürün';
 
     // Teslimat tarihinden kalan gün sayısı
-    final int daysLeft = order.deliveryDate.difference(DateTime.now()).inDays;
+    final now = DateTime.now();
+    final deliveryDate = order.deliveryDate;
+
+    // Sadece tarih kısmını karşılaştır (saat bilgisini yok say)
+    final today = DateTime(now.year, now.month, now.day);
+    final orderDeliveryDate =
+        DateTime(deliveryDate.year, deliveryDate.month, deliveryDate.day);
+
+    final int daysLeft = orderDeliveryDate.difference(today).inDays;
     final String timeIndicator = daysLeft > 0
         ? '$daysLeft gün kaldı'
         : daysLeft == 0
@@ -898,7 +1028,7 @@ class _DashboardTabState extends State<DashboardTab> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Müşteri adı ve ID
+                    // Müşteri adı
                     Row(
                       children: [
                         Expanded(
@@ -911,13 +1041,6 @@ class _DashboardTabState extends State<DashboardTab> {
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Text(
-                          '#${order.id.substring(0, min(5, order.id.length))}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[600],
                           ),
                         ),
                       ],
@@ -1233,5 +1356,26 @@ class _DashboardTabState extends State<DashboardTab> {
       default:
         return Icons.category;
     }
+  }
+
+  void _applySorting(List<Order> orders) {
+    switch (_selectedSortOption) {
+      case 'Yakın Teslimat':
+        orders.sort((a, b) => a.deliveryDate.compareTo(b.deliveryDate));
+        break;
+      case 'Uzak Teslimat':
+        orders.sort((a, b) => b.deliveryDate.compareTo(a.deliveryDate));
+        break;
+    }
+  }
+
+  void _showAllDailyProducts(
+      BuildContext context, Map<String, DailyProductSummary> products) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AllDailyProductsScreen(products: products),
+      ),
+    );
   }
 }

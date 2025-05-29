@@ -169,14 +169,16 @@ class OrderProvider extends ChangeNotifier {
     final Map<String, Map<String, int>> productFirmaCounts = {};
 
     // Bugün için olan siparişleri filtrele
-    final todayOrders = _orders
-        .where(
-          (order) =>
-              order.deliveryDate.day == DateTime.now().day &&
-              order.deliveryDate.month == DateTime.now().month &&
-              order.deliveryDate.year == DateTime.now().year,
-        )
-        .toList();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final todayOrders = _orders.where(
+      (order) {
+        final orderDeliveryDate = DateTime(order.deliveryDate.year,
+            order.deliveryDate.month, order.deliveryDate.day);
+        return orderDeliveryDate.isAtSameMomentAs(today);
+      },
+    ).toList();
 
     // Her bir sipariş öğesi için özet oluştur
     for (final order in todayOrders) {
