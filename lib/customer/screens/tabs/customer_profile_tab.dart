@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:siparis/config/theme.dart';
 import 'package:siparis/providers/auth_provider.dart';
-import 'package:siparis/screens/auth/login_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:siparis/providers/order_provider.dart';
 
 class CustomerProfileTab extends StatefulWidget {
   const CustomerProfileTab({super.key});
@@ -11,98 +12,57 @@ class CustomerProfileTab extends StatefulWidget {
   State<CustomerProfileTab> createState() => _CustomerProfileTabState();
 }
 
-class _CustomerProfileTabState extends State<CustomerProfileTab>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+class _CustomerProfileTabState extends State<CustomerProfileTab> {
+  bool _notificationsEnabled = true;
 
   // Form controllers
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _companyController = TextEditingController();
-
-  // Settings
-  bool _notificationsEnabled = true;
-  bool _darkMode = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-    ));
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
-    ));
-
-    _animationController.forward();
-    _loadUserData();
-  }
-
-  void _loadUserData() {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final user = authProvider.currentUser;
-    if (user != null) {
-      _nameController.text = user.name;
-      _emailController.text = user.email;
-      _phoneController.text = user.phone ?? '';
-      _companyController.text = user.companyName ?? '';
-    }
-  }
+  final _addressController = TextEditingController();
 
   @override
   void dispose() {
-    _animationController.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _companyController.dispose();
+    _addressController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: SlideTransition(
-          position: _slideAnimation,
-          child: CustomScrollView(
+      backgroundColor: AppTheme.backgroundColor,
+      body: Consumer<AuthProvider>(
+        builder: (context, authProvider, child) {
+          final user = authProvider.currentUser;
+          final employee = authProvider.currentEmployee;
+          final isEmployee = authProvider.isEmployeeLogin;
+
+          return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              // Modern App Bar
-              _buildModernAppBar(),
-
-              // Profile Header
+              // Modern Header
               SliverToBoxAdapter(
-                child: _buildProfileHeader(),
+                child: _buildHeader(user, employee, isEmployee),
               ),
 
-              // Settings Sections
+              // Profile Info Card
               SliverToBoxAdapter(
-                child: _buildSettingsSections(),
+                child: _buildProfileCard(user, employee, isEmployee),
               ),
 
-              // Logout Section
+              // Quick Settings
               SliverToBoxAdapter(
-                child: _buildLogoutSection(),
+                child: _buildQuickSettings(),
+              ),
+
+              // Account Actions
+              SliverToBoxAdapter(
+                child: _buildAccountActions(authProvider),
               ),
 
               // Bottom Padding
@@ -110,942 +70,179 @@ class _CustomerProfileTabState extends State<CustomerProfileTab>
                 child: SizedBox(height: 100),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildModernAppBar() {
-    return SliverAppBar(
-      expandedHeight: 120,
-      floating: false,
-      pinned: true,
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppTheme.primaryColor,
-                AppTheme.primaryColor.withOpacity(0.8),
-                Colors.purple[400]!,
-              ],
-            ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        'Profilim',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          letterSpacing: -1,
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.3),
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.settings_outlined,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Hesap ayarlarınızı yönetin',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white.withOpacity(0.9),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProfileHeader() {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, child) {
-        final user = authProvider.currentUser;
-
-        return Container(
-          margin: const EdgeInsets.all(20),
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 30,
-                offset: const Offset(0, 15),
-                spreadRadius: -5,
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Profile Avatar
-              Stack(
-                children: [
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          AppTheme.primaryColor,
-                          Colors.purple[400]!,
-                        ],
-                      ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.primaryColor.withOpacity(0.4),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      Icons.person_rounded,
-                      size: 50,
-                      color: Colors.white,
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: GestureDetector(
-                      onTap: _changeProfilePhoto,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.camera_alt_rounded,
-                          color: AppTheme.primaryColor,
-                          size: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // User Info
-              Text(
-                user?.name ?? 'Kullanıcı',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.grey[900],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                user?.email ?? '',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-
-              if (user?.companyName != null &&
-                  user!.companyName!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.orange[400]!,
-                        Colors.red[400]!,
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.orange[400]!.withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.business_rounded,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        user.companyName!,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 24),
-
-              // Edit Profile Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _editProfile,
-                  icon: const Icon(Icons.edit_rounded, size: 20),
-                  label: const Text(
-                    'Profili Düzenle',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSettingsSections() {
-    return Container(
-      margin: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 20),
-          Text(
-            'Ayarlar',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: Colors.grey[900],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Preferences Section
-          _buildSettingsCard(
-            'Hesap Ayarları',
-            [
-              _buildActionTile(
-                'Adreslerim',
-                'Teslimat adreslerini yönet',
-                Icons.location_on_rounded,
-                Colors.green,
-                _manageAddresses,
-              ),
-              _buildSwitchTile(
-                'Bildirimler',
-                'Push bildirimleri al',
-                Icons.notifications_rounded,
-                _notificationsEnabled,
-                (value) => setState(() => _notificationsEnabled = value),
-              ),
-              _buildSwitchTile(
-                'Koyu Tema',
-                'Gece modu kullan',
-                Icons.dark_mode_rounded,
-                _darkMode,
-                (value) => setState(() => _darkMode = value),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Support Section
-          _buildSettingsCard(
-            'Destek',
-            [
-              _buildActionTile(
-                'Yardım Merkezi',
-                'SSS ve rehberler',
-                Icons.help_rounded,
-                Colors.blue,
-                _openHelp,
-              ),
-              _buildActionTile(
-                'Canlı Destek',
-                'Müşteri hizmetleri',
-                Icons.chat_rounded,
-                Colors.green,
-                _openLiveSupport,
-              ),
-              _buildActionTile(
-                'Geri Bildirim',
-                'Önerilerinizi paylaşın',
-                Icons.feedback_rounded,
-                Colors.purple,
-                _sendFeedback,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // About Section
-          _buildSettingsCard(
-            'Hakkında',
-            [
-              _buildActionTile(
-                'Uygulama Hakkında',
-                'Versiyon 2.1.0',
-                Icons.info_rounded,
-                Colors.grey,
-                _showAbout,
-              ),
-              _buildActionTile(
-                'Gizlilik Politikası',
-                'Veri kullanım koşulları',
-                Icons.privacy_tip_rounded,
-                Colors.indigo,
-                _showPrivacyPolicy,
-              ),
-              _buildActionTile(
-                'Kullanım Şartları',
-                'Hizmet koşulları',
-                Icons.description_rounded,
-                Colors.teal,
-                _showTerms,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingsCard(String title, List<Widget> children) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.grey[900],
-              ),
-            ),
-          ),
-          ...children,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSwitchTile(String title, String subtitle, IconData icon,
-      bool value, ValueChanged<bool> onChanged) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              color: AppTheme.primaryColor,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[900],
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppTheme.primaryColor,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionTile(String title, String subtitle, IconData icon,
-      Color color, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[900],
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: Colors.grey[400],
-              size: 16,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogoutSection() {
-    return Container(
-      margin: const EdgeInsets.all(20),
-      child: Consumer<AuthProvider>(
-        builder: (context, authProvider, child) {
-          return InkWell(
-            onTap: authProvider.isLoading ? null : _showLogoutDialog,
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.red[400]!,
-                    Colors.red[600]!,
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.red[400]!.withOpacity(0.3),
-                    blurRadius: 15,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: authProvider.isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation(Colors.white),
-                            ),
-                          )
-                        : const Icon(
-                            Icons.logout_rounded,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Çıkış Yap',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Hesabınızdan güvenli çıkış yapın',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white.withOpacity(0.9),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: Colors.white.withOpacity(0.8),
-                    size: 20,
-                  ),
-                ],
-              ),
-            ),
           );
         },
       ),
     );
   }
 
-  // Action Methods
-  void _changeProfilePhoto() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  Widget _buildHeader(user, employee, bool isEmployee) {
+    final name = isEmployee ? employee?.name : user?.name;
+    final role = isEmployee ? employee?.position : 'Firma Sahibi';
+    final companyName = isEmployee
+        ? (employee?.companyId ?? 'Bağlı Firma')
+        : (user?.companyName ?? 'Firma Adı Belirtilmemiş');
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryColor,
+            AppTheme.primaryColor.withOpacity(0.8),
+          ],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+      ),
+      child: Row(
+        children: [
+          // Avatar
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 2,
               ),
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Profil Fotoğrafı',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: Colors.grey[900],
+            child: Center(
+              child: Text(
+                name?.substring(0, 1).toUpperCase() ?? '?',
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
-            const SizedBox(height: 20),
-            Row(
+          ),
+
+          const SizedBox(width: 20),
+
+          // User Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: _buildPhotoOption(
-                    'Kamera',
-                    Icons.camera_alt_rounded,
-                    () {
-                      Navigator.pop(context);
-                      _showSnackBar('Kamera açılıyor...');
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildPhotoOption(
-                    'Galeri',
-                    Icons.photo_library_rounded,
-                    () {
-                      Navigator.pop(context);
-                      _showSnackBar('Galeri açılıyor...');
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPhotoOption(String title, IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.grey[50],
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey[200]!),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: AppTheme.primaryColor,
-              size: 32,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[900],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _editProfile() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.85,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    'Profili Düzenle',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.grey[900],
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-                ],
-              ),
-            ),
-            // Form
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
+                // İsim ve Rol yan yana
+                Row(
                   children: [
-                    _buildEditField(
-                      controller: _nameController,
-                      label: 'Ad Soyad',
-                      icon: Icons.person_rounded,
-                      keyboardType: TextInputType.name,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildEditField(
-                      controller: _emailController,
-                      label: 'E-posta',
-                      icon: Icons.email_rounded,
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildEditField(
-                      controller: _phoneController,
-                      label: 'Telefon',
-                      icon: Icons.phone_rounded,
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildEditField(
-                      controller: _companyController,
-                      label: 'Firma Adı',
-                      icon: Icons.business_rounded,
-                      keyboardType: TextInputType.text,
-                    ),
-                    const SizedBox(height: 40),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _saveProfile,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.all(20),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 0,
+                    Flexible(
+                      child: Text(
+                        name ?? 'Kullanıcı',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
-                        child: const Text(
-                          'Değişiklikleri Kaydet',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        role ?? '',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
                   ],
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+                const SizedBox(height: 12),
 
-  Widget _buildEditField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required TextInputType keyboardType,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: Colors.grey[900],
-        ),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
-          ),
-          prefixIcon: Icon(
-            icon,
-            color: AppTheme.primaryColor,
-          ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.all(20),
-        ),
-      ),
-    );
-  }
-
-  void _saveProfile() {
-    Navigator.pop(context);
-    _showSnackBar('Profil başarıyla güncellendi!');
-  }
-
-  void _manageAddresses() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.85,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    'Adreslerim',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.grey[900],
+                // Firma Adı
+                Row(
+                  children: [
+                    Icon(
+                      Icons.business_rounded,
+                      color: Colors.white.withOpacity(0.8),
+                      size: 18,
                     ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-                ],
-              ),
-            ),
-            // Content
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  _buildAddressCard(
-                    'Ev Adresi',
-                    'Atatürk Mah. Cumhuriyet Cad. No:123\nAnkara, Türkiye',
-                    true,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildAddressCard(
-                    'İş Adresi',
-                    'Kızılay Mah. İş Merkezi No:45\nAnkara, Türkiye',
-                    false,
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _addNewAddress,
-                      icon: const Icon(Icons.add_rounded),
-                      label: const Text(
-                        'Yeni Adres Ekle',
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        companyName,
                         style: TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withOpacity(0.9),
+                          fontWeight: FontWeight.w500,
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.all(16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                    ),
+                  ],
+                ),
+
+                if (isEmployee) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.badge_outlined,
+                          color: Colors.white,
+                          size: 16,
                         ),
-                        elevation: 0,
-                      ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Çalışan Hesabı',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildAddressCard(String title, String address, bool isDefault) {
+  Widget _buildProfileCard(user, employee, bool isEmployee) {
+    final email = isEmployee ? employee?.email : user?.email;
+    final phone = isEmployee ? employee?.phone : user?.phone;
+    final company = isEmployee ? 'Bağlı Firma' : user?.companyName;
+
     return Container(
+      margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDefault ? AppTheme.primaryColor : Colors.grey[200]!,
-          width: isDefault ? 2 : 1,
-        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -1059,282 +256,285 @@ class _CustomerProfileTabState extends State<CustomerProfileTab>
         children: [
           Row(
             children: [
-              Text(
-                title,
+              Icon(
+                Icons.person_outline_rounded,
+                color: AppTheme.primaryColor,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Kişisel Bilgiler',
                 style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.grey[900],
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimaryColor,
                 ),
               ),
-              if (isDefault) ...[
-                const SizedBox(width: 12),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
+              const Spacer(),
+              // Düzenle butonu - sadece sahip için
+              if (!isEmployee)
+                IconButton(
+                  onPressed: () => _showEditProfileDialog(user),
+                  icon: Icon(
+                    Icons.edit_outlined,
                     color: AppTheme.primaryColor,
-                    borderRadius: BorderRadius.circular(12),
+                    size: 20,
                   ),
-                  child: const Text(
-                    'Varsayılan',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                    padding: const EdgeInsets.all(8),
+                  ),
+                ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // Email
+          _buildInfoRow(
+            Icons.email_outlined,
+            'E-posta',
+            email ?? 'Belirtilmemiş',
+          ),
+
+          // Phone
+          if (phone != null && phone.isNotEmpty)
+            _buildInfoRow(
+              Icons.phone_outlined,
+              'Telefon',
+              phone,
+            ),
+
+          // Company
+          if (company != null && company.isNotEmpty)
+            _buildInfoRow(
+              Icons.business_outlined,
+              isEmployee ? 'Bağlı Firma' : 'Firma',
+              company,
+            ),
+
+          // Address - sadece sahip için ve adres varsa
+          if (!isEmployee &&
+              user?.companyAddress != null &&
+              user!.companyAddress!.isNotEmpty)
+            _buildInfoRow(
+              Icons.location_on_outlined,
+              'Firma Adresi',
+              user!.companyAddress!,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              color: AppTheme.primaryColor,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: AppTheme.textPrimaryColor,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
-              const Spacer(),
-              IconButton(
-                onPressed: () => _editAddress(title),
-                icon: Icon(
-                  Icons.edit_rounded,
-                  color: AppTheme.primaryColor,
-                  size: 20,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickSettings() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.tune_rounded,
+                color: AppTheme.primaryColor,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Hızlı Ayarlar',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimaryColor,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            address,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  void _addNewAddress() {
-    Navigator.pop(context);
-    _showSnackBar('Yeni adres ekleme formu açılıyor...');
-  }
+          const SizedBox(height: 20),
 
-  void _editAddress(String addressTitle) {
-    _showSnackBar('$addressTitle düzenleniyor...');
-  }
-
-  void _openHelp() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const HelpCenterScreen(),
-      ),
-    );
-  }
-
-  void _openLiveSupport() {
-    _showSnackBar('Canlı destek başlatılıyor...');
-  }
-
-  void _sendFeedback() {
-    _showSnackBar('Geri bildirim formu açılıyor...');
-  }
-
-  void _showAbout() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: const Text(
-          'Uygulama Hakkında',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Sipariş Takip Uygulaması',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[900],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Versiyon 2.1.0',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '© 2024 Tüm hakları saklıdır.',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Tamam',
-              style: TextStyle(
-                color: AppTheme.primaryColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPrivacyPolicy() {
-    _showSnackBar('Gizlilik politikası açılıyor...');
-  }
-
-  void _showTerms() {
-    _showSnackBar('Kullanım şartları açılıyor...');
-  }
-
-  void _showLogoutDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: const Text(
-          'Çıkış Yap',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-        content: const Text(
-          'Hesabınızdan çıkış yapmak istediğinizden emin misiniz?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'İptal',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              final authProvider =
-                  Provider.of<AuthProvider>(context, listen: false);
-              await authProvider.signOut();
-
-              if (mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (context) => const LoginScreen(),
-                  ),
-                  (route) => false,
-                );
-              }
+          // Notifications Toggle
+          _buildSettingToggle(
+            Icons.notifications_outlined,
+            'Bildirimler',
+            'Sipariş güncellemelerini al',
+            _notificationsEnabled,
+            (value) {
+              setState(() {
+                _notificationsEnabled = value;
+              });
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              'Çıkış Yap',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
           ),
         ],
       ),
     );
   }
 
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppTheme.primaryColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+  Widget _buildSettingToggle(
+    IconData icon,
+    String title,
+    String subtitle,
+    bool value,
+    Function(bool) onChanged,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundColor,
+        borderRadius: BorderRadius.circular(12),
       ),
-    );
-  }
-}
-
-// Placeholder screens for navigation
-class HelpCenterScreen extends StatelessWidget {
-  const HelpCenterScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Yardım Merkezi'),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
+      child: Row(
         children: [
-          _buildHelpCard(
-            'Sipariş Nasıl Verilir?',
-            'Adım adım sipariş verme rehberi',
-            Icons.shopping_cart_rounded,
-            Colors.blue,
-            () => _showHelpDetail(context, 'Sipariş Verme'),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: value
+                  ? AppTheme.primaryColor.withOpacity(0.1)
+                  : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              color: value ? AppTheme.primaryColor : Colors.grey.shade600,
+              size: 20,
+            ),
           ),
-          const SizedBox(height: 16),
-          _buildHelpCard(
-            'Teslimat Süreci',
-            'Teslimat aşamaları ve takip',
-            Icons.local_shipping_rounded,
-            Colors.green,
-            () => _showHelpDetail(context, 'Teslimat'),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimaryColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          _buildHelpCard(
-            'Ödeme Yöntemleri',
-            'Kabul edilen ödeme seçenekleri',
-            Icons.payment_rounded,
-            Colors.orange,
-            () => _showHelpDetail(context, 'Ödeme'),
-          ),
-          const SizedBox(height: 16),
-          _buildHelpCard(
-            'Sık Sorulan Sorular',
-            'En çok merak edilen konular',
-            Icons.help_rounded,
-            Colors.purple,
-            () => _showHelpDetail(context, 'SSS'),
-          ),
-          const SizedBox(height: 16),
-          _buildHelpCard(
-            'Canlı Destek',
-            'Müşteri hizmetleri ile iletişim',
-            Icons.chat_rounded,
-            Colors.red,
-            () => _showHelpDetail(context, 'Canlı Destek'),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: AppTheme.primaryColor,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHelpCard(String title, String subtitle, IconData icon,
-      Color color, VoidCallback onTap) {
+  Widget _buildAccountActions(AuthProvider authProvider) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      child: Column(
+        children: [
+          // App Info
+          _buildActionTile(
+            Icons.info_outline_rounded,
+            'Uygulama Bilgisi',
+            'Sürüm 1.0.0',
+            () {
+              _showAppInfoDialog();
+            },
+            Colors.blue,
+          ),
+
+          const SizedBox(height: 12),
+
+          // Logout
+          _buildActionTile(
+            Icons.logout_rounded,
+            'Çıkış Yap',
+            'Hesabınızdan güvenli çıkış',
+            () {
+              _showLogoutDialog(authProvider);
+            },
+            Colors.red,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionTile(
+    IconData icon,
+    String title,
+    String subtitle,
+    VoidCallback onTap,
+    Color color,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1347,92 +547,585 @@ class HelpCenterScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: color,
+                    size: 24,
+                  ),
                 ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.grey[900],
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimaryColor,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: Colors.grey[400],
-                size: 16,
-              ),
-            ],
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Colors.grey.shade400,
+                  size: 16,
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  static void _showHelpDetail(BuildContext context, String topic) {
+  void _showAppInfoDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
         ),
-        title: Text(
-          topic,
-          style: const TextStyle(fontWeight: FontWeight.w700),
+        title: Row(
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              color: AppTheme.primaryColor,
+            ),
+            const SizedBox(width: 12),
+            const Text('Uygulama Bilgisi'),
+          ],
         ),
-        content: Text(
-          '$topic hakkında detaylı bilgiler burada yer alacak.',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.grey[600],
-          ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Sipariş Takip Uygulaması'),
+            SizedBox(height: 8),
+            Text('Sürüm: 1.0.0'),
+            SizedBox(height: 8),
+            Text('Modern sipariş yönetimi çözümü'),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Tamam',
-              style: TextStyle(
-                color: AppTheme.primaryColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: const Text('Tamam'),
           ),
         ],
       ),
     );
+  }
+
+  void _showLogoutDialog(AuthProvider authProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Row(
+          children: [
+            Icon(
+              Icons.logout_rounded,
+              color: Colors.red,
+            ),
+            SizedBox(width: 12),
+            Text('Çıkış Yap'),
+          ],
+        ),
+        content: const Text(
+          'Hesabınızdan çıkış yapmak istediğinizden emin misiniz?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await authProvider.signOut();
+              if (mounted) {
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/',
+                  (route) => false,
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Çıkış Yap'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditProfileDialog(user) {
+    // Form değerlerini doldur
+    _nameController.text = user?.name ?? '';
+    _emailController.text = user?.email ?? '';
+    _phoneController.text = user?.phone ?? '';
+    _companyController.text = user?.companyName ?? '';
+    _addressController.text = user?.companyAddress ?? '';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppTheme.primaryColor,
+                    AppTheme.primaryColor.withOpacity(0.8),
+                  ],
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.edit_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Profili Düzenle',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Firma ve kişisel bilgilerinizi güncelleyin',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Form
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Firma Bilgileri
+                    const Text(
+                      'Firma Bilgileri',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    _buildEditField(
+                      controller: _companyController,
+                      label: 'Firma Adı',
+                      icon: Icons.business_rounded,
+                      hint: 'Firma adınızı girin',
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    _buildEditField(
+                      controller: _addressController,
+                      label: 'Firma Adresi',
+                      icon: Icons.location_on_rounded,
+                      hint: 'Firmanızın tam adresini girin',
+                      keyboardType: TextInputType.multiline,
+                      maxLines: 3,
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Kişisel Bilgiler
+                    const Text(
+                      'Kişisel Bilgiler',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    _buildEditField(
+                      controller: _nameController,
+                      label: 'Ad Soyad',
+                      icon: Icons.person_rounded,
+                      hint: 'Adınızı ve soyadınızı girin',
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    _buildEditField(
+                      controller: _emailController,
+                      label: 'E-posta',
+                      icon: Icons.email_rounded,
+                      hint: 'ornek@email.com',
+                      keyboardType: TextInputType.emailAddress,
+                      enabled: false, // Email değiştirilemez
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    _buildEditField(
+                      controller: _phoneController,
+                      label: 'Telefon',
+                      icon: Icons.phone_rounded,
+                      hint: '0555 123 45 67',
+                      keyboardType: TextInputType.phone,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Save Button
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Consumer<AuthProvider>(
+                builder: (context, authProvider, child) {
+                  return SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: authProvider.isLoading
+                          ? null
+                          : () => _saveProfile(authProvider),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: authProvider.isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Değişiklikleri Kaydet',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEditField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required String hint,
+    TextInputType keyboardType = TextInputType.text,
+    bool enabled = true,
+    int maxLines = 1,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textPrimaryColor,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: enabled ? Colors.white : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: enabled ? Colors.grey.shade300 : Colors.grey.shade200,
+            ),
+          ),
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            enabled: enabled,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: enabled ? AppTheme.textPrimaryColor : Colors.grey.shade600,
+            ),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(
+                color: Colors.grey.shade500,
+                fontSize: 14,
+              ),
+              prefixIcon: Icon(
+                icon,
+                color: enabled ? AppTheme.primaryColor : Colors.grey.shade400,
+                size: 20,
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.all(16),
+            ),
+            maxLines: maxLines,
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _saveProfile(AuthProvider authProvider) async {
+    // Form validasyonu
+    if (_nameController.text.trim().isEmpty ||
+        _companyController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen zorunlu alanları doldurun'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Güncellenmiş kullanıcı verisi oluştur
+      final currentUser = authProvider.currentUser;
+      if (currentUser != null) {
+        // Eski firma adını kaydet (sipariş güncellemesi için)
+        final oldCompanyName = currentUser.companyName;
+        final newCompanyName = _companyController.text.trim();
+
+        final updatedUser = currentUser.copyWith(
+          name: _nameController.text.trim(),
+          phone: _phoneController.text.trim(),
+          companyName: newCompanyName,
+          companyAddress: _addressController.text.trim(),
+        );
+
+        // Güncellemeyi kaydet
+        final success = await authProvider.updateUserData(updatedUser);
+
+        if (success) {
+          // Eğer firma adı değiştiyse, siparişleri de güncelle
+          if (oldCompanyName != null && oldCompanyName != newCompanyName) {
+            await _updateCustomerOrdersAfterProfileChange(
+              oldCompanyName,
+              newCompanyName,
+              _phoneController.text.trim(),
+              _addressController.text.trim(),
+            );
+          }
+
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 12),
+                  Text('Profil başarıyla güncellendi!'),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.error, color: Colors.white),
+                  SizedBox(width: 12),
+                  Text('Güncelleme başarısız oldu'),
+                ],
+              ),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(child: Text('Hata: ${e.toString()}')),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+  }
+
+  // Profil değiştiğinde sipariş müşteri bilgilerini güncelle
+  Future<void> _updateCustomerOrdersAfterProfileChange(
+    String oldCompanyName,
+    String newCompanyName,
+    String newPhone,
+    String newAddress,
+  ) async {
+    try {
+      print('🔄 Sipariş müşteri bilgileri güncelleniyor...');
+      print('   Eski firma adı: $oldCompanyName');
+      print('   Yeni firma adı: $newCompanyName');
+
+      // Firebase'den eski firma adıyla kayıtlı siparişleri bul
+      final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('orders')
+          .where('customer.name', isEqualTo: oldCompanyName)
+          .get();
+
+      print('   Güncellenecek sipariş sayısı: ${querySnapshot.docs.length}');
+
+      // Batch güncelleme hazırla
+      final WriteBatch batch = FirebaseFirestore.instance.batch();
+
+      for (final doc in querySnapshot.docs) {
+        // Sipariş verisini al
+        final orderData = doc.data() as Map<String, dynamic>;
+
+        // Müşteri bilgilerini güncelle
+        orderData['customer']['name'] = newCompanyName;
+        orderData['customer']['phoneNumber'] = newPhone;
+        orderData['customer']['address'] = newAddress;
+
+        // Batch'e ekle
+        batch.update(doc.reference, orderData);
+      }
+
+      // Batch'i çalıştır
+      await batch.commit();
+
+      print('✅ ${querySnapshot.docs.length} sipariş güncellendi');
+
+      // OrderProvider'ı yeniden yükle
+      if (mounted) {
+        final orderProvider =
+            Provider.of<OrderProvider>(context, listen: false);
+        await orderProvider.loadOrders();
+      }
+    } catch (e) {
+      print('❌ Sipariş güncelleme hatası: $e');
+      // Hata olsa da profil güncellemesini engellemiyoruz
+    }
   }
 }
