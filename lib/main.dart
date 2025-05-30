@@ -18,6 +18,7 @@ import 'package:siparis/providers/work_request_provider.dart';
 import 'package:siparis/customer/screens/customer_home_screen.dart';
 import 'package:siparis/providers/cart_provider.dart';
 import 'package:siparis/customer/screens/cart_screen.dart';
+import 'package:siparis/providers/employee_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,6 +58,7 @@ class MainApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CompanyProvider()),
         ChangeNotifierProvider(create: (_) => WorkRequestProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => EmployeeProvider()),
       ],
       child: MaterialApp(
         title: 'Sipariş Takip',

@@ -52,6 +52,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       const BudgetScreen(),
     ]);
 
+    // Çalışan ise geçersiz tab kontrolü yap
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      if (authProvider.isEmployeeLogin) {
+        _validateCurrentTab();
+      }
+    });
+
     // FAB animasyonu
     _fabAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -322,10 +330,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
+              // Ana Sayfa - herkese açık
               _buildNavItem(0, Icons.home_rounded, 'Ana Sayfa'),
+
+              // Siparişler - her zaman görünür
               _buildNavItem(1, Icons.receipt_long_rounded, 'Siparişler'),
-              const SizedBox(width: 40), // FAB için boşluk
+
+              // FAB için boşluk
+              const SizedBox(width: 40),
+
+              // Ürünler - her zaman görünür
               _buildNavItem(3, Icons.restaurant_menu_rounded, 'Ürünler'),
+
+              // Bütçe - her zaman görünür
               _buildNavItem(4, Icons.analytics_rounded, 'Bütçe'),
             ],
           ),
@@ -336,12 +353,43 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildNavItem(int index, IconData iconData, String label) {
     final isSelected = _selectedIndex == index;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // Yetki kontrolü
+    bool hasAccess = false;
+    switch (index) {
+      case 0: // Ana Sayfa
+        hasAccess = true;
+        break;
+      case 1: // Siparişler
+        hasAccess = authProvider.hasPermission('manage_orders');
+        break;
+      case 3: // Ürünler
+        hasAccess = authProvider.hasPermission('manage_products');
+        break;
+      case 4: // Bütçe
+        hasAccess = authProvider.hasPermission('view_budget');
+        break;
+      default:
+        hasAccess = false;
+    }
 
     return InkWell(
       onTap: () {
-        setState(() {
-          _selectedIndex = index;
-        });
+        if (hasAccess) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        } else {
+          // Yetki yoksa uyarı mesajı göster
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Bu alana erişim izniniz bulunmamaktadır.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       },
       customBorder: const CircleBorder(),
       splashColor: AppTheme.primaryColor.withOpacity(0.1),
@@ -359,20 +407,47 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              iconData,
-              color: isSelected
-                  ? AppTheme.primaryColor
-                  : AppTheme.textSecondaryColor,
-              size: isSelected ? 28 : 24,
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(
+                  iconData,
+                  color: hasAccess
+                      ? (isSelected
+                          ? AppTheme.primaryColor
+                          : AppTheme.textSecondaryColor)
+                      : AppTheme.textSecondaryColor.withOpacity(0.3),
+                  size: isSelected ? 28 : 24,
+                ),
+                // Yetkisiz sekmeler için kilit ikonu
+                if (!hasAccess)
+                  Positioned(
+                    right: -8,
+                    top: -8,
+                    child: Container(
+                      padding: EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.lock,
+                        color: Colors.white,
+                        size: 8,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
-                color: isSelected
-                    ? AppTheme.primaryColor
-                    : AppTheme.textSecondaryColor,
+                color: hasAccess
+                    ? (isSelected
+                        ? AppTheme.primaryColor
+                        : AppTheme.textSecondaryColor)
+                    : AppTheme.textSecondaryColor.withOpacity(0.3),
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
@@ -863,4 +938,57 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
   }
+
+  // Çalışan için geçersiz tab kontrolü
+  void _validateCurrentTab() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    bool canAccessCurrentTab = false;
+
+    switch (_selectedIndex) {
+      case 0: // Ana Sayfa
+        canAccessCurrentTab = true;
+        break;
+      case 1: // Siparişler
+        canAccessCurrentTab = authProvider.hasPermission('manage_orders');
+        break;
+      case 3: // Ürünler
+        canAccessCurrentTab = authProvider.hasPermission('manage_products');
+        break;
+      case 4: // Bütçe
+        canAccessCurrentTab = authProvider.hasPermission('view_budget');
+        break;
+      default:
+        canAccessCurrentTab = false;
+    }
+
+    // Eğer mevcut tab'e erişim yoksa ana sayfaya yönlendir
+    if (!canAccessCurrentTab && mounted) {
+      setState(() {
+        _selectedIndex = 0; // Ana sayfaya yönlendir
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Erişim yetkiniz olmayan bölümden ana sayfaya yönlendirildiniz.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+}
+
+// Navigation item helper sınıfı
+class NavItem {
+  final int index;
+  final IconData icon;
+  final String label;
+  final bool isVisible;
+
+  NavItem({
+    required this.index,
+    required this.icon,
+    required this.label,
+    this.isVisible = true,
+  });
 }

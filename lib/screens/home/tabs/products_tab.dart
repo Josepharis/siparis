@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:siparis/config/theme.dart';
 import 'package:siparis/models/order.dart';
 import 'package:siparis/screens/product_detail_screen.dart';
 import 'package:siparis/screens/add_product_screen.dart';
 import 'package:siparis/screens/debug_screen.dart';
 import 'package:siparis/services/product_service.dart';
+import 'package:siparis/providers/auth_provider.dart';
 import 'dart:developer' as developer;
 
 class ProductsTab extends StatefulWidget {
@@ -37,10 +39,30 @@ class _ProductsTabState extends State<ProductsTab>
     });
 
     try {
+      // AuthProvider'dan kullanıcı bilgisini al
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      String? companyId;
+
+      if (authProvider.isEmployeeLogin) {
+        // Çalışan girişi - şirket ID'sini employee'dan al
+        companyId = authProvider.currentEmployee?.companyId;
+        developer.log('ProductsTab: Çalışan girişi - Company ID: $companyId',
+            name: 'ProductsTab');
+      } else if (authProvider.currentUser != null) {
+        // Sahip girişi - user ID'sini kullan
+        companyId = authProvider.currentUser!.uid;
+        developer.log('ProductsTab: Sahip girişi - User ID: $companyId',
+            name: 'ProductsTab');
+      } else {
+        throw Exception('Kullanıcı oturum açmamış');
+      }
+
       // Firebase'den kullanıcının ürünlerini çek
       developer.log('ProductsTab: Firebase\'den ürünler getiriliyor',
           name: 'ProductsTab');
-      final List<Product> products = await ProductService.getUserProducts();
+      final List<Product> products = await ProductService.getUserProducts(
+        companyId: companyId,
+      );
 
       developer.log('ProductsTab: ${products.length} ürün alındı',
           name: 'ProductsTab');

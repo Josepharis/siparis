@@ -7,11 +7,36 @@ service cloud.firestore {
       allow read, write: if true;
     }
     
+    // ÖZELLİKLE EMPLOYEES İÇİN EK KONTROL
+    match /employees/{employeeId} {
+      // Kimlik doğrulama yapılmış herkes employee okuyabilir ve yazabilir (şimdilik)
+      allow read, write: if request.auth != null;
+      allow create: if request.auth != null;
+    }
+    
     // PRODUCTION İÇİN KULLANILACAK KURALLAR (ŞU ANDA KAPALI)
     /*
     // Kullanıcılar koleksiyonu - sadece kendi verilerine erişim
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Çalışanlar koleksiyonu
+    match /employees/{employeeId} {
+      // Çalışan kendi verilerini okuyabilir
+      allow read: if request.auth != null && 
+        (request.auth.uid == employeeId || 
+         isCompanyOwner(resource.data.companyId));
+      
+      // Sadece şirket sahibi çalışan ekleyebilir/güncelleyebilir
+      allow write, create: if request.auth != null && 
+        isCompanyOwner(request.resource.data.companyId);
+    }
+    
+    // Yardımcı fonksiyon - şirket sahibi kontrolü
+    function isCompanyOwner(companyId) {
+      return exists(/databases/$(database)/documents/companies/$(companyId)) &&
+        get(/databases/$(database)/documents/companies/$(companyId)).data.ownerId == request.auth.uid;
     }
     
     // Firmalar koleksiyonu

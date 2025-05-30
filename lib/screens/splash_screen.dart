@@ -70,9 +70,20 @@ class _SplashScreenState extends State<SplashScreen>
     _hasNavigated = true;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final user = authProvider.currentUser;
 
-    // Kullanıcı rolüne göre yönlendirme
+    // Çalışan girişi kontrolü
+    if (authProvider.isEmployeeLogin && authProvider.currentEmployee != null) {
+      // Çalışan girişi - direkt HomeScreen'e yönlendir
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const HomeScreen(),
+        ),
+      );
+      return;
+    }
+
+    // Normal kullanıcı girişi kontrolü
+    final user = authProvider.currentUser;
     if (user != null) {
       if (user.isProducer) {
         // Üretici ise screens/home/home_screen.dart'a git

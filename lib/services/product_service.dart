@@ -20,18 +20,12 @@ class ProductService {
         throw Exception('Kullanıcı oturum açmamış');
       }
 
-      developer.log('ProductService: Kullanıcı ID: ${user.uid}',
-          name: 'ProductService');
-      developer.log('ProductService: Ürün bilgileri: ${product.toJson()}',
-          name: 'ProductService');
-
       final productData = product.toJson();
       productData['createdBy'] = user.uid;
       productData['createdAt'] = FieldValue.serverTimestamp();
       productData['updatedAt'] = FieldValue.serverTimestamp();
 
-      developer.log(
-          'ProductService: Firebase\'e gönderilecek veri: $productData',
+      developer.log('ProductService: Eklenecek veri: $productData',
           name: 'ProductService');
 
       final docRef =
@@ -39,6 +33,7 @@ class ProductService {
 
       developer.log('ProductService: Ürün başarıyla eklendi, ID: ${docRef.id}',
           name: 'ProductService');
+
       return docRef.id;
     } catch (e, stackTrace) {
       developer.log('ProductService: Ürün eklenirken hata oluştu',
@@ -105,26 +100,39 @@ class ProductService {
     }
   }
 
-  // Kullanıcının ürünlerini al
-  static Future<List<Product>> getUserProducts() async {
+  // Kullanıcının ürünlerini al - çalışan desteği ile
+  static Future<List<Product>> getUserProducts({String? companyId}) async {
     try {
       developer.log('ProductService: Kullanıcı ürünleri getiriliyor',
           name: 'ProductService');
 
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        developer.log('ProductService: Kullanıcı oturum açmamış',
-            name: 'ProductService', level: 1000);
-        throw Exception('Kullanıcı oturum açmamış');
+      String? ownerId;
+
+      if (companyId != null) {
+        // Çalışan girişi - company ID'si ile
+        ownerId = companyId;
+        developer.log('ProductService: Çalışan girişi - Company ID: $companyId',
+            name: 'ProductService');
+      } else {
+        // Normal kullanıcı girişi
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          developer.log('ProductService: Kullanıcı oturum açmamış',
+              name: 'ProductService', level: 1000);
+          throw Exception('Kullanıcı oturum açmamış');
+        }
+        ownerId = user.uid;
+        developer.log('ProductService: Normal giriş - User ID: ${user.uid}',
+            name: 'ProductService');
       }
 
-      developer.log('ProductService: Kullanıcı ID: ${user.uid}',
+      developer.log('ProductService: Ürünler şu ID ile aranıyor: $ownerId',
           name: 'ProductService');
 
       final querySnapshot = await FirebaseService.queryCollection(
         _collection,
         field: 'createdBy',
-        value: user.uid,
+        value: ownerId,
         orderBy: 'createdAt',
         descending: true,
       );

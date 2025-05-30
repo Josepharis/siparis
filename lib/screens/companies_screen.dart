@@ -4,10 +4,13 @@ import 'package:siparis/config/theme.dart';
 import 'package:siparis/models/company.dart';
 import 'package:siparis/models/company_model.dart';
 import 'package:siparis/models/work_request.dart';
+import 'package:siparis/models/order.dart';
 import 'package:siparis/providers/auth_provider.dart';
 import 'package:siparis/providers/company_provider.dart';
 import 'package:siparis/providers/work_request_provider.dart';
+import 'package:siparis/providers/order_provider.dart';
 import 'package:siparis/screens/add_company_screen.dart';
+import 'package:siparis/screens/order_detail_screen.dart';
 
 class CompaniesScreen extends StatefulWidget {
   const CompaniesScreen({super.key});
@@ -478,203 +481,221 @@ class _CompaniesScreenState extends State<CompaniesScreen>
   }
 
   Widget _buildSampleCompanyCard(Company company, {required bool isPartnered}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: isPartnered
+          ? () => _showCompanyOrderHistory(company.name, company.id)
+          : null,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: isPartnered
+              ? Border.all(
+                  color: AppTheme.primaryColor.withOpacity(0.3),
+                  width: 1,
+                )
+              : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.business,
+                      color: AppTheme.primaryColor,
+                      size: 24,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.business,
-                    color: AppTheme.primaryColor,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              company.name,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.textPrimaryColor,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                company.name,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.textPrimaryColor,
+                                ),
                               ),
                             ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                'Örnek',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          company.address,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondaryColor,
                           ),
-                          Container(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isPartnered) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Çalışıyor',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.green,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                company.description,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppTheme.textSecondaryColor,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(
+                    Icons.star,
+                    size: 16,
+                    color: Colors.amber[600],
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    company.rating.toString(),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Icon(
+                    Icons.work_outline,
+                    size: 16,
+                    color: AppTheme.textSecondaryColor,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${company.totalProjects} proje',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondaryColor,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (!isPartnered)
+                    Consumer<WorkRequestProvider>(
+                      builder: (context, workRequestProvider, child) {
+                        final isPartner =
+                            workRequestProvider.isPartneredCompany(company.id);
+
+                        if (isPartner) {
+                          return Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
+                              horizontal: 12,
+                              vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
+                              color: Colors.green.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Text(
-                              'Örnek',
+                              'Çalışıyor',
                               style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.blue,
+                                fontSize: 12,
+                                color: Colors.green,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        company.address,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.textSecondaryColor,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                if (isPartnered)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      'Çalışıyor',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.green,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              company.description,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondaryColor,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(
-                  Icons.star,
-                  size: 16,
-                  color: Colors.amber[600],
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  company.rating.toString(),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.textPrimaryColor,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Icon(
-                  Icons.work_outline,
-                  size: 16,
-                  color: AppTheme.textSecondaryColor,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${company.totalProjects} proje',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textSecondaryColor,
-                  ),
-                ),
-                const Spacer(),
-                if (!isPartnered)
-                  Consumer<WorkRequestProvider>(
-                    builder: (context, workRequestProvider, child) {
-                      final isPartner =
-                          workRequestProvider.isPartneredCompany(company.id);
+                          );
+                        }
 
-                      if (isPartner) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'Çalışıyor',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.green,
-                              fontWeight: FontWeight.w500,
+                        return ElevatedButton(
+                          onPressed: () =>
+                              _showWorkRequestDialog(company.name, company.id),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
                           ),
+                          child: const Text(
+                            'Çalışma İsteği',
+                            style: TextStyle(fontSize: 12),
+                          ),
                         );
-                      }
-
-                      return ElevatedButton(
-                        onPressed: () =>
-                            _showWorkRequestDialog(company.name, company.id),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          'Çalışma İsteği',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      );
-                    },
-                  ),
-              ],
-            ),
-          ],
+                      },
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -682,202 +703,220 @@ class _CompaniesScreenState extends State<CompaniesScreen>
 
   Widget _buildFirestoreCompanyCard(CompanyModel company,
       {required bool isPartnered}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: isPartnered
+          ? () => _showCompanyOrderHistory(company.name, company.id)
+          : null,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: isPartnered
+              ? Border.all(
+                  color: AppTheme.primaryColor.withOpacity(0.3),
+                  width: 1,
+                )
+              : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.business,
+                      color: AppTheme.primaryColor,
+                      size: 24,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.business,
-                    color: AppTheme.primaryColor,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              company.name,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.textPrimaryColor,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                company.name,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.textPrimaryColor,
+                                ),
                               ),
                             ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                'Firebase',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.orange,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          company.address,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondaryColor,
                           ),
-                          Container(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isPartnered) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Çalışıyor',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.green,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                company.description ?? 'Açıklama bulunmuyor.',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppTheme.textSecondaryColor,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(
+                    Icons.business_center,
+                    size: 16,
+                    color: AppTheme.textSecondaryColor,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    company.type == 'producer' ? 'Üretici' : 'Müşteri',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Icon(
+                    Icons.calendar_today,
+                    size: 16,
+                    color: AppTheme.textSecondaryColor,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${company.createdAt.day}/${company.createdAt.month}/${company.createdAt.year}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondaryColor,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (!isPartnered)
+                    Consumer<WorkRequestProvider>(
+                      builder: (context, workRequestProvider, child) {
+                        final isPartner =
+                            workRequestProvider.isPartneredCompany(company.id);
+
+                        if (isPartner) {
+                          return Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
+                              horizontal: 12,
+                              vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.1),
+                              color: Colors.green.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Text(
-                              'Firebase',
+                              'Çalışıyor',
                               style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.orange,
+                                fontSize: 12,
+                                color: Colors.green,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        company.address,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.textSecondaryColor,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                if (isPartnered)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      'Çalışıyor',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.green,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              company.description ?? 'Açıklama bulunmuyor.',
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondaryColor,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(
-                  Icons.business_center,
-                  size: 16,
-                  color: AppTheme.textSecondaryColor,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  company.type == 'producer' ? 'Üretici' : 'Müşteri',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textSecondaryColor,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: AppTheme.textSecondaryColor,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${company.createdAt.day}/${company.createdAt.month}/${company.createdAt.year}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textSecondaryColor,
-                  ),
-                ),
-                const Spacer(),
-                if (!isPartnered)
-                  Consumer<WorkRequestProvider>(
-                    builder: (context, workRequestProvider, child) {
-                      final isPartner =
-                          workRequestProvider.isPartneredCompany(company.id);
+                          );
+                        }
 
-                      if (isPartner) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'Çalışıyor',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.green,
-                              fontWeight: FontWeight.w500,
+                        return ElevatedButton(
+                          onPressed: () =>
+                              _showWorkRequestDialog(company.name, company.id),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
                           ),
+                          child: const Text(
+                            'Çalışma İsteği',
+                            style: TextStyle(fontSize: 12),
+                          ),
                         );
-                      }
-
-                      return ElevatedButton(
-                        onPressed: () =>
-                            _showWorkRequestDialog(company.name, company.id),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          'Çalışma İsteği',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      );
-                    },
-                  ),
-              ],
-            ),
-          ],
+                      },
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1046,6 +1085,503 @@ class _CompaniesScreenState extends State<CompaniesScreen>
           backgroundColor: Colors.orange,
         ),
       );
+    }
+  }
+
+  void _showCompanyOrderHistory(String companyName, String companyId) {
+    DateTimeRange? selectedDateRange;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(16),
+          child: Container(
+            width: double.infinity,
+            height: MediaQuery.of(context).size.height * 0.85,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Başlık
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppTheme.primaryColor,
+                        AppTheme.primaryColor.withOpacity(0.8),
+                      ],
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.history,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Sipariş Geçmişi',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              companyName,
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 14,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Tarih Filtreleme
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey.shade200),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () async {
+                            final DateTimeRange? picked =
+                                await showDateRangePicker(
+                              context: context,
+                              firstDate: DateTime.now()
+                                  .subtract(const Duration(days: 365)),
+                              lastDate: DateTime.now(),
+                              initialDateRange: selectedDateRange,
+                              builder: (context, child) {
+                                return Theme(
+                                  data: Theme.of(context).copyWith(
+                                    colorScheme: ColorScheme.light(
+                                      primary: AppTheme.primaryColor,
+                                    ),
+                                  ),
+                                  child: child!,
+                                );
+                              },
+                            );
+
+                            if (picked != null) {
+                              setState(() {
+                                selectedDateRange = picked;
+                              });
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.date_range,
+                                  color: AppTheme.primaryColor,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    selectedDateRange == null
+                                        ? 'Tarih aralığı seçin'
+                                        : '${_formatDate(selectedDateRange!.start)} - ${_formatDate(selectedDateRange!.end)}',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: selectedDateRange == null
+                                          ? Colors.grey.shade600
+                                          : AppTheme.textPrimaryColor,
+                                      fontWeight: selectedDateRange == null
+                                          ? FontWeight.normal
+                                          : FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.arrow_drop_down,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      if (selectedDateRange != null)
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              selectedDateRange = null;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.clear,
+                              color: Colors.red.shade600,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                // Sipariş Listesi
+                Expanded(
+                  child: Consumer<OrderProvider>(
+                    builder: (context, orderProvider, child) {
+                      // Firmaya ait siparişleri filtrele
+                      final companyOrders = orderProvider.orders
+                          .where((order) => order.customer.name == companyName)
+                          .toList();
+
+                      // Tarih filtrelemesi
+                      final filteredOrders = selectedDateRange == null
+                          ? companyOrders
+                          : companyOrders.where((order) {
+                              final orderDate = DateTime(
+                                order.orderDate.year,
+                                order.orderDate.month,
+                                order.orderDate.day,
+                              );
+                              final startDate = DateTime(
+                                selectedDateRange!.start.year,
+                                selectedDateRange!.start.month,
+                                selectedDateRange!.start.day,
+                              );
+                              final endDate = DateTime(
+                                selectedDateRange!.end.year,
+                                selectedDateRange!.end.month,
+                                selectedDateRange!.end.day,
+                              );
+                              return orderDate.isAfter(startDate
+                                      .subtract(const Duration(days: 1))) &&
+                                  orderDate.isBefore(
+                                      endDate.add(const Duration(days: 1)));
+                            }).toList();
+
+                      // Tarihe göre sırala (en yeni önce)
+                      filteredOrders
+                          .sort((a, b) => b.orderDate.compareTo(a.orderDate));
+
+                      if (filteredOrders.isEmpty) {
+                        return _buildEmptyOrderHistory(
+                            selectedDateRange != null);
+                      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filteredOrders.length,
+                        itemBuilder: (context, index) {
+                          final order = filteredOrders[index];
+                          return _buildOrderHistoryCard(order);
+                        },
+                      );
+                    },
+                  ),
+                ),
+
+                // Alt Bilgi
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Sipariş kartına dokunarak detaylarını görüntüleyebilirsiniz.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyOrderHistory(bool hasDateFilter) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            hasDateFilter
+                ? Icons.date_range_outlined
+                : Icons.receipt_long_outlined,
+            size: 64,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            hasDateFilter
+                ? 'Seçilen Tarih Aralığında\nSipariş Bulunamadı'
+                : 'Henüz Sipariş Yok',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            hasDateFilter
+                ? 'Farklı bir tarih aralığı deneyin.'
+                : 'Bu firma ile henüz sipariş geçmişiniz bulunmuyor.',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderHistoryCard(Order order) {
+    return GestureDetector(
+      onTap: () {
+        // Sipariş detayına git
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OrderDetailScreen(order: order),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Sipariş başlığı ve durum
+              Row(
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '#${order.id.substring(0, 6).toUpperCase()}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(order.status).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      Order.getStatusText(order.status),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _getStatusColor(order.status),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              // Tarih ve tutar
+              Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today,
+                    size: 16,
+                    color: Colors.grey.shade600,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${order.orderDate.day}/${order.orderDate.month}/${order.orderDate.year}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '₺${order.totalAmount.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimaryColor,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
+              // Ürünler
+              Text(
+                'Ürünler: ${order.items.map((item) => '${item.product.name} (${item.quantity})').join(', ')}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.textSecondaryColor,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+
+              // Ödeme durumu
+              if (order.status == OrderStatus.completed) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      order.paymentStatus == PaymentStatus.paid
+                          ? Icons.check_circle
+                          : Icons.pending,
+                      size: 16,
+                      color: order.paymentStatus == PaymentStatus.paid
+                          ? Colors.green
+                          : Colors.orange,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      order.paymentStatus == PaymentStatus.paid
+                          ? 'Ödeme Tamamlandı'
+                          : 'Ödeme Bekliyor (₺${order.remainingAmount.toStringAsFixed(2)})',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: order.paymentStatus == PaymentStatus.paid
+                            ? Colors.green.shade700
+                            : Colors.orange.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getStatusColor(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.waiting:
+        return Colors.orange;
+      case OrderStatus.processing:
+        return Colors.blue;
+      case OrderStatus.completed:
+        return Colors.green;
+      case OrderStatus.cancelled:
+        return Colors.red;
     }
   }
 }

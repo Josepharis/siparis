@@ -325,46 +325,58 @@ class OrderListItem extends StatelessWidget {
                                 children: [
                                   // İptal butonu
                                   Flexible(
-                                    child: OutlinedButton(
-                                      onPressed: () => onStatusChanged(
-                                        OrderStatus.cancelled,
-                                      ),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: Colors.red.shade600,
-                                        side: BorderSide(
-                                          color: Colors.red.shade600,
-                                          width: 1,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.red.shade600
+                                                .withOpacity(0.2),
+                                            blurRadius: 3,
+                                            offset: const Offset(0, 1),
                                           ),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 4,
-                                          vertical: 0,
-                                        ),
-                                        minimumSize: const Size(0, 24),
-                                        tapTargetSize:
-                                            MaterialTapTargetSize.shrinkWrap,
+                                        ],
                                       ),
-                                      child: FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: const Text(
-                                          'İptal',
-                                          style: TextStyle(fontSize: 11),
+                                      child: ElevatedButton(
+                                        onPressed: () =>
+                                            _showCancelDialog(context),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red.shade600,
+                                          foregroundColor: Colors.white,
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 8,
+                                          ),
+                                          minimumSize: const Size(0, 36),
+                                          tapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
+                                        ),
+                                        child: FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: const Text(
+                                            'İptal',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
 
-                                  const SizedBox(width: 6),
+                                  const SizedBox(width: 8),
 
                                   // İlerleme butonu
                                   Flexible(
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(6),
+                                        borderRadius: BorderRadius.circular(8),
                                         boxShadow: [
                                           BoxShadow(
                                             color: (order.status ==
@@ -372,7 +384,7 @@ class OrderListItem extends StatelessWidget {
                                                     ? Colors.orange.shade600
                                                     : Colors.green.shade600)
                                                 .withOpacity(0.2),
-                                            blurRadius: 2,
+                                            blurRadius: 3,
                                             offset: const Offset(0, 1),
                                           ),
                                         ],
@@ -391,15 +403,14 @@ class OrderListItem extends StatelessWidget {
                                           foregroundColor: Colors.white,
                                           elevation: 0,
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
                                           ),
                                           padding: const EdgeInsets.symmetric(
-                                            horizontal: 4,
-                                            vertical: 0,
+                                            horizontal: 8,
+                                            vertical: 8,
                                           ),
-                                          minimumSize: const Size(0, 24),
+                                          minimumSize: const Size(0, 36),
                                           tapTargetSize:
                                               MaterialTapTargetSize.shrinkWrap,
                                         ),
@@ -410,7 +421,8 @@ class OrderListItem extends StatelessWidget {
                                                 ? 'Hazırla'
                                                 : 'Tamamla',
                                             style: const TextStyle(
-                                              fontSize: 11,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
                                             ),
                                           ),
                                         ),
@@ -574,5 +586,96 @@ class OrderListItem extends StatelessWidget {
       case PaymentStatus.paid:
         return Icons.check_circle_outline_rounded;
     }
+  }
+
+  void _showCancelDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        icon: Icon(
+          Icons.warning_amber_rounded,
+          color: Colors.orange.shade600,
+          size: 48,
+        ),
+        title: const Text(
+          'Sipariş İptal',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textPrimaryColor,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Bu siparişi iptal etmek istediğinize emin misiniz?',
+              style: TextStyle(
+                fontSize: 16,
+                color: AppTheme.textSecondaryColor,
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Bu işlem geri alınamaz.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.orange.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+            child: Text(
+              'Vazgeç',
+              style: TextStyle(
+                color: AppTheme.textSecondaryColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              onStatusChanged(OrderStatus.cancelled);
+              Navigator.of(context).pop();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Evet, İptal Et',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

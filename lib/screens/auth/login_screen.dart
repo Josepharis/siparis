@@ -34,29 +34,38 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
+      // E-posta adresine göre otomatik giriş (çalışan vs sahip kontrolü AuthProvider'da)
       final success = await authProvider.signIn(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
       if (success && mounted) {
-        final user = authProvider.currentUser;
-
-        if (user != null) {
-          if (user.isProducer) {
-            // Üretici ise screens/home/home_screen.dart'a git
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => const HomeScreen(),
-              ),
-            );
-          } else {
-            // Müşteri ise customer/screens/customer_home_screen.dart'a git
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => const CustomerHomeScreen(),
-              ),
-            );
+        // Giriş başarılı - kullanıcı tipine göre yönlendir
+        if (authProvider.isEmployeeLogin) {
+          // Çalışan girişi - HomeScreen'e git
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const HomeScreen(),
+            ),
+          );
+        } else {
+          // Normal kullanıcı girişi
+          final user = authProvider.currentUser;
+          if (user != null) {
+            if (user.isProducer) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => const HomeScreen(),
+                ),
+              );
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => const CustomerHomeScreen(),
+                ),
+              );
+            }
           }
         }
       } else if (mounted) {
