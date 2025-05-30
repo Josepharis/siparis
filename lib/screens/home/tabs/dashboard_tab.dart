@@ -1089,35 +1089,157 @@ class _DashboardTabState extends State<DashboardTab> {
                 ),
               ),
 
-              // Durum etiketi - Sağ tarafta
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(
-                    color: statusColor.withOpacity(0.5),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(statusIcon, size: 12, color: statusColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      statusText,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: statusColor,
+              // Durum etiketi ve durum değiştirme butonları
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Durum etiketi
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(
+                        color: statusColor.withOpacity(0.5),
+                        width: 1,
                       ),
                     ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(statusIcon, size: 12, color: statusColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          statusText,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: statusColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Durum değiştirme butonları
+                  if (order.status != OrderStatus.completed &&
+                      order.status != OrderStatus.cancelled) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // İlerleme butonu
+                        InkWell(
+                          onTap: () async {
+                            // Context'i sakla
+                            final buttonContext = context;
+
+                            try {
+                              await orderProvider.updateOrderStatus(
+                                order.id,
+                                order.status == OrderStatus.waiting
+                                    ? OrderStatus.processing
+                                    : OrderStatus.completed,
+                              );
+
+                              // Başarı mesajı göster
+                              if (buttonContext.mounted) {
+                                ScaffoldMessenger.of(buttonContext)
+                                    .showSnackBar(
+                                  SnackBar(
+                                    content: Row(
+                                      children: [
+                                        Icon(Icons.check_circle,
+                                            color: Colors.white),
+                                        const SizedBox(width: 8),
+                                        Text('Sipariş durumu güncellendi'),
+                                      ],
+                                    ),
+                                    backgroundColor:
+                                        order.status == OrderStatus.waiting
+                                            ? Colors.orange.shade600
+                                            : Colors.green.shade600,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              print('❌ Dashboard buton hatası: $e');
+
+                              // Hata mesajı göster
+                              if (buttonContext.mounted) {
+                                ScaffoldMessenger.of(buttonContext)
+                                    .showSnackBar(
+                                  SnackBar(
+                                    content: Row(
+                                      children: [
+                                        const Icon(Icons.error,
+                                            color: Colors.white),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                              'Güncelleme başarısız: ${e.toString()}'),
+                                        ),
+                                      ],
+                                    ),
+                                    backgroundColor: Colors.red,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: order.status == OrderStatus.waiting
+                                  ? Colors.orange.shade600
+                                  : Colors.green.shade600,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  order.status == OrderStatus.waiting
+                                      ? Icons.play_arrow_rounded
+                                      : Icons.check_rounded,
+                                  color: Colors.white,
+                                  size: 12,
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  order.status == OrderStatus.waiting
+                                      ? 'Hazırla'
+                                      : 'Tamamla',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
-                ),
+                ],
               ),
             ],
           ),

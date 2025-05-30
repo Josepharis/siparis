@@ -44,8 +44,8 @@ class _OrdersTabState extends State<OrdersTab>
                 Text(
                   'Siparişler',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: AppTheme.textPrimaryColor,
-                  ),
+                        color: AppTheme.textPrimaryColor,
+                      ),
                 ),
                 const Spacer(),
                 IconButton(
@@ -148,8 +148,8 @@ class OrderListView extends StatelessWidget {
             Text(
               emptyMessage,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppTheme.textSecondaryColor,
-              ),
+                    color: AppTheme.textSecondaryColor,
+                  ),
             ),
           ],
         ),
@@ -166,8 +166,60 @@ class OrderListView extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 4),
           child: OrderListItem(
             order: order,
-            onStatusChanged: (newStatus) {
-              orderProvider.updateOrderStatus(order.id, newStatus);
+            onStatusChanged: (newStatus) async {
+              // Context'i sakla
+              final orderContext = context;
+
+              try {
+                await orderProvider.updateOrderStatus(order.id, newStatus);
+
+                // Başarı mesajı göster
+                if (orderContext.mounted) {
+                  ScaffoldMessenger.of(orderContext).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.white),
+                          const SizedBox(width: 8),
+                          Text(
+                              'Sipariş durumu güncellendi: ${Order.getStatusText(newStatus)}'),
+                        ],
+                      ),
+                      backgroundColor: AppTheme.primaryColor,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              } catch (e) {
+                print('❌ OrdersTab buton hatası: $e');
+
+                // Hata mesajı göster
+                if (orderContext.mounted) {
+                  ScaffoldMessenger.of(orderContext).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          const Icon(Icons.error, color: Colors.white),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child:
+                                Text('Güncelleme başarısız: ${e.toString()}'),
+                          ),
+                        ],
+                      ),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  );
+                }
+              }
             },
             onTap: () {
               Navigator.push(

@@ -49,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       const OrdersTab(),
       Container(), // FAB için boş tab
       const ProductsTab(),
-      const FinanceTab(),
+      const BudgetScreen(),
     ]);
 
     // FAB animasyonu
@@ -339,24 +339,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     return InkWell(
       onTap: () {
-        // Bütçe sekmesi (4) dışındaki sekmelere tıklandığında
-        if (index != 4) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        }
-        // Bütçe sekmesine tıklandığında
-        else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const BudgetScreen()),
-          ).then((_) {
-            // Bütçe ekranından dönüldüğünde FAB animasyonunu yeniden göster
-            if (!_fabAnimationController.isCompleted && mounted) {
-              _fabAnimationController.forward();
-            }
-          });
-        }
+        setState(() {
+          _selectedIndex = index;
+        });
       },
       customBorder: const CircleBorder(),
       splashColor: AppTheme.primaryColor.withOpacity(0.1),

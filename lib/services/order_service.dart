@@ -25,16 +25,23 @@ class OrderService {
   /// Siparişi Firebase Firestore'da güncelle
   static Future<bool> updateOrder(order_models.Order order) async {
     try {
+      print('🔥 OrderService: updateOrder başlatılıyor...');
+      print('🔥 OrderService: Sipariş ID: ${order.id}');
+      print(
+          '🔥 OrderService: Yeni durum: ${order_models.Order.getStatusText(order.status)}');
+      print('🔥 OrderService: Firebase bağlantısı kontrol ediliyor...');
+
       // Siparişi Firestore'da güncelle
       await _firestore
           .collection(_ordersCollection)
           .doc(order.id)
           .update(order.toJson());
 
-      print('✅ Sipariş güncellendi: ${order.id}');
+      print('✅ OrderService: Sipariş başarıyla güncellendi: ${order.id}');
       return true;
     } catch (e) {
-      print('❌ Sipariş güncellenirken hata: $e');
+      print('❌ OrderService: Sipariş güncellenirken hata: $e');
+      print('❌ OrderService: Hata türü: ${e.runtimeType}');
       return false;
     }
   }

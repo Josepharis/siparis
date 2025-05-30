@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:siparis/providers/auth_provider.dart';
 import 'package:siparis/providers/company_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:siparis/providers/order_provider.dart';
 
 class OrderDetailScreen extends StatelessWidget {
   final Order order;
@@ -15,104 +16,118 @@ class OrderDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Sipariş durumuna göre renk ve ikon
-    Color statusColor;
-    IconData statusIcon;
-    String statusText;
+    return Consumer<OrderProvider>(
+      builder: (context, orderProvider, child) {
+        // Güncel sipariş bilgisini al
+        final currentOrder =
+            orderProvider.orders.where((o) => o.id == order.id).firstOrNull ??
+                order;
 
-    switch (order.status) {
-      case OrderStatus.waiting:
-        statusColor = Colors.amber;
-        statusIcon = Icons.hourglass_empty_rounded;
-        statusText = 'Bekliyor';
-        break;
-      case OrderStatus.processing:
-        statusColor = Colors.orange;
-        statusIcon = Icons.sync_rounded;
-        statusText = 'Hazırlanıyor';
-        break;
-      case OrderStatus.completed:
-        statusColor = Colors.green;
-        statusIcon = Icons.check_circle_outline_rounded;
-        statusText = 'Tamamlandı';
-        break;
-      default:
-        statusColor = Colors.grey;
-        statusIcon = Icons.help_outline_rounded;
-        statusText = 'Bilinmiyor';
-    }
+        // Sipariş durumuna göre renk ve ikon
+        Color statusColor;
+        IconData statusIcon;
+        String statusText;
 
-    // Kullanıcının rolünü kontrol et
-    final authProvider = Provider.of<AuthProvider>(context);
-    final currentUser = authProvider.currentUser;
-    final isCustomer = currentUser?.role == 'customer';
-
-    // ✅ Üretici firma adını çıkar (ana sayfadaki mantık)
-    String producerCompanyName = 'Bilinmeyen Firma';
-
-    // Önce yeni producerCompanyName alanını kontrol et
-    if (order.producerCompanyName != null &&
-        order.producerCompanyName!.isNotEmpty) {
-      producerCompanyName = order.producerCompanyName!;
-    } else if (order.customer.name.contains('→')) {
-      producerCompanyName = order.customer.name.split('→').last.trim();
-    } else if (order.note != null &&
-        order.note!.contains('🏭 Üretici Firma:')) {
-      // Note'tan üretici firma adını çıkarmaya çalış
-      final noteLines = order.note!.split('\n');
-      for (final line in noteLines) {
-        if (line.contains('🏭 Üretici Firma:')) {
-          producerCompanyName = line.split('🏭 Üretici Firma:').last.trim();
-          break;
+        switch (currentOrder.status) {
+          case OrderStatus.waiting:
+            statusColor = Colors.amber;
+            statusIcon = Icons.hourglass_empty_rounded;
+            statusText = 'Bekliyor';
+            break;
+          case OrderStatus.processing:
+            statusColor = Colors.orange;
+            statusIcon = Icons.sync_rounded;
+            statusText = 'Hazırlanıyor';
+            break;
+          case OrderStatus.completed:
+            statusColor = Colors.green;
+            statusIcon = Icons.check_circle_outline_rounded;
+            statusText = 'Tamamlandı';
+            break;
+          default:
+            statusColor = Colors.grey;
+            statusIcon = Icons.help_outline_rounded;
+            statusText = 'Bilinmiyor';
         }
-      }
-    }
 
-    // Debug: Firma adı çıkarma işlemini kontrol et
-    print('🔍 OrderDetailScreen Debug:');
-    print('   Üretici firma adı (model): ${order.producerCompanyName}');
-    print('   Çıkarılan firma: $producerCompanyName');
-    print('   Not: ${order.note}');
+        // Kullanıcının rolünü kontrol et
+        final authProvider = Provider.of<AuthProvider>(context);
+        final currentUser = authProvider.currentUser;
+        final isCustomer = currentUser?.role == 'customer';
 
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Üst başlık bölümü
-            _buildHeader(context, statusColor, statusText, statusIcon,
-                isCustomer, producerCompanyName),
+        // ✅ Üretici firma adını çıkar (ana sayfadaki mantık)
+        String producerCompanyName = 'Bilinmeyen Firma';
 
-            // İçerik
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(0),
-                children: [
-                  // Sipariş Zaman Çizelgesi
-                  _buildOrderTimeline(context, statusColor),
+        // Önce yeni producerCompanyName alanını kontrol et
+        if (currentOrder.producerCompanyName != null &&
+            currentOrder.producerCompanyName!.isNotEmpty) {
+          producerCompanyName = currentOrder.producerCompanyName!;
+        } else if (currentOrder.customer.name.contains('→')) {
+          producerCompanyName =
+              currentOrder.customer.name.split('→').last.trim();
+        } else if (currentOrder.note != null &&
+            currentOrder.note!.contains('🏭 Üretici Firma:')) {
+          // Note'tan üretici firma adını çıkarmaya çalış
+          final noteLines = currentOrder.note!.split('\n');
+          for (final line in noteLines) {
+            if (line.contains('🏭 Üretici Firma:')) {
+              producerCompanyName = line.split('🏭 Üretici Firma:').last.trim();
+              break;
+            }
+          }
+        }
 
-                  // Sipariş İçeriği (Üstte)
-                  _buildOrderItems(context),
+        // Debug: Firma adı çıkarma işlemini kontrol et
+        print('🔍 OrderDetailScreen Debug:');
+        print(
+            '   Üretici firma adı (model): ${currentOrder.producerCompanyName}');
+        print('   Çıkarılan firma: $producerCompanyName');
+        print('   Not: ${currentOrder.note}');
 
-                  // ✅ Müşteri ise üretici bilgilerini, üretici ise müşteri bilgilerini göster
-                  if (isCustomer)
-                    _buildProducerCard(
-                        context, statusColor, producerCompanyName)
-                  else
-                    _buildCustomerCard(context, statusColor),
+        return Scaffold(
+          backgroundColor: AppTheme.backgroundColor,
+          body: SafeArea(
+            child: Column(
+              children: [
+                // Üst başlık bölümü
+                _buildHeader(context, statusColor, statusText, statusIcon,
+                    isCustomer, producerCompanyName),
 
-                  // Teslimat Detayları (müşteri tercihi dahil)
-                  _buildDeliveryInfoCard(context, statusColor),
+                // İçerik
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.all(0),
+                    children: [
+                      // Sipariş Zaman Çizelgesi
+                      _buildOrderTimeline(context, statusColor, currentOrder),
 
-                  const SizedBox(height: 100), // Alt boşluk
-                ],
-              ),
+                      // Sipariş İçeriği (Üstte)
+                      _buildOrderItems(context, currentOrder),
+
+                      // ✅ Müşteri ise üretici bilgilerini, üretici ise müşteri bilgilerini göster
+                      if (isCustomer)
+                        _buildProducerCard(context, statusColor,
+                            producerCompanyName, currentOrder)
+                      else
+                        _buildCustomerCard(context, statusColor, currentOrder),
+
+                      // Teslimat Detayları (müşteri tercihi dahil)
+                      _buildDeliveryInfoCard(
+                          context, statusColor, currentOrder),
+
+                      const SizedBox(height: 100), // Alt boşluk
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-      // ✅ Müşteri ise bottom bar gösterme
-      bottomSheet: !isCustomer ? _buildBottomBar(context, statusColor) : null,
+          ),
+          // ✅ Müşteri ise bottom bar gösterme
+          bottomSheet: !isCustomer
+              ? _buildBottomBar(context, statusColor, currentOrder)
+              : null,
+        );
+      },
     );
   }
 
@@ -320,7 +335,8 @@ class OrderDetailScreen extends StatelessWidget {
   }
 
   // Sipariş zaman çizelgesi
-  Widget _buildOrderTimeline(BuildContext context, Color statusColor) {
+  Widget _buildOrderTimeline(
+      BuildContext context, Color statusColor, Order order) {
     final isCompleted = order.status == OrderStatus.completed;
     final isProcessing = order.status == OrderStatus.processing || isCompleted;
 
@@ -479,7 +495,8 @@ class OrderDetailScreen extends StatelessWidget {
   }
 
   // Müşteri bilgi kartı
-  Widget _buildCustomerCard(BuildContext context, Color statusColor) {
+  Widget _buildCustomerCard(
+      BuildContext context, Color statusColor, Order order) {
     // Müşteri telefon numarasını al ve temizle
     String? customerPhone = order.customer.phoneNumber;
     if (customerPhone != null && customerPhone.isNotEmpty) {
@@ -617,7 +634,8 @@ class OrderDetailScreen extends StatelessWidget {
   }
 
   // Teslimat bilgileri kartı
-  Widget _buildDeliveryInfoCard(BuildContext context, Color statusColor) {
+  Widget _buildDeliveryInfoCard(
+      BuildContext context, Color statusColor, Order order) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
@@ -825,7 +843,7 @@ class OrderDetailScreen extends StatelessWidget {
   }
 
   // Sipariş içerik listesi - Modernize edilmiş
-  Widget _buildOrderItems(BuildContext context) {
+  Widget _buildOrderItems(BuildContext context, Order order) {
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1108,7 +1126,7 @@ class OrderDetailScreen extends StatelessWidget {
   }
 
   // Alt eylem çubuğu
-  Widget _buildBottomBar(BuildContext context, Color statusColor) {
+  Widget _buildBottomBar(BuildContext context, Color statusColor, Order order) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -1143,7 +1161,7 @@ class OrderDetailScreen extends StatelessWidget {
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: () {
-                  _showStatusDialog(context, statusColor);
+                  _showStatusDialog(context, statusColor, order);
                 },
                 icon: const Icon(Icons.update),
                 label: const Text('Durumu Güncelle'),
@@ -1165,16 +1183,236 @@ class OrderDetailScreen extends StatelessWidget {
   }
 
   // Durum güncelleme dialotu
-  void _showStatusDialog(BuildContext context, Color statusColor) {
+  void _showStatusDialog(BuildContext context, Color statusColor, Order order) {
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+
+    // Mevcut durumdan sonraki durumları belirle
+    List<OrderStatus> availableStatuses = [];
+    List<String> statusDescriptions = [];
+
+    switch (order.status) {
+      case OrderStatus.waiting:
+        availableStatuses = [OrderStatus.processing, OrderStatus.cancelled];
+        statusDescriptions = ['Hazırlanmaya başla', 'Siparişi iptal et'];
+        break;
+      case OrderStatus.processing:
+        availableStatuses = [OrderStatus.completed, OrderStatus.cancelled];
+        statusDescriptions = ['Sipariş tamamlandı', 'Siparişi iptal et'];
+        break;
+      case OrderStatus.completed:
+        // Tamamlanmış siparişte sadece bilgi göster
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green, size: 24),
+                const SizedBox(width: 8),
+                const Text('Sipariş Durumu'),
+              ],
+            ),
+            content: const Text('Bu sipariş zaten tamamlanmış durumda.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Tamam'),
+              ),
+            ],
+          ),
+        );
+        return;
+      case OrderStatus.cancelled:
+        // İptal edilmiş siparişte sadece bilgi göster
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.cancel, color: Colors.red, size: 24),
+                const SizedBox(width: 8),
+                const Text('Sipariş Durumu'),
+              ],
+            ),
+            content: const Text('Bu sipariş iptal edilmiş durumda.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Tamam'),
+              ),
+            ],
+          ),
+        );
+        return;
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Sipariş Durumunu Güncelle'),
-        content: const Text('Bu işlev yakında eklenecek.'),
+        title: Row(
+          children: [
+            Icon(Icons.update, color: statusColor, size: 24),
+            const SizedBox(width: 8),
+            const Text('Sipariş Durumunu Güncelle'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Sipariş No: #${order.id.substring(0, 8).toUpperCase()}',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Müşteri: ${order.customer.name}',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Yeni durumu seçin:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            ...availableStatuses.asMap().entries.map((entry) {
+              final index = entry.key;
+              final status = entry.value;
+              final description = statusDescriptions[index];
+
+              Color buttonColor;
+              IconData icon;
+
+              switch (status) {
+                case OrderStatus.processing:
+                  buttonColor = Colors.orange.shade600;
+                  icon = Icons.play_arrow_rounded;
+                  break;
+                case OrderStatus.completed:
+                  buttonColor = Colors.green.shade600;
+                  icon = Icons.check_circle_rounded;
+                  break;
+                case OrderStatus.cancelled:
+                  buttonColor = Colors.red.shade600;
+                  icon = Icons.cancel_rounded;
+                  break;
+                default:
+                  buttonColor = Colors.grey;
+                  icon = Icons.help_outline;
+              }
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context); // Status dialog'u kapat
+
+                      // Önce güncelleniyor mesajı göster
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text('Güncelleniyor...'),
+                            ],
+                          ),
+                          backgroundColor: buttonColor,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          duration: Duration(seconds: 3),
+                        ),
+                      );
+
+                      try {
+                        print('🎯 Dialog: Durum güncelleme başlatılıyor...');
+
+                        // Durumu güncelle
+                        await orderProvider.updateOrderStatus(order.id, status);
+
+                        print('🎯 Dialog: Durum güncelleme tamamlandı');
+
+                        // Başarı mesajı göster
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).clearSnackBars();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(Icons.check_circle, color: Colors.white),
+                                  const SizedBox(width: 8),
+                                  Text('Durum güncellendi!'),
+                                ],
+                              ),
+                              backgroundColor: Colors.green,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        print('❌ Dialog: Durum güncelleme hatası: $e');
+
+                        // Hata mesajı göster
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).clearSnackBars();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  const Icon(Icons.error, color: Colors.white),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text('Hata: ${e.toString()}'),
+                                  ),
+                                ],
+                              ),
+                              backgroundColor: Colors.red,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    icon: Icon(icon, size: 18),
+                    label: Text(description),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: buttonColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Tamam'),
+            child: const Text('İptal'),
           ),
         ],
       ),
@@ -1214,8 +1452,8 @@ class OrderDetailScreen extends StatelessWidget {
   }
 
   // Üretici bilgi kartı
-  Widget _buildProducerCard(
-      BuildContext context, Color statusColor, String producerCompanyName) {
+  Widget _buildProducerCard(BuildContext context, Color statusColor,
+      String producerCompanyName, Order order) {
     return Consumer<CompanyProvider>(
       builder: (context, companyProvider, child) {
         // Üretici firma telefon numarasını bul

@@ -35,66 +35,35 @@ class _BudgetScreenState extends State<BudgetScreen>
 
   @override
   Widget build(BuildContext context) {
-    final orderProvider = Provider.of<OrderProvider>(context);
-    final financialSummary = orderProvider.financialSummary;
-    final companies = orderProvider.companySummaries;
-    final productSummaries = orderProvider.dailyProductSummary;
+    return Consumer<OrderProvider>(
+      builder: (context, orderProvider, child) {
+        final financialSummary = orderProvider.financialSummary;
+        final companySummaries = orderProvider.companySummaries;
 
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: AppTheme.textPrimaryColor),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Bütçe & Finansal Durum',
-          style: TextStyle(
-            color: AppTheme.textPrimaryColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.refresh_rounded,
-                color: AppTheme.primaryColor,
-                size: 20,
-              ),
-            ),
-            onPressed: () {
-              orderProvider.loadOrders();
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Tab Bar
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
+        return Scaffold(
+          backgroundColor: AppTheme.backgroundColor,
+          body: Column(
+            children: [
+              // Başlık
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Bütçe Yönetimi',
+                    style: TextStyle(
+                      color: AppTheme.textPrimaryColor,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ],
+                ),
               ),
-              child: Container(
-                height: 40,
+
+              // Tab Bar
+              Container(
+                margin: const EdgeInsets.all(16),
+                height: 45,
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(12),
@@ -114,191 +83,31 @@ class _BudgetScreenState extends State<BudgetScreen>
                   ),
                   labelColor: Colors.white,
                   unselectedLabelColor: AppTheme.textSecondaryColor,
+                  labelStyle: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w600),
+                  unselectedLabelStyle: const TextStyle(fontSize: 12),
                   tabs: const [
                     Tab(text: 'Genel Durum & Ödemeler'),
                     Tab(text: 'Ürün Satış Analizi'),
                   ],
                 ),
               ),
-            ),
 
-            // Tab View
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  // Genel Durum & Ödemeler Sekmesi
-                  _buildFinancialTab(financialSummary, companies),
-
-                  // Ürün Satış Analizi Sekmesi
-                  _buildProductSalesTab(productSummaries.values.toList()),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: _buildFloatingActionButton(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: _buildBottomNavigationBar(context),
-    );
-  }
-
-  // Bottom Navigation Bar
-  Widget _buildBottomNavigationBar(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 15,
-            offset: const Offset(0, -3),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-        child: BottomAppBar(
-          height: 70,
-          padding: EdgeInsets.zero,
-          elevation: 0,
-          notchMargin: 10,
-          shape: const CircularNotchedRectangle(),
-          color: Colors.white,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(context, 0, Icons.home_rounded, 'Ana Sayfa'),
-              _buildNavItem(
-                context,
-                1,
-                Icons.receipt_long_rounded,
-                'Siparişler',
-              ),
-              const SizedBox(width: 40), // FAB için boşluk
-              _buildNavItem(
-                context,
-                3,
-                Icons.restaurant_menu_rounded,
-                'Ürünler',
-              ),
-              _buildNavItem(
-                context,
-                4,
-                Icons.analytics_rounded,
-                'Bütçe',
-                isActive: true,
+              // Tab View
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildFinancialTab(financialSummary, companySummaries),
+                    _buildProductSalesTab(
+                        orderProvider.dailyProductSummary.values.toList()),
+                  ],
+                ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  // Navigation Item
-  Widget _buildNavItem(
-    BuildContext context,
-    int index,
-    IconData iconData,
-    String label, {
-    bool isActive = false,
-  }) {
-    return InkWell(
-      onTap: () {
-        if (!isActive) {
-          // Ana ekrana dön ve ilgili sekmeyi seç
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  HomeScreen(initialIndex: index, skipLoading: true),
-            ),
-          );
-        }
+        );
       },
-      customBorder: const CircleBorder(),
-      splashColor: AppTheme.primaryColor.withOpacity(0.1),
-      highlightColor: AppTheme.primaryColor.withOpacity(0.1),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        height: 50,
-        width: 65,
-        decoration: BoxDecoration(
-          color: isActive
-              ? AppTheme.primaryColor.withOpacity(0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              iconData,
-              color: isActive
-                  ? AppTheme.primaryColor
-                  : AppTheme.textSecondaryColor,
-              size: isActive ? 28 : 24,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isActive
-                    ? AppTheme.primaryColor
-                    : AppTheme.textSecondaryColor,
-                fontSize: 10,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Floating Action Button
-  Widget _buildFloatingActionButton() {
-    return Container(
-      height: 64,
-      width: 64,
-      margin: const EdgeInsets.only(top: 25),
-      child: FloatingActionButton(
-        heroTag: 'budget_screen_fab',
-        onPressed: () {
-          // Yeni işlem ekle
-        },
-        elevation: 2,
-        highlightElevation: 5,
-        backgroundColor: AppTheme.primaryColor,
-        child: Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppTheme.primaryColor,
-                AppTheme.primaryColor.withBlue(255).withRed(60),
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primaryColor.withOpacity(0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: const Icon(Icons.add, size: 32, color: Colors.white),
-        ),
-      ),
     );
   }
 
@@ -967,36 +776,50 @@ class _BudgetScreenState extends State<BudgetScreen>
 
                         // Siparişleri Görüntüle Butonu
                         Center(
-                          child: TextButton.icon(
-                            onPressed: () {
-                              _showCompanyOrdersDialog(context, company);
-                            },
-                            icon: Icon(
-                              Icons.receipt_long_rounded,
-                              color: Colors.white.withOpacity(0.9),
-                              size: 18,
-                            ),
-                            label: Text(
-                              'Siparişleri Görüntüle (${company.totalOrders} sipariş)',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.9),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.white.withOpacity(0.15),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                                side: BorderSide(
-                                  color: Colors.white.withOpacity(0.3),
+                          child: Consumer<OrderProvider>(
+                            builder: (context, orderProvider, child) {
+                              // Gerçek zamanlı ödenmemiş sipariş sayısını hesapla
+                              final unpaidOrdersCount = orderProvider.orders
+                                  .where((order) =>
+                                      order.customer.name ==
+                                          company.company.name &&
+                                      order.status == OrderStatus.completed &&
+                                      order.paymentStatus != PaymentStatus.paid)
+                                  .length;
+
+                              return TextButton.icon(
+                                onPressed: () {
+                                  _showCompanyOrdersDialog(context, company);
+                                },
+                                icon: Icon(
+                                  Icons.receipt_long_rounded,
+                                  color: Colors.white.withOpacity(0.9),
+                                  size: 18,
                                 ),
-                              ),
-                            ),
+                                label: Text(
+                                  'Siparişleri Görüntüle ($unpaidOrdersCount sipariş)',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                style: TextButton.styleFrom(
+                                  backgroundColor:
+                                      Colors.white.withOpacity(0.15),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                    side: BorderSide(
+                                      color: Colors.white.withOpacity(0.3),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ],
@@ -1841,7 +1664,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                                                   context,
                                                   listen: false)
                                               .processCustomerPayment(
-                                                  company.company.id, amount);
+                                                  company.company.name, amount);
 
                                           // Diyaloğu kapat
                                           Navigator.of(context).pop();
@@ -2679,10 +2502,11 @@ class _BudgetScreenState extends State<BudgetScreen>
   void _showCompanyOrdersDialog(BuildContext context, CompanySummary company) {
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
 
-    // Firmanın ödenmemiş siparişlerini al
+    // Firmanın ödenmemiş siparişlerini al - Firma adına göre filtrele
     final unpaidOrders = orderProvider.orders
         .where((order) =>
-            order.customer.id == company.company.id &&
+            order.customer.name == company.company.name &&
+            order.status == OrderStatus.completed &&
             order.paymentStatus != PaymentStatus.paid)
         .toList();
 

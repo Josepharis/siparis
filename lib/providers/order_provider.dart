@@ -117,44 +117,95 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
-  // Sipariş durumunu güncelleme
-  void updateOrderStatus(String orderId, OrderStatus newStatus) {
+  // Sipariş durumunu güncelleme - Firebase ile senkronize
+  Future<void> updateOrderStatus(String orderId, OrderStatus newStatus) async {
+    print(
+        '🔄 Sipariş durumu güncelleniyor: $orderId -> ${Order.getStatusText(newStatus)}');
+    print('📍 Başlangıç zamanı: ${DateTime.now()}');
+
     final index = _orders.indexWhere((order) => order.id == orderId);
-    if (index != -1) {
+    if (index == -1) {
+      print('❌ Sipariş bulunamadı: $orderId');
+      throw Exception('Sipariş bulunamadı');
+    }
+
+    final currentOrder = _orders[index];
+    print(
+        '📋 Mevcut sipariş durumu: ${Order.getStatusText(currentOrder.status)}');
+
+    try {
+      print('🏗️ Yeni sipariş objesi oluşturuluyor...');
+
       // Yeni sipariş oluştur, final değişkenleri güncellemek için
       final updatedOrder = Order(
-        id: _orders[index].id,
-        customer: _orders[index].customer,
-        items: _orders[index].items,
-        orderDate: _orders[index].orderDate,
-        deliveryDate: _orders[index].deliveryDate,
-        requestedDate: _orders[index].requestedDate,
-        requestedTime: _orders[index].requestedTime,
+        id: currentOrder.id,
+        customer: currentOrder.customer,
+        items: currentOrder.items,
+        orderDate: currentOrder.orderDate,
+        deliveryDate: currentOrder.deliveryDate,
+        requestedDate: currentOrder.requestedDate,
+        requestedTime: currentOrder.requestedTime,
         status: newStatus,
-        paymentStatus: _orders[index].paymentStatus,
-        paidAmount: _orders[index].paidAmount,
-        note: _orders[index].note,
+        paymentStatus: currentOrder.paymentStatus,
+        paidAmount: currentOrder.paidAmount,
+        note: currentOrder.note,
+        producerCompanyName: currentOrder.producerCompanyName,
+        producerCompanyId: currentOrder.producerCompanyId,
       );
 
+      print('🔥 Firebase\'e kaydediliyor...');
+      print('📍 Firebase başlangıç: ${DateTime.now()}');
+
+      // Önce Firebase'e kaydet
+      final success = await OrderService.updateOrder(updatedOrder);
+
+      print('📍 Firebase bitiş: ${DateTime.now()}');
+      print('🔥 Firebase sonucu: $success');
+
+      if (!success) {
+        print('❌ Firebase güncelleme başarısız oldu');
+        throw Exception('Firebase güncelleme başarısız');
+      }
+
+      print('✅ Firebase güncelleme başarılı');
+
+      // Başarılı olursa local'i güncelle
+      print('🔄 Local liste güncelleniyor...');
       _orders[index] = updatedOrder;
+
+      print('📊 Özetler güncelleniyor...');
+      _updateSummaries();
+
+      print('🔔 Listener\'lara bildirim gönderiliyor...');
       notifyListeners();
+
+      print(
+          '✅ Sipariş durumu başarıyla güncellendi: ${updatedOrder.id} -> ${Order.getStatusText(newStatus)}');
+      print('📍 Toplam süre: ${DateTime.now()}');
+    } catch (e) {
+      print('❌ Sipariş durumu güncellenirken hata: $e');
+      print('📍 Hata zamanı: ${DateTime.now()}');
+      // Hata durumunda exception'ı yukarıya ilet
+      rethrow;
     }
   }
 
-  // Müşteri ödemelerini güncelleme - Sadece Firebase
+  // Müşteri ödemelerini güncelleme - Firma adına göre (Sadece tamamlanan siparişler)
   Future<void> processCustomerPayment(
-      String customerId, double paymentAmount) async {
-    print('🔄 Ödeme işlemi başlatıldı: $customerId, Tutar: $paymentAmount');
+      String companyName, double paymentAmount) async {
+    print('🔄 Ödeme işlemi başlatıldı: $companyName, Tutar: $paymentAmount');
 
-    // Müşterinin ödenmemiş siparişlerini bul
+    // Firmanın tamamlanan ve ödenmemiş siparişlerini bul
     final customerOrders = _orders
         .where((order) =>
-            order.customer.id == customerId &&
+            order.customer.name == companyName &&
+            order.status == OrderStatus.completed &&
             order.paymentStatus != PaymentStatus.paid)
         .toList();
 
     if (customerOrders.isEmpty) {
-      print('❌ Müşteri için ödenmemiş sipariş bulunamadı: $customerId');
+      print(
+          '❌ Firma için tamamlanan ödenmemiş sipariş bulunamadı: $companyName');
       return;
     }
 
@@ -301,15 +352,20 @@ class OrderProvider extends ChangeNotifier {
     _dailyProductSummary = summaryMap;
   }
 
-  // Finansal özeti güncelleme
+  // Finansal özeti güncelleme - Sadece tamamlanan siparişler
   void _updateFinancialSummary() {
+    // Sadece tamamlanan siparişleri finansal özete dahil et
+    final completedOrders = _orders
+        .where((order) => order.status == OrderStatus.completed)
+        .toList();
+
     double totalAmount = 0;
     double collectedAmount = 0;
-    int totalOrders = _orders.length;
+    int totalOrders = completedOrders.length;
     int paidOrders = 0;
     int pendingOrders = 0;
 
-    for (final order in _orders) {
+    for (final order in completedOrders) {
       totalAmount += order.totalAmount;
       collectedAmount += order.paidAmount ?? 0;
 
@@ -333,21 +389,29 @@ class OrderProvider extends ChangeNotifier {
       paidOrders: paidOrders,
       pendingOrders: pendingOrders,
     );
+
+    print(
+        '✅ Finansal özet güncellendi: ${completedOrders.length} tamamlanan sipariş, ₺${totalAmount.toStringAsFixed(2)} toplam tutar');
   }
 
   // Firma özetlerini güncelleme
   void _updateCompanySummaries() {
     final Map<String, CompanySummary> summaryMap = {};
 
-    // Her bir firma için sipariş ve ödeme özetlerini hazırla
-    for (final order in _orders) {
-      final customerId = order.customer.id;
+    // Sadece tamamlanan siparişleri ödeme sistemine dahil et
+    final completedOrders = _orders
+        .where((order) => order.status == OrderStatus.completed)
+        .toList();
 
-      if (summaryMap.containsKey(customerId)) {
+    // Her bir firma için sipariş ve ödeme özetlerini hazırla - Firma adına göre grupla
+    for (final order in completedOrders) {
+      final companyName = order.customer.name; // Firma adını kullan
+
+      if (summaryMap.containsKey(companyName)) {
         // Mevcut özeti güncelle
-        final existingSummary = summaryMap[customerId]!;
+        final existingSummary = summaryMap[companyName]!;
 
-        summaryMap[customerId] = CompanySummary(
+        summaryMap[companyName] = CompanySummary(
           company: order.customer,
           totalAmount: existingSummary.totalAmount + order.totalAmount,
           paidAmount: existingSummary.paidAmount + (order.paidAmount ?? 0),
@@ -357,7 +421,7 @@ class OrderProvider extends ChangeNotifier {
         );
       } else {
         // Yeni özet oluştur
-        summaryMap[customerId] = CompanySummary(
+        summaryMap[companyName] = CompanySummary(
           company: order.customer,
           totalAmount: order.totalAmount,
           paidAmount: order.paidAmount ?? 0,
@@ -368,25 +432,31 @@ class OrderProvider extends ChangeNotifier {
       }
     }
 
-    // Koleksiyon oranlarını hesapla
-    final List<CompanySummary> summaries = summaryMap.values.map((summary) {
-      final collectionRate = summary.totalAmount > 0
-          ? (summary.paidAmount / summary.totalAmount) * 100
-          : 0.0;
+    // Koleksiyon oranlarını hesapla ve ödemesi tamamlanan firmaları filtrele
+    final List<CompanySummary> summaries = summaryMap.values
+        .map((summary) {
+          final collectionRate = summary.totalAmount > 0
+              ? (summary.paidAmount / summary.totalAmount) * 100
+              : 0.0;
 
-      return CompanySummary(
-        company: summary.company,
-        totalAmount: summary.totalAmount,
-        paidAmount: summary.paidAmount,
-        pendingAmount: summary.pendingAmount,
-        totalOrders: summary.totalOrders,
-        collectionRate: collectionRate,
-      );
-    }).toList();
+          return CompanySummary(
+            company: summary.company,
+            totalAmount: summary.totalAmount,
+            paidAmount: summary.paidAmount,
+            pendingAmount: summary.pendingAmount,
+            totalOrders: summary.totalOrders,
+            collectionRate: collectionRate,
+          );
+        })
+        .where((summary) => summary.pendingAmount > 0)
+        .toList(); // Sadece bekleyen ödemesi olan firmalar
 
     // Toplam tutara göre sırala
     summaries.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
 
     _companySummaries = summaries;
+
+    print(
+        '✅ Firma özetleri güncellendi: ${completedOrders.length} tamamlanan sipariş, ${summaries.length} firma (ödemesi bekleyen)');
   }
 }
