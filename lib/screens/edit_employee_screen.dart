@@ -28,6 +28,7 @@ class _EditEmployeeScreenState extends State<EditEmployeeScreen> {
     // Eksik yetkileri varsayılan false değeriyle ekle
     final defaultPermissions = {
       'view_budget': false,
+      'view_partial_budget': false,
       'approve_partnerships': false,
       'view_companies': false,
       'manage_orders': true,
@@ -202,6 +203,12 @@ class _EditEmployeeScreenState extends State<EditEmployeeScreen> {
                 'Bütçe Sekmesi',
                 'Mali raporlar ve bütçe bilgilerini görüntüleyebilir',
                 Icons.analytics,
+              ),
+              _buildPermissionTile(
+                'view_partial_budget',
+                'Kısmi Bütçe',
+                'Kısmi bütçe bilgilerini görüntüleyebilir',
+                Icons.bar_chart,
               ),
               _buildPermissionTile(
                 'manage_orders',

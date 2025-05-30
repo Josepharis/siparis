@@ -368,7 +368,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         hasAccess = authProvider.hasPermission('manage_products');
         break;
       case 4: // Bütçe
-        hasAccess = authProvider.hasPermission('view_budget');
+        hasAccess = authProvider.hasPermission('view_budget') ||
+            authProvider.hasPermission('view_partial_budget');
         break;
       default:
         hasAccess = false;
@@ -955,7 +956,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         canAccessCurrentTab = authProvider.hasPermission('manage_products');
         break;
       case 4: // Bütçe
-        canAccessCurrentTab = authProvider.hasPermission('view_budget');
+        canAccessCurrentTab = authProvider.hasPermission('view_budget') ||
+            authProvider.hasPermission('view_partial_budget');
         break;
       default:
         canAccessCurrentTab = false;

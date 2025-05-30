@@ -50,25 +50,65 @@ class AuthProvider with ChangeNotifier {
       // Önce çalışan otomatik girişini kontrol et
       await _checkAutoEmployeeLogin();
 
-      // Eğer çalışan otomatik girişi başarılıysa Firebase listener'ını başlatma
-      if (_isEmployeeLogin && _currentEmployee != null) {
-        print('🔧 Çalışan girişi aktif, Firebase listener başlatılmayacak');
-        return;
-      }
-
-      // Firebase auth state değişikliklerini dinle (sadece sahip girişi için)
+      // Firebase auth state değişikliklerini her zaman dinle
       AuthService.authStateChanges.listen((User? user) async {
-        if (!_isEmployeeLogin) {
-          // Sadece çalışan girişi yapılmamışsa Firebase'i dinle
-          if (user != null) {
-            try {
-              _currentUser = await AuthService.getUserData(user.uid);
-            } catch (e) {
-              _errorMessage = e.toString();
-              _currentUser = null;
+        // Eğer çalışan girişi aktifse Firebase user değişikliklerini görmezden gel
+        if (_isEmployeeLogin && _currentEmployee != null) {
+          print(
+              '🔧 Çalışan girişi aktif, Firebase user değişiklikleri görmezden geliniyor');
+          if (!_isInitialized) {
+            _isInitialized = true;
+            notifyListeners();
+          }
+          return;
+        }
+
+        // Sahip kullanıcı Firebase işlemleri
+        if (user != null) {
+          try {
+            _currentUser = await AuthService.getUserData(user.uid);
+            _isEmployeeLogin = false;
+            _currentEmployee = null;
+
+            // Demo çalışan verisi kontrolü (email bazlı)
+            if (user.email == 'calisan@test.com') {
+              _currentEmployee = Employee(
+                id: 'demo_emp_1',
+                name: 'Demo Çalışan',
+                email: 'calisan@test.com',
+                phone: '0555 123 45 67',
+                position: 'Satış Uzmanı',
+                companyId: 'demo_company',
+                permissions: {
+                  'manage_orders': true,
+                  'manage_products': true,
+                  'view_partial_budget': true,
+                  'view_budget': false,
+                  'approve_partnerships': false,
+                  'view_companies': false,
+                },
+                createdAt: DateTime.now(),
+                isActive: true,
+                password: 'hashed_password',
+              );
+              _isEmployeeLogin = true;
+              _currentUser = null; // Demo çalışan için sahip bilgisini temizle
             }
-          } else {
+
+            print('✅ Sahip otomatik girişi başarılı: ${_currentUser?.name}');
+          } catch (e) {
+            _errorMessage = e.toString();
             _currentUser = null;
+            _currentEmployee = null;
+            _isEmployeeLogin = false;
+            print('❌ Sahip otomatik giriş hatası: $e');
+          }
+        } else {
+          // User null ise ve çalışan girişi de yoksa tüm bilgileri temizle
+          if (!_isEmployeeLogin) {
+            _currentUser = null;
+            _currentEmployee = null;
+            print('ℹ️ Firebase user null, otomatik giriş yok');
           }
         }
 
@@ -116,33 +156,23 @@ class AuthProvider with ChangeNotifier {
           _isEmployeeLogin = true;
           _currentUser = null; // Sahip girişini temizle
 
-          // Auth başlatılmış olarak işaretle ve UI'ı bilgilendir
-          _isInitialized = true;
-          notifyListeners();
-
-          print('🎯 Çalışan otomatik girişi tamamlandı, UI güncellenecek');
+          print('🎯 Çalışan otomatik girişi tamamlandı');
         } else {
           print('❌ Çalışan artık aktif değil, otomatik giriş temizleniyor');
           await _clearEmployeeLoginData();
-
-          // Başarısız giriş durumunda da initialize olarak işaretle
-          _isInitialized = true;
-          notifyListeners();
+          _isEmployeeLogin = false;
+          _currentEmployee = null;
         }
       } else {
         print('ℹ️ Kaydedilmiş çalışan girişi bulunamadı');
-
-        // Çalışan girişi yoksa da initialize olarak işaretle
-        _isInitialized = true;
-        notifyListeners();
+        _isEmployeeLogin = false;
+        _currentEmployee = null;
       }
     } catch (e) {
       print('❌ Çalışan otomatik giriş kontrolü hatası: $e');
       await _clearEmployeeLoginData();
-
-      // Hata durumunda da initialize olarak işaretle
-      _isInitialized = true;
-      notifyListeners();
+      _isEmployeeLogin = false;
+      _currentEmployee = null;
     }
   }
 
@@ -295,16 +325,28 @@ class AuthProvider with ChangeNotifier {
     try {
       if (_isEmployeeLogin) {
         // Çalışan çıkışı - lokal verileri temizle
+        print('🚪 Çalışan çıkışı yapılıyor...');
         await _clearEmployeeLoginData();
         _currentEmployee = null;
         _isEmployeeLogin = false;
+        print('✅ Çalışan çıkışı tamamlandı');
       } else {
-        // Sahip çıkışı
+        // Sahip çıkışı - Firebase'den çıkış yap
+        print('🚪 Sahip çıkışı yapılıyor...');
         await AuthService.signOut();
         _currentUser = null;
+        print('✅ Sahip çıkışı tamamlandı');
       }
+
+      // Her durumda tüm verileri temizle
+      _currentUser = null;
+      _currentEmployee = null;
+      _isEmployeeLogin = false;
+
       _setLoading(false);
+      print('🎯 Çıkış işlemi tamamlandı');
     } catch (e) {
+      print('❌ Çıkış hatası: $e');
       _setError(e.toString());
       _setLoading(false);
     }

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:siparis/config/theme.dart';
 import 'package:siparis/models/order.dart';
 import 'package:siparis/providers/order_provider.dart';
+import 'package:siparis/providers/auth_provider.dart';
 import 'package:siparis/screens/home/home_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math' as math;
@@ -35,10 +36,15 @@ class _BudgetScreenState extends State<BudgetScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<OrderProvider>(
-      builder: (context, orderProvider, child) {
+    return Consumer2<OrderProvider, AuthProvider>(
+      builder: (context, orderProvider, authProvider, child) {
         final financialSummary = orderProvider.financialSummary;
         final companySummaries = orderProvider.companySummaries;
+
+        // Yetki kontrolü
+        final hasFullBudgetAccess = authProvider.hasPermission('view_budget');
+        final hasPartialBudgetAccess =
+            authProvider.hasPermission('view_partial_budget');
 
         return Scaffold(
           backgroundColor: AppTheme.backgroundColor,
@@ -60,49 +66,56 @@ class _BudgetScreenState extends State<BudgetScreen>
                 ),
               ),
 
-              // Tab Bar
-              Container(
-                margin: const EdgeInsets.all(16),
-                height: 45,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: TabBar(
-                  controller: _tabController,
-                  indicator: BoxDecoration(
-                    color: AppTheme.primaryColor,
+              // Tab Bar (sadece tam yetki olanlar için)
+              if (hasFullBudgetAccess)
+                Container(
+                  margin: const EdgeInsets.all(16),
+                  height: 45,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryColor.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    indicator: BoxDecoration(
+                      color: AppTheme.primaryColor,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    labelColor: Colors.white,
+                    unselectedLabelColor: AppTheme.textSecondaryColor,
+                    labelStyle: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w600),
+                    unselectedLabelStyle: const TextStyle(fontSize: 12),
+                    tabs: const [
+                      Tab(text: 'Genel Durum & Ödemeler'),
+                      Tab(text: 'Ürün Satış Analizi'),
                     ],
                   ),
-                  labelColor: Colors.white,
-                  unselectedLabelColor: AppTheme.textSecondaryColor,
-                  labelStyle: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w600),
-                  unselectedLabelStyle: const TextStyle(fontSize: 12),
-                  tabs: const [
-                    Tab(text: 'Genel Durum & Ödemeler'),
-                    Tab(text: 'Ürün Satış Analizi'),
-                  ],
                 ),
-              ),
 
-              // Tab View
+              // Tab View veya Kısmi Görünüm
               Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildFinancialTab(financialSummary, companySummaries),
-                    _buildProductSalesTab(
-                        orderProvider.dailyProductSummary.values.toList()),
-                  ],
-                ),
+                child: hasFullBudgetAccess
+                    ? TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildFinancialTab(
+                              financialSummary, companySummaries),
+                          _buildProductSalesTab(orderProvider
+                              .dailyProductSummary.values
+                              .toList()),
+                        ],
+                      )
+                    : hasPartialBudgetAccess
+                        ? _buildPartialBudgetView(companySummaries)
+                        : _buildNoAccessView(),
               ),
             ],
           ),
@@ -2845,6 +2858,75 @@ class _BudgetScreenState extends State<BudgetScreen>
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  // Kısmi bütçe görünümü (sadece firma ödemeleri)
+  Widget _buildPartialBudgetView(List<CompanySummary> companies) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Firma Bazlı Ödemeler Başlık
+          Row(
+            children: [
+              Text(
+                'Firma Ödemeleri',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimaryColor,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'Toplam ${companies.length} firma',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // Firma Kartları
+          _buildCompanyCards(companies),
+        ],
+      ),
+    );
+  }
+
+  // Yetkisiz erişim görünümü
+  Widget _buildNoAccessView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.lock_outline,
+            size: 64,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Bütçe Bilgilerine Erişim Yetkisi Yok',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimaryColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Bu sayfayı görüntülemek için yetki almanız gerekiyor.',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.textSecondaryColor,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

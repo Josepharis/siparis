@@ -59,6 +59,7 @@ class Employee {
   }
 
   bool get canViewBudget => hasPermission('view_budget');
+  bool get canViewPartialBudget => hasPermission('view_partial_budget');
   bool get canApprovePartnerships => hasPermission('approve_partnerships');
   bool get canViewCompanies => hasPermission('view_companies');
   bool get canManageOrders => hasPermission('manage_orders');

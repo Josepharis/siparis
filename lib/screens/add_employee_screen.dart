@@ -27,6 +27,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
   // Yetkilendirme seçenekleri
   Map<String, bool> _permissions = {
     'view_budget': false,
+    'view_partial_budget': false,
     'approve_partnerships': false,
     'view_companies': false,
     'manage_orders': true, // Varsayılan açık
@@ -261,6 +262,12 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                 'Bütçe Sekmesi',
                 'Mali raporlar ve bütçe bilgilerini görüntüleyebilir',
                 Icons.analytics,
+              ),
+              _buildPermissionTile(
+                'view_partial_budget',
+                'Kısmi Bütçe',
+                'Kısmi bütçe bilgilerini görüntüleyebilir',
+                Icons.bar_chart,
               ),
               _buildPermissionTile(
                 'manage_orders',
