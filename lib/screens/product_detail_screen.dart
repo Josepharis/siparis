@@ -48,22 +48,51 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             pinned: true,
             stretch: true,
             backgroundColor: _getCategoryColor(widget.product.category),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-              onPressed: () => Navigator.of(context).pop(),
+            leading: Container(
+              margin: const EdgeInsets.all(8),
+              child: Material(
+                color: Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(12),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: Colors.black87,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
             ),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.print_rounded, size: 22),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Üretim listesi yazdırılıyor...'),
+              Container(
+                margin: const EdgeInsets.all(8),
+                child: Material(
+                  color: Colors.white.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Üretim listesi yazdırılıyor...'),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      child: const Icon(
+                        Icons.print_rounded,
+                        color: Colors.black87,
+                        size: 20,
+                      ),
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
-              const SizedBox(width: 8),
             ],
             flexibleSpace: FlexibleSpaceBar(
               titlePadding: const EdgeInsets.only(
@@ -75,12 +104,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   .shrink(), // Boş title, üst üste binmeyi önlemek için
               background: Stack(
                 children: [
-                  // Ürüne özel arka plan
+                  // Ürüne özel arka plan - gerçek görsel kullan
                   Positioned.fill(
-                    child: _getCategoryImage(
-                      widget.product.category,
-                      widget.product.productName,
-                    ),
+                    child: _buildProductImage(),
                   ),
 
                   // Karanlık gradient overlay
@@ -827,63 +853,28 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   // Ürüne özel arkaplan görseli
-  Widget _getCategoryImage(String category, String productName) {
-    // Ürün ismine bağlı farklı görsel
-    if (productName == 'Cheesecake') {
+  Widget _buildProductImage() {
+    // Ürünün imageUrl'i varsa onu göster, yoksa kategori rengini göster
+    if (widget.product.imageUrl != null &&
+        widget.product.imageUrl!.isNotEmpty) {
       return Image.network(
-        'https://images.unsplash.com/photo-1567171466295-4afa63d45416?q=80&w=2787&auto=format&fit=crop',
+        widget.product.imageUrl!,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) =>
-            Container(color: _getCategoryColor(category)),
+            Container(color: _getCategoryColor(widget.product.category)),
       );
-    } else if (productName == 'Tiramisu') {
-      return Image.network(
-        'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?q=80&w=2787&auto=format&fit=crop',
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) =>
-            Container(color: _getCategoryColor(category)),
+    } else {
+      // Görsel yoksa kategori rengini göster
+      return Container(
+        color: _getCategoryColor(widget.product.category),
+        child: Center(
+          child: Icon(
+            _getCategoryIcon(widget.product.category),
+            size: 80,
+            color: Colors.white.withOpacity(0.3),
+          ),
+        ),
       );
-    } else if (productName.toLowerCase().contains('brownie')) {
-      return Image.network(
-        'https://images.unsplash.com/photo-1515037893149-de7f840978e2?q=80&w=2883&auto=format&fit=crop',
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) =>
-            Container(color: _getCategoryColor(category)),
-      );
-    }
-
-    // Kategoriye bağlı genel görseller
-    switch (category.toLowerCase()) {
-      case 'tatlılar':
-        return Image.network(
-          'https://images.unsplash.com/photo-1551024506-0bccd828d307?q=80&w=2814&auto=format&fit=crop',
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) =>
-              Container(color: _getCategoryColor(category)),
-        );
-      case 'hamur işleri':
-        return Image.network(
-          'https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=2728&auto=format&fit=crop',
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) =>
-              Container(color: _getCategoryColor(category)),
-        );
-      case 'kurabiyeler':
-        return Image.network(
-          'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?q=80&w=2984&auto=format&fit=crop',
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) =>
-              Container(color: _getCategoryColor(category)),
-        );
-      case 'pastalar':
-        return Image.network(
-          'https://images.unsplash.com/photo-1535141192574-5d4897c12636?q=80&w=2916&auto=format&fit=crop',
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) =>
-              Container(color: _getCategoryColor(category)),
-        );
-      default:
-        return Container(color: _getCategoryColor(category));
     }
   }
 
@@ -962,61 +953,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  // Alt eylem butonu
+  // Alt eylem butonu - KALDIRILIYOR
   Widget _buildActionButton(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: Colors.white,
-            child: IconButton(
-              icon: Icon(
-                Icons.note_add_rounded,
-                color: _getCategoryColor(widget.product.category),
-              ),
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Üretim notu ekleniyor...')),
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () {
-                HapticFeedback.mediumImpact();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '${widget.product.productName} üretim listesine eklendi',
-                    ),
-                    backgroundColor: _getCategoryColor(widget.product.category),
-                  ),
-                );
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _getCategoryColor(widget.product.category),
-                foregroundColor: Colors.white,
-                elevation: 2,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Üretime Ekle',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    return const SizedBox.shrink(); // Tamamen kaldırıldı
   }
 
   // Kompakt firma kartı - yeni model ile çalışacak şekilde güncellendi

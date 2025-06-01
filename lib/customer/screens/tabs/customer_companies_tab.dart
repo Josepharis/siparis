@@ -606,13 +606,13 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
                 // Company Name
                 Text(
                   company.name,
-                  style: const TextStyle(
-                    fontSize: 14,
+                  style: TextStyle(
+                    fontSize: MediaQuery.of(context).size.width < 600 ? 12 : 14,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1F2937),
+                    color: const Color(0xFF1F2937),
                     height: 1.2,
                   ),
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
 
@@ -755,10 +755,10 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
                 // Company Info
                 Text(
                   company.name,
-                  style: const TextStyle(
-                    fontSize: 15,
+                  style: TextStyle(
+                    fontSize: MediaQuery.of(context).size.width < 600 ? 12 : 14,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1F2937),
+                    color: const Color(0xFF1F2937),
                     height: 1.2,
                   ),
                   maxLines: 1,

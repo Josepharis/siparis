@@ -36,6 +36,8 @@ class _BudgetScreenState extends State<BudgetScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     return Consumer2<OrderProvider, AuthProvider>(
       builder: (context, orderProvider, authProvider, child) {
         final financialSummary = orderProvider.financialSummary;
@@ -52,14 +54,18 @@ class _BudgetScreenState extends State<BudgetScreen>
             children: [
               // Başlık
               Container(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                padding: EdgeInsets.fromLTRB(
+                    isSmallScreen ? 12 : 16,
+                    isSmallScreen ? 12 : 16,
+                    isSmallScreen ? 12 : 16,
+                    isSmallScreen ? 6 : 8),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Bütçe Yönetimi',
                     style: TextStyle(
                       color: AppTheme.textPrimaryColor,
-                      fontSize: 24,
+                      fontSize: isSmallScreen ? 20 : 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -69,33 +75,42 @@ class _BudgetScreenState extends State<BudgetScreen>
               // Tab Bar (sadece tam yetki olanlar için)
               if (hasFullBudgetAccess)
                 Container(
-                  margin: const EdgeInsets.all(16),
-                  height: 45,
+                  margin: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                  height: isSmallScreen ? 40 : 45,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius:
+                        BorderRadius.circular(isSmallScreen ? 10 : 12),
                   ),
                   child: TabBar(
                     controller: _tabController,
                     indicator: BoxDecoration(
                       color: AppTheme.primaryColor,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius:
+                          BorderRadius.circular(isSmallScreen ? 10 : 12),
                       boxShadow: [
                         BoxShadow(
                           color: AppTheme.primaryColor.withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                          blurRadius: isSmallScreen ? 6 : 8,
+                          offset: Offset(0, isSmallScreen ? 1 : 2),
                         ),
                       ],
                     ),
                     labelColor: Colors.white,
                     unselectedLabelColor: AppTheme.textSecondaryColor,
-                    labelStyle: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w600),
-                    unselectedLabelStyle: const TextStyle(fontSize: 12),
-                    tabs: const [
-                      Tab(text: 'Genel Durum & Ödemeler'),
-                      Tab(text: 'Ürün Satış Analizi'),
+                    labelStyle: TextStyle(
+                        fontSize: isSmallScreen ? 10 : 12,
+                        fontWeight: FontWeight.w600),
+                    unselectedLabelStyle:
+                        TextStyle(fontSize: isSmallScreen ? 10 : 12),
+                    tabs: [
+                      Tab(
+                          text: isSmallScreen
+                              ? 'Genel'
+                              : 'Genel Durum & Ödemeler'),
+                      Tab(
+                          text:
+                              isSmallScreen ? 'Analiz' : 'Ürün Satış Analizi'),
                     ],
                   ),
                 ),
@@ -129,19 +144,21 @@ class _BudgetScreenState extends State<BudgetScreen>
     FinancialSummary? financialSummary,
     List<CompanySummary> companies,
   ) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     if (financialSummary == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Genel Finansal Özet Kartları
           _buildBudgetSummaryCards(financialSummary),
 
-          const SizedBox(height: 24),
+          SizedBox(height: isSmallScreen ? 16 : 24),
 
           // Firma Bazlı Ödemeler Başlık
           Row(
@@ -149,7 +166,7 @@ class _BudgetScreenState extends State<BudgetScreen>
               Text(
                 'Firma Ödemeleri',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: isSmallScreen ? 14 : 16,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.textPrimaryColor,
                 ),
@@ -157,12 +174,14 @@ class _BudgetScreenState extends State<BudgetScreen>
               const Spacer(),
               Text(
                 'Toplam ${companies.length} firma',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                style: TextStyle(
+                    fontSize: isSmallScreen ? 10 : 12,
+                    color: Colors.grey.shade600),
               ),
             ],
           ),
 
-          const SizedBox(height: 12),
+          SizedBox(height: isSmallScreen ? 8 : 12),
 
           // Firma Kartları
           _buildCompanyCards(companies),
@@ -173,6 +192,8 @@ class _BudgetScreenState extends State<BudgetScreen>
 
   // Genel özet kartları
   Widget _buildBudgetSummaryCards(FinancialSummary summary) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     return Column(
       children: [
         // Ciro ve Tahsilat Durumu Kartı
@@ -186,46 +207,49 @@ class _BudgetScreenState extends State<BudgetScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
             boxShadow: [
               BoxShadow(
                 color: AppTheme.primaryColor.withOpacity(0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 5),
+                blurRadius: isSmallScreen ? 8 : 12,
+                offset: Offset(0, isSmallScreen ? 3 : 5),
               ),
             ],
           ),
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Toplam Bütçe',
-                    style: TextStyle(color: Colors.white, fontSize: 14),
+                    style: TextStyle(
+                        color: Colors.white, fontSize: isSmallScreen ? 12 : 14),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isSmallScreen ? 6 : 8,
+                      vertical: isSmallScreen ? 3 : 4,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius:
+                          BorderRadius.circular(isSmallScreen ? 6 : 8),
                     ),
                     child: Text(
-                      '₺${summary.totalAmount.toStringAsFixed(2)}',
-                      style: const TextStyle(
+                      '₺${summary.totalAmount >= 1000 ? '${(summary.totalAmount / 1000).toStringAsFixed(summary.totalAmount % 1000 == 0 ? 0 : 1)}K' : summary.totalAmount.toStringAsFixed(0)}',
+                      style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
+                        fontSize: isSmallScreen ? 12 : 14,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: isSmallScreen ? 12 : 16),
               Row(
                 children: [
                   // Tahsilat Miktarı
@@ -233,16 +257,18 @@ class _BudgetScreenState extends State<BudgetScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Tahsil Edilen',
-                          style: TextStyle(color: Colors.white70, fontSize: 12),
-                        ),
-                        const SizedBox(height: 4),
                         Text(
-                          '₺${summary.collectedAmount.toStringAsFixed(2)}',
-                          style: const TextStyle(
+                          'Tahsil Edilen',
+                          style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: isSmallScreen ? 10 : 12),
+                        ),
+                        SizedBox(height: isSmallScreen ? 2 : 4),
+                        Text(
+                          '₺${summary.collectedAmount >= 1000 ? '${(summary.collectedAmount / 1000).toStringAsFixed(summary.collectedAmount % 1000 == 0 ? 0 : 1)}K' : summary.collectedAmount.toStringAsFixed(0)}',
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 18,
+                            fontSize: isSmallScreen ? 14 : 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -255,16 +281,18 @@ class _BudgetScreenState extends State<BudgetScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Bekleyen',
-                          style: TextStyle(color: Colors.white70, fontSize: 12),
-                        ),
-                        const SizedBox(height: 4),
                         Text(
-                          '₺${summary.pendingAmount.toStringAsFixed(2)}',
-                          style: const TextStyle(
+                          'Bekleyen',
+                          style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: isSmallScreen ? 10 : 12),
+                        ),
+                        SizedBox(height: isSmallScreen ? 2 : 4),
+                        Text(
+                          '₺${summary.pendingAmount >= 1000 ? '${(summary.pendingAmount / 1000).toStringAsFixed(summary.pendingAmount % 1000 == 0 ? 0 : 1)}K' : summary.pendingAmount.toStringAsFixed(0)}',
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 18,
+                            fontSize: isSmallScreen ? 14 : 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -277,16 +305,18 @@ class _BudgetScreenState extends State<BudgetScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Tahsilat Oranı',
-                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                          style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: isSmallScreen ? 10 : 12),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: isSmallScreen ? 2 : 4),
                         Text(
                           '%${summary.collectionRate.toStringAsFixed(1)}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 18,
+                            fontSize: isSmallScreen ? 14 : 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -299,7 +329,7 @@ class _BudgetScreenState extends State<BudgetScreen>
           ),
         ),
 
-        const SizedBox(height: 12),
+        SizedBox(height: isSmallScreen ? 8 : 12),
 
         // Sipariş İstatistikleri
         Row(
@@ -313,7 +343,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                 Colors.blue,
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: isSmallScreen ? 6 : 12),
             // Ödenmiş Sipariş
             Expanded(
               child: _buildInfoCard(
@@ -323,7 +353,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                 Colors.green,
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: isSmallScreen ? 6 : 12),
             // Bekleyen Sipariş
             Expanded(
               child: _buildInfoCard(
@@ -346,16 +376,18 @@ class _BudgetScreenState extends State<BudgetScreen>
     IconData icon,
     Color color,
   ) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 5,
-            spreadRadius: 1,
+            blurRadius: isSmallScreen ? 3 : 5,
+            spreadRadius: isSmallScreen ? 0.5 : 1,
           ),
         ],
       ),
@@ -364,22 +396,25 @@ class _BudgetScreenState extends State<BudgetScreen>
         children: [
           Row(
             children: [
-              Icon(icon, color: color, size: 18),
-              const SizedBox(width: 6),
+              Icon(icon, color: color, size: isSmallScreen ? 14 : 18),
+              SizedBox(width: isSmallScreen ? 4 : 6),
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  style: TextStyle(
+                      fontSize: isSmallScreen ? 10 : 12,
+                      color: Colors.grey.shade600),
                   overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isSmallScreen ? 4 : 8),
           Text(
             value,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: isSmallScreen ? 14 : 18,
               fontWeight: FontWeight.bold,
               color: AppTheme.textPrimaryColor,
             ),
@@ -391,6 +426,8 @@ class _BudgetScreenState extends State<BudgetScreen>
 
   // Firma kartları
   Widget _buildCompanyCards(List<CompanySummary> companies) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     if (companies.isEmpty) {
       return const Center(
         child: Padding(
@@ -414,24 +451,24 @@ class _BudgetScreenState extends State<BudgetScreen>
             _showPaymentDialog(context, company);
           },
           child: Container(
-            margin: const EdgeInsets.only(bottom: 12),
+            margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 12),
               border: Border.all(
                 color: isPaid ? Colors.green.shade300 : Colors.orange.shade300,
-                width: 1.5,
+                width: isSmallScreen ? 1 : 1.5,
               ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.04),
-                  blurRadius: 5,
-                  offset: const Offset(0, 2),
+                  blurRadius: isSmallScreen ? 3 : 5,
+                  offset: Offset(0, isSmallScreen ? 1 : 2),
                 ),
               ],
             ),
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
               child: Column(
                 children: [
                   // Firma adı ve ödeme durumu
@@ -441,7 +478,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                         backgroundColor: isPaid
                             ? Colors.green.shade100
                             : Colors.orange.shade100,
-                        radius: 20,
+                        radius: isSmallScreen ? 16 : 20,
                         child: Text(
                           company.company.name.substring(0, 1),
                           style: TextStyle(
@@ -449,46 +486,50 @@ class _BudgetScreenState extends State<BudgetScreen>
                                 ? Colors.green.shade700
                                 : Colors.orange.shade700,
                             fontWeight: FontWeight.bold,
+                            fontSize: isSmallScreen ? 14 : 16,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: isSmallScreen ? 8 : 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               company.company.name,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                                fontSize: isSmallScreen ? 14 : 16,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             Text(
                               '${company.totalOrders} Sipariş',
                               style: TextStyle(
                                 color: Colors.grey.shade600,
-                                fontSize: 12,
+                                fontSize: isSmallScreen ? 10 : 12,
                               ),
                             ),
                           ],
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 6 : 8,
+                          vertical: isSmallScreen ? 3 : 4,
                         ),
                         decoration: BoxDecoration(
                           color: isPaid
                               ? Colors.green.shade100
                               : Colors.orange.shade100,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius:
+                              BorderRadius.circular(isSmallScreen ? 6 : 8),
                         ),
                         child: Text(
                           isPaid ? 'Tamamlandı' : 'Bekliyor',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: isSmallScreen ? 10 : 12,
                             fontWeight: FontWeight.bold,
                             color: isPaid
                                 ? Colors.green.shade700
@@ -499,7 +540,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                     ],
                   ),
 
-                  const SizedBox(height: 16),
+                  SizedBox(height: isSmallScreen ? 10 : 16),
 
                   // Ödeme detayları
                   Row(
@@ -512,17 +553,19 @@ class _BudgetScreenState extends State<BudgetScreen>
                             Text(
                               'Toplam Tutar',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: isSmallScreen ? 9 : 11,
                                 color: Colors.grey.shade600,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: isSmallScreen ? 2 : 4),
                             Text(
-                              '₺${company.totalAmount.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 14,
+                              '₺${company.totalAmount >= 1000 ? '${(company.totalAmount / 1000).toStringAsFixed(company.totalAmount % 1000 == 0 ? 0 : 1)}K' : company.totalAmount.toStringAsFixed(0)}',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 12 : 14,
                                 fontWeight: FontWeight.bold,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -536,18 +579,20 @@ class _BudgetScreenState extends State<BudgetScreen>
                             Text(
                               'Ödenen',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: isSmallScreen ? 9 : 11,
                                 color: Colors.grey.shade600,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: isSmallScreen ? 2 : 4),
                             Text(
-                              '₺${company.paidAmount.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 14,
+                              '₺${company.paidAmount >= 1000 ? '${(company.paidAmount / 1000).toStringAsFixed(company.paidAmount % 1000 == 0 ? 0 : 1)}K' : company.paidAmount.toStringAsFixed(0)}',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 12 : 14,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.green,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -561,18 +606,20 @@ class _BudgetScreenState extends State<BudgetScreen>
                             Text(
                               'Kalan',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: isSmallScreen ? 9 : 11,
                                 color: Colors.grey.shade600,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: isSmallScreen ? 2 : 4),
                             Text(
-                              '₺${company.pendingAmount.toStringAsFixed(2)}',
+                              '₺${company.pendingAmount >= 1000 ? '${(company.pendingAmount / 1000).toStringAsFixed(company.pendingAmount % 1000 == 0 ? 0 : 1)}K' : company.pendingAmount.toStringAsFixed(0)}',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: isSmallScreen ? 12 : 14,
                                 fontWeight: FontWeight.bold,
                                 color: isPaid ? Colors.green : Colors.orange,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -580,7 +627,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                     ],
                   ),
 
-                  const SizedBox(height: 8),
+                  SizedBox(height: isSmallScreen ? 6 : 8),
 
                   // İlerleme çubuğu
                   LinearProgressIndicator(
@@ -589,20 +636,23 @@ class _BudgetScreenState extends State<BudgetScreen>
                     valueColor: AlwaysStoppedAnimation<Color>(
                       isPaid ? Colors.green : AppTheme.primaryColor,
                     ),
-                    minHeight: 4,
+                    minHeight: isSmallScreen ? 3 : 4,
                     borderRadius: BorderRadius.circular(2),
                   ),
 
-                  const SizedBox(height: 4),
+                  SizedBox(height: isSmallScreen ? 3 : 4),
 
                   // Tahsilat oranı
                   Align(
                     alignment: Alignment.centerRight,
                     child: Text(
-                      'Tahsilat Oranı: %${company.collectionRate.toStringAsFixed(1)}',
+                      '%${company.collectionRate.toStringAsFixed(1)}',
                       style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
+                        fontSize: isSmallScreen ? 10 : 12,
+                        fontWeight: FontWeight.bold,
+                        color: isPaid
+                            ? Colors.green.shade700
+                            : AppTheme.primaryColor,
                       ),
                     ),
                   ),
@@ -617,6 +667,8 @@ class _BudgetScreenState extends State<BudgetScreen>
 
   // Ödeme alma diyaloğu
   void _showPaymentDialog(BuildContext context, CompanySummary company) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     // Ödeme yöntemi ve tutarı için controller'lar
     final TextEditingController amountController = TextEditingController();
     final TextEditingController noteController = TextEditingController();
@@ -637,7 +689,9 @@ class _BudgetScreenState extends State<BudgetScreen>
         return StatefulBuilder(
           builder: (context, setState) {
             return Container(
-              height: MediaQuery.of(context).size.height * 0.75,
+              height: isSmallScreen
+                  ? MediaQuery.of(context).size.height * 0.88
+                  : MediaQuery.of(context).size.height * 0.75,
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.only(
@@ -649,7 +703,11 @@ class _BudgetScreenState extends State<BudgetScreen>
                 children: [
                   // Başlık
                   Container(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                    padding: EdgeInsets.fromLTRB(
+                        isSmallScreen ? 16 : 24,
+                        isSmallScreen ? 16 : 24,
+                        isSmallScreen ? 16 : 24,
+                        isSmallScreen ? 12 : 16),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
@@ -673,20 +731,20 @@ class _BudgetScreenState extends State<BudgetScreen>
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
+                                  Text(
                                     'Ödeme Al',
                                     style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: 22,
+                                      fontSize: isSmallScreen ? 18 : 22,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
+                                  SizedBox(height: isSmallScreen ? 2 : 4),
                                   Text(
                                     company.company.name,
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.9),
-                                      fontSize: 16,
+                                      fontSize: isSmallScreen ? 13 : 16,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -695,103 +753,114 @@ class _BudgetScreenState extends State<BudgetScreen>
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.close,
                                 color: Colors.white,
+                                size: isSmallScreen ? 20 : 24,
                               ),
                               onPressed: () => Navigator.pop(context),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: isSmallScreen ? 12 : 16),
 
-                        // Firma bilgileri
-                        Row(
-                          children: [
-                            // Toplam Tutar
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Toplam Tutar',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 12,
+                        // Firma bilgileri - Kompakt hale getirildi
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isSmallScreen ? 12 : 16,
+                            vertical: isSmallScreen ? 8 : 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius:
+                                BorderRadius.circular(isSmallScreen ? 10 : 12),
+                          ),
+                          child: Row(
+                            children: [
+                              // Toplam Tutar
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Toplam',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: isSmallScreen ? 10 : 12,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '₺${company.totalAmount.toStringAsFixed(2)}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+                                    SizedBox(height: isSmallScreen ? 2 : 4),
+                                    Text(
+                                      '₺${company.totalAmount >= 1000 ? '${(company.totalAmount / 1000).toStringAsFixed(1)}K' : company.totalAmount.toStringAsFixed(0)}',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: isSmallScreen ? 12 : 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
 
-                            // Ödenmiş Tutar
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Ödenmiş',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 12,
+                              // Ödenmiş Tutar
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Ödenmiş',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: isSmallScreen ? 10 : 12,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '₺${company.paidAmount.toStringAsFixed(2)}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+                                    SizedBox(height: isSmallScreen ? 2 : 4),
+                                    Text(
+                                      '₺${company.paidAmount >= 1000 ? '${(company.paidAmount / 1000).toStringAsFixed(1)}K' : company.paidAmount.toStringAsFixed(0)}',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: isSmallScreen ? 12 : 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
 
-                            // Kalan Tutar
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Kalan Tutar',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 12,
+                              // Kalan Tutar
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Kalan',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: isSmallScreen ? 10 : 12,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '₺${company.pendingAmount.toStringAsFixed(2)}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+                                    SizedBox(height: isSmallScreen ? 2 : 4),
+                                    Text(
+                                      '₺${company.pendingAmount >= 1000 ? '${(company.pendingAmount / 1000).toStringAsFixed(1)}K' : company.pendingAmount.toStringAsFixed(0)}',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: isSmallScreen ? 12 : 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
 
-                        const SizedBox(height: 16),
+                        SizedBox(height: isSmallScreen ? 8 : 16),
 
-                        // Siparişleri Görüntüle Butonu
+                        // Siparişleri Görüntüle Butonu - Küçültüldü
                         Center(
                           child: Consumer<OrderProvider>(
                             builder: (context, orderProvider, child) {
-                              // Gerçek zamanlı ödenmemiş sipariş sayısını hesapla
                               final unpaidOrdersCount = orderProvider.orders
                                   .where((order) =>
                                       order.customer.name ==
@@ -807,25 +876,28 @@ class _BudgetScreenState extends State<BudgetScreen>
                                 icon: Icon(
                                   Icons.receipt_long_rounded,
                                   color: Colors.white.withOpacity(0.9),
-                                  size: 18,
+                                  size: isSmallScreen ? 14 : 18,
                                 ),
                                 label: Text(
-                                  'Siparişleri Görüntüle ($unpaidOrdersCount sipariş)',
+                                  isSmallScreen
+                                      ? 'Siparişler ($unpaidOrdersCount)'
+                                      : 'Siparişleri Görüntüle ($unpaidOrdersCount sipariş)',
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.9),
-                                    fontSize: 13,
+                                    fontSize: isSmallScreen ? 11 : 13,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                                 style: TextButton.styleFrom(
                                   backgroundColor:
                                       Colors.white.withOpacity(0.15),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: isSmallScreen ? 12 : 16,
+                                    vertical: isSmallScreen ? 6 : 8,
                                   ),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
+                                    borderRadius: BorderRadius.circular(
+                                        isSmallScreen ? 16 : 20),
                                     side: BorderSide(
                                       color: Colors.white.withOpacity(0.3),
                                     ),
@@ -842,20 +914,20 @@ class _BudgetScreenState extends State<BudgetScreen>
                   // Form
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Tam/Kısmi Ödeme Seçimi
+                          // Tam/Kısmi Ödeme Seçimi - Kompakt
                           Text(
                             'Ödeme Tutarı',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: isSmallScreen ? 12 : 14,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.textPrimaryColor,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: isSmallScreen ? 6 : 8),
                           Row(
                             children: [
                               Expanded(
@@ -869,15 +941,16 @@ class _BudgetScreenState extends State<BudgetScreen>
                                     });
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: isSmallScreen ? 8 : 12,
                                     ),
                                     decoration: BoxDecoration(
                                       color: isFullPayment
                                           ? AppTheme.primaryColor
                                               .withOpacity(0.1)
                                           : Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(
+                                          isSmallScreen ? 6 : 8),
                                       border: Border.all(
                                         color: isFullPayment
                                             ? AppTheme.primaryColor
@@ -891,24 +964,24 @@ class _BudgetScreenState extends State<BudgetScreen>
                                           color: isFullPayment
                                               ? AppTheme.primaryColor
                                               : Colors.grey.shade500,
-                                          size: 20,
+                                          size: isSmallScreen ? 16 : 20,
                                         ),
-                                        const SizedBox(height: 4),
+                                        SizedBox(height: isSmallScreen ? 2 : 4),
                                         Text(
                                           'Tam Ödeme',
                                           style: TextStyle(
-                                            fontSize: 13,
+                                            fontSize: isSmallScreen ? 11 : 13,
                                             fontWeight: FontWeight.w500,
                                             color: isFullPayment
                                                 ? AppTheme.primaryColor
                                                 : Colors.grey.shade700,
                                           ),
                                         ),
-                                        const SizedBox(height: 4),
+                                        SizedBox(height: isSmallScreen ? 2 : 4),
                                         Text(
-                                          '₺${company.pendingAmount.toStringAsFixed(2)}',
+                                          '₺${company.pendingAmount >= 1000 ? '${(company.pendingAmount / 1000).toStringAsFixed(1)}K' : company.pendingAmount.toStringAsFixed(0)}',
                                           style: TextStyle(
-                                            fontSize: 12,
+                                            fontSize: isSmallScreen ? 10 : 12,
                                             color: isFullPayment
                                                 ? AppTheme.primaryColor
                                                 : Colors.grey.shade600,
@@ -919,25 +992,25 @@ class _BudgetScreenState extends State<BudgetScreen>
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              SizedBox(width: isSmallScreen ? 8 : 12),
                               Expanded(
                                 child: GestureDetector(
                                   onTap: () {
                                     setState(() {
                                       isFullPayment = false;
-                                      // Tutarı kullanıcının girmesi için boş bırak
                                       amountController.text = '';
                                     });
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: isSmallScreen ? 8 : 12,
                                     ),
                                     decoration: BoxDecoration(
                                       color: !isFullPayment
                                           ? Colors.orange.withOpacity(0.1)
                                           : Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(
+                                          isSmallScreen ? 6 : 8),
                                       border: Border.all(
                                         color: !isFullPayment
                                             ? Colors.orange.shade300
@@ -951,24 +1024,24 @@ class _BudgetScreenState extends State<BudgetScreen>
                                           color: !isFullPayment
                                               ? Colors.orange.shade700
                                               : Colors.grey.shade500,
-                                          size: 20,
+                                          size: isSmallScreen ? 16 : 20,
                                         ),
-                                        const SizedBox(height: 4),
+                                        SizedBox(height: isSmallScreen ? 2 : 4),
                                         Text(
                                           'Kısmi Ödeme',
                                           style: TextStyle(
-                                            fontSize: 13,
+                                            fontSize: isSmallScreen ? 11 : 13,
                                             fontWeight: FontWeight.w500,
                                             color: !isFullPayment
                                                 ? Colors.orange.shade700
                                                 : Colors.grey.shade700,
                                           ),
                                         ),
-                                        const SizedBox(height: 4),
+                                        SizedBox(height: isSmallScreen ? 2 : 4),
                                         Text(
                                           'Tutar girin',
                                           style: TextStyle(
-                                            fontSize: 12,
+                                            fontSize: isSmallScreen ? 10 : 12,
                                             color: !isFullPayment
                                                 ? Colors.orange.shade600
                                                 : Colors.grey.shade600,
@@ -982,47 +1055,48 @@ class _BudgetScreenState extends State<BudgetScreen>
                             ],
                           ),
 
-                          const SizedBox(height: 20),
+                          SizedBox(height: isSmallScreen ? 12 : 20),
 
-                          // Tutar Girişi
+                          // Tutar Girişi - Kompakt
                           if (!isFullPayment) ...[
                             Text(
                               'Ödeme Tutarını Girin',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: isSmallScreen ? 12 : 14,
                                 fontWeight: FontWeight.w600,
                                 color: AppTheme.textPrimaryColor,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            SizedBox(height: isSmallScreen ? 6 : 8),
                             Container(
                               decoration: BoxDecoration(
                                 color: Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(
+                                    isSmallScreen ? 8 : 12),
                                 border: Border.all(color: Colors.grey.shade200),
                               ),
                               child: TextField(
                                 controller: amountController,
                                 keyboardType: TextInputType.number,
-                                style: const TextStyle(
-                                  fontSize: 16,
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 14 : 16,
                                   fontWeight: FontWeight.bold,
                                 ),
                                 decoration: InputDecoration(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 16,
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: isSmallScreen ? 12 : 16,
+                                    vertical: isSmallScreen ? 12 : 16,
                                   ),
                                   border: InputBorder.none,
                                   hintText: 'Ödeme tutarı',
                                   prefixIcon: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: isSmallScreen ? 8 : 12,
                                     ),
                                     child: Text(
                                       '₺',
                                       style: TextStyle(
-                                        fontSize: 18,
+                                        fontSize: isSmallScreen ? 14 : 18,
                                         fontWeight: FontWeight.bold,
                                         color: AppTheme.textPrimaryColor,
                                       ),
@@ -1035,19 +1109,19 @@ class _BudgetScreenState extends State<BudgetScreen>
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 20),
+                            SizedBox(height: isSmallScreen ? 12 : 20),
                           ],
 
-                          // Ödeme Yöntemi
+                          // Ödeme Yöntemi - Kompakt
                           Text(
                             'Ödeme Yöntemi',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: isSmallScreen ? 12 : 14,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.textPrimaryColor,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: isSmallScreen ? 6 : 8),
                           Row(
                             children: [
                               Expanded(
@@ -1059,15 +1133,16 @@ class _BudgetScreenState extends State<BudgetScreen>
                                     });
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: isSmallScreen ? 8 : 12,
                                     ),
                                     decoration: BoxDecoration(
                                       color: selectedPaymentMethod ==
                                               PaymentMethod.card
                                           ? Colors.blue.withOpacity(0.1)
                                           : Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(
+                                          isSmallScreen ? 6 : 8),
                                       border: Border.all(
                                         color: selectedPaymentMethod ==
                                                 PaymentMethod.card
@@ -1083,13 +1158,15 @@ class _BudgetScreenState extends State<BudgetScreen>
                                                   PaymentMethod.card
                                               ? Colors.blue
                                               : Colors.grey.shade500,
-                                          size: 20,
+                                          size: isSmallScreen ? 16 : 20,
                                         ),
-                                        const SizedBox(height: 4),
+                                        SizedBox(height: isSmallScreen ? 2 : 4),
                                         Text(
-                                          'Kart ile Ödeme',
+                                          isSmallScreen
+                                              ? 'Kart'
+                                              : 'Kart ile Ödeme',
                                           style: TextStyle(
-                                            fontSize: 13,
+                                            fontSize: isSmallScreen ? 11 : 13,
                                             fontWeight: FontWeight.w500,
                                             color: selectedPaymentMethod ==
                                                     PaymentMethod.card
@@ -1102,7 +1179,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              SizedBox(width: isSmallScreen ? 8 : 12),
                               Expanded(
                                 child: GestureDetector(
                                   onTap: () {
@@ -1112,15 +1189,16 @@ class _BudgetScreenState extends State<BudgetScreen>
                                     });
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: isSmallScreen ? 8 : 12,
                                     ),
                                     decoration: BoxDecoration(
                                       color: selectedPaymentMethod ==
                                               PaymentMethod.cash
                                           ? Colors.green.withOpacity(0.1)
                                           : Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(
+                                          isSmallScreen ? 6 : 8),
                                       border: Border.all(
                                         color: selectedPaymentMethod ==
                                                 PaymentMethod.cash
@@ -1136,13 +1214,15 @@ class _BudgetScreenState extends State<BudgetScreen>
                                                   PaymentMethod.cash
                                               ? Colors.green
                                               : Colors.grey.shade500,
-                                          size: 20,
+                                          size: isSmallScreen ? 16 : 20,
                                         ),
-                                        const SizedBox(height: 4),
+                                        SizedBox(height: isSmallScreen ? 2 : 4),
                                         Text(
-                                          'Nakit Ödeme',
+                                          isSmallScreen
+                                              ? 'Nakit'
+                                              : 'Nakit Ödeme',
                                           style: TextStyle(
-                                            fontSize: 13,
+                                            fontSize: isSmallScreen ? 11 : 13,
                                             fontWeight: FontWeight.w500,
                                             color: selectedPaymentMethod ==
                                                     PaymentMethod.cash
@@ -1158,18 +1238,18 @@ class _BudgetScreenState extends State<BudgetScreen>
                             ],
                           ),
 
-                          const SizedBox(height: 20),
+                          SizedBox(height: isSmallScreen ? 12 : 20),
 
-                          // Ödeme Tarihi
+                          // Ödeme Tarihi - Kompakt
                           Text(
                             'Ödeme Tarihi',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: isSmallScreen ? 12 : 14,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.textPrimaryColor,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: isSmallScreen ? 6 : 8),
                           GestureDetector(
                             onTap: () async {
                               final DateTime? pickedDate = await showDatePicker(
@@ -1190,34 +1270,35 @@ class _BudgetScreenState extends State<BudgetScreen>
                               }
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isSmallScreen ? 12 : 16,
+                                vertical: isSmallScreen ? 10 : 14,
                               ),
                               decoration: BoxDecoration(
                                 color: Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(
+                                    isSmallScreen ? 8 : 12),
                                 border: Border.all(color: Colors.grey.shade200),
                               ),
                               child: Row(
                                 children: [
                                   Icon(
                                     Icons.calendar_today_rounded,
-                                    size: 18,
+                                    size: isSmallScreen ? 14 : 18,
                                     color: Colors.grey.shade700,
                                   ),
-                                  const SizedBox(width: 12),
+                                  SizedBox(width: isSmallScreen ? 8 : 12),
                                   Text(
                                     '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
-                                    style: const TextStyle(
-                                      fontSize: 15,
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 13 : 15,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                   const Spacer(),
                                   Icon(
                                     Icons.arrow_forward_ios,
-                                    size: 14,
+                                    size: isSmallScreen ? 12 : 14,
                                     color: Colors.grey.shade600,
                                   ),
                                 ],
@@ -1225,35 +1306,37 @@ class _BudgetScreenState extends State<BudgetScreen>
                             ),
                           ),
 
-                          const SizedBox(height: 20),
+                          SizedBox(height: isSmallScreen ? 12 : 20),
 
-                          // Not
+                          // Not - Kompakt (Telefonda sadece tek satır)
                           Text(
-                            'Ödeme Notu (İsteğe Bağlı)',
+                            'Not (İsteğe Bağlı)',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: isSmallScreen ? 12 : 14,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.textPrimaryColor,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: isSmallScreen ? 6 : 8),
                           Container(
                             decoration: BoxDecoration(
                               color: Colors.grey.shade50,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius:
+                                  BorderRadius.circular(isSmallScreen ? 8 : 12),
                               border: Border.all(color: Colors.grey.shade200),
                             ),
                             child: TextField(
                               controller: noteController,
-                              maxLines: 2,
-                              style: const TextStyle(fontSize: 14),
-                              decoration: const InputDecoration(
+                              maxLines: isSmallScreen ? 1 : 2,
+                              style:
+                                  TextStyle(fontSize: isSmallScreen ? 12 : 14),
+                              decoration: InputDecoration(
                                 contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
+                                  horizontal: isSmallScreen ? 12 : 16,
+                                  vertical: isSmallScreen ? 8 : 12,
                                 ),
                                 border: InputBorder.none,
-                                hintText: 'Ödeme ile ilgili not ekleyin...',
+                                hintText: 'Ödeme notu...',
                               ),
                             ),
                           ),
@@ -1262,9 +1345,9 @@ class _BudgetScreenState extends State<BudgetScreen>
                     ),
                   ),
 
-                  // Alt Butonlar
+                  // Alt Butonlar - Kompakt
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.all(isSmallScreen ? 12 : 20),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: const BorderRadius.only(
@@ -1286,10 +1369,12 @@ class _BudgetScreenState extends State<BudgetScreen>
                           child: TextButton(
                             onPressed: () => Navigator.pop(context),
                             style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              padding: EdgeInsets.symmetric(
+                                  vertical: isSmallScreen ? 12 : 16),
                               backgroundColor: Colors.grey.shade100,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(
+                                    isSmallScreen ? 8 : 12),
                               ),
                             ),
                             child: Text(
@@ -1297,11 +1382,12 @@ class _BudgetScreenState extends State<BudgetScreen>
                               style: TextStyle(
                                 color: Colors.grey.shade700,
                                 fontWeight: FontWeight.w600,
+                                fontSize: isSmallScreen ? 14 : 16,
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: isSmallScreen ? 8 : 16),
                         // Ödeme Al Butonu
                         Expanded(
                           flex: 2,
@@ -1318,18 +1404,20 @@ class _BudgetScreenState extends State<BudgetScreen>
                               );
                             },
                             style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              padding: EdgeInsets.symmetric(
+                                  vertical: isSmallScreen ? 12 : 16),
                               backgroundColor: AppTheme.primaryColor,
                               foregroundColor: Colors.white,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(
+                                    isSmallScreen ? 8 : 12),
                               ),
                             ),
-                            child: const Text(
-                              'Ödemeyi Tamamla',
+                            child: Text(
+                              isSmallScreen ? 'Tamamla' : 'Ödemeyi Tamamla',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: isSmallScreen ? 14 : 16,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -2514,6 +2602,7 @@ class _BudgetScreenState extends State<BudgetScreen>
   // Firma siparişlerini gösterme dialog'u - Sadece Ödenmemiş
   void _showCompanyOrdersDialog(BuildContext context, CompanySummary company) {
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
     // Firmanın ödenmemiş siparişlerini al - Firma adına göre filtrele
     final unpaidOrders = orderProvider.orders
@@ -2527,17 +2616,18 @@ class _BudgetScreenState extends State<BudgetScreen>
       context: context,
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(16),
+        insetPadding: EdgeInsets.all(isSmallScreen ? 12 : 16),
         child: Container(
           width: double.infinity,
-          height: MediaQuery.of(context).size.height * 0.75,
+          height: MediaQuery.of(context).size.height *
+              (isSmallScreen ? 0.85 : 0.75),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
+                blurRadius: isSmallScreen ? 15 : 20,
                 offset: const Offset(0, 10),
               ),
             ],
@@ -2546,7 +2636,7 @@ class _BudgetScreenState extends State<BudgetScreen>
             children: [
               // Başlık
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -2556,9 +2646,9 @@ class _BudgetScreenState extends State<BudgetScreen>
                       Colors.orange.shade500,
                     ],
                   ),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(isSmallScreen ? 16 : 20),
+                    topRight: Radius.circular(isSmallScreen ? 16 : 20),
                   ),
                 ),
                 child: Row(
@@ -2679,6 +2769,8 @@ class _BudgetScreenState extends State<BudgetScreen>
 
   // Ödenmemiş sipariş listesi
   Widget _buildUnpaidOrdersList(List<Order> unpaidOrders) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     if (unpaidOrders.isEmpty) {
       return Center(
         child: Column(
@@ -2686,23 +2778,23 @@ class _BudgetScreenState extends State<BudgetScreen>
           children: [
             Icon(
               Icons.check_circle_outline_rounded,
-              size: 64,
+              size: isSmallScreen ? 48 : 64,
               color: Colors.green.shade400,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isSmallScreen ? 12 : 16),
             Text(
               'Tüm siparişler ödendi!',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: isSmallScreen ? 14 : 16,
                 color: Colors.green.shade600,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: isSmallScreen ? 6 : 8),
             Text(
               'Bu firma için ödenmemiş sipariş bulunmuyor.',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: isSmallScreen ? 12 : 14,
                 color: Colors.grey.shade600,
               ),
               textAlign: TextAlign.center,
@@ -2713,7 +2805,8 @@ class _BudgetScreenState extends State<BudgetScreen>
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: EdgeInsets.fromLTRB(isSmallScreen ? 12 : 16, 0,
+          isSmallScreen ? 12 : 16, isSmallScreen ? 12 : 16),
       itemCount: unpaidOrders.length,
       itemBuilder: (context, index) {
         final order = unpaidOrders[index];
@@ -2726,12 +2819,13 @@ class _BudgetScreenState extends State<BudgetScreen>
   Widget _buildUnpaidOrderCard(Order order) {
     final remainingAmount = order.totalAmount - (order.paidAmount ?? 0);
     final hasPartialPayment = order.paidAmount != null && order.paidAmount! > 0;
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
         border: Border.all(
           color: Colors.orange.shade200,
           width: 1,
@@ -2739,13 +2833,13 @@ class _BudgetScreenState extends State<BudgetScreen>
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
+            blurRadius: isSmallScreen ? 6 : 8,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2753,16 +2847,17 @@ class _BudgetScreenState extends State<BudgetScreen>
             Row(
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: isSmallScreen ? 6 : 8,
+                      vertical: isSmallScreen ? 3 : 4),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 5 : 6),
                   ),
                   child: Text(
                     '#${order.id.substring(0, 6).toUpperCase()}',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: isSmallScreen ? 10 : 12,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.primaryColor,
                     ),
@@ -2773,17 +2868,21 @@ class _BudgetScreenState extends State<BudgetScreen>
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '₺${order.totalAmount.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 16,
+                      order.totalAmount >= 1000
+                          ? '₺${(order.totalAmount / 1000).toStringAsFixed(order.totalAmount % 1000 == 0 ? 0 : 1)}K'
+                          : '₺${order.totalAmount.toStringAsFixed(0)}',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 13 : 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     if (hasPartialPayment)
                       Text(
-                        '₺${remainingAmount.toStringAsFixed(2)} kalan',
+                        remainingAmount >= 1000
+                            ? '₺${(remainingAmount / 1000).toStringAsFixed(remainingAmount % 1000 == 0 ? 0 : 1)}K kalan'
+                            : '₺${remainingAmount.toStringAsFixed(0)} kalan',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: isSmallScreen ? 9 : 12,
                           color: Colors.orange.shade700,
                           fontWeight: FontWeight.w600,
                         ),
@@ -2793,21 +2892,21 @@ class _BudgetScreenState extends State<BudgetScreen>
               ],
             ),
 
-            const SizedBox(height: 8),
+            SizedBox(height: isSmallScreen ? 6 : 8),
 
             // Teslimat tarihi
             Row(
               children: [
                 Icon(
                   Icons.calendar_today_rounded,
-                  size: 16,
+                  size: isSmallScreen ? 12 : 16,
                   color: Colors.grey.shade600,
                 ),
-                const SizedBox(width: 6),
+                SizedBox(width: isSmallScreen ? 4 : 6),
                 Text(
                   'Teslimat: ${order.deliveryDate.day}/${order.deliveryDate.month}/${order.deliveryDate.year}',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: isSmallScreen ? 11 : 13,
                     color: Colors.grey.shade600,
                     fontWeight: FontWeight.w500,
                   ),
@@ -2815,22 +2914,22 @@ class _BudgetScreenState extends State<BudgetScreen>
               ],
             ),
 
-            const SizedBox(height: 8),
+            SizedBox(height: isSmallScreen ? 6 : 8),
 
             // Ürünler - Kompakt görünüm
             Text(
               'Ürünler: ${order.items.map((item) => '${item.product.name} (${item.quantity})').join(', ')}',
-              style: const TextStyle(
-                fontSize: 13,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 11 : 13,
                 fontWeight: FontWeight.w500,
               ),
-              maxLines: 2,
+              maxLines: isSmallScreen ? 1 : 2,
               overflow: TextOverflow.ellipsis,
             ),
 
             // Kısmi ödeme varsa progress göster
             if (hasPartialPayment) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: isSmallScreen ? 8 : 12),
               Row(
                 children: [
                   Expanded(
@@ -2840,15 +2939,18 @@ class _BudgetScreenState extends State<BudgetScreen>
                       valueColor: AlwaysStoppedAnimation<Color>(
                         Colors.orange.shade600,
                       ),
-                      minHeight: 6,
-                      borderRadius: BorderRadius.circular(3),
+                      minHeight: isSmallScreen ? 4 : 6,
+                      borderRadius:
+                          BorderRadius.circular(isSmallScreen ? 2 : 3),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: isSmallScreen ? 8 : 12),
                   Text(
-                    '₺${order.paidAmount!.toStringAsFixed(2)} ödendi',
+                    order.paidAmount! >= 1000
+                        ? '₺${(order.paidAmount! / 1000).toStringAsFixed(order.paidAmount! % 1000 == 0 ? 0 : 1)}K ödendi'
+                        : '₺${order.paidAmount!.toStringAsFixed(0)} ödendi',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: isSmallScreen ? 10 : 12,
                       color: Colors.green.shade700,
                       fontWeight: FontWeight.w600,
                     ),

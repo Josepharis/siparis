@@ -17,24 +17,45 @@ class AllDailyProductsScreen extends StatelessWidget {
     final sortedProducts = products.entries.toList()
       ..sort((a, b) => b.value.totalQuantity.compareTo(a.value.totalQuantity));
 
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Günlük Üretilecekler',
           style: TextStyle(
             fontWeight: FontWeight.w700,
             color: Colors.white,
+            fontSize: isSmallScreen ? 16 : 18,
           ),
         ),
         backgroundColor: Colors.orange[600],
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.arrow_back,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           Container(
-            margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            margin: EdgeInsets.only(right: isSmallScreen ? 12 : 16),
+            padding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? 8 : 12,
+              vertical: isSmallScreen ? 4 : 6,
+            ),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(20),
@@ -45,14 +66,14 @@ class AllDailyProductsScreen extends StatelessWidget {
                 Icon(
                   Icons.bakery_dining_rounded,
                   color: Colors.white,
-                  size: 16,
+                  size: isSmallScreen ? 14 : 16,
                 ),
-                const SizedBox(width: 6),
+                SizedBox(width: isSmallScreen ? 4 : 6),
                 Text(
                   '${products.length} Ürün',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 12,
+                    fontSize: isSmallScreen ? 10 : 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -63,10 +84,10 @@ class AllDailyProductsScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // Tarih bilgisi - daha kompakt
+          // Tarih bilgisi - responsive
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
@@ -81,35 +102,38 @@ class AllDailyProductsScreen extends StatelessWidget {
               children: [
                 Text(
                   _getTodayDateText(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: isSmallScreen ? 14 : 16,
                     fontWeight: FontWeight.w600,
                   ),
+                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: isSmallScreen ? 2 : 4),
                 Text(
                   'Bugün üretilmesi gereken ürünler',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.9),
-                    fontSize: 13,
+                    fontSize: isSmallScreen ? 11 : 13,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
           ),
 
-          // Ürün listesi - satır satır daha fazla ürün gösterelim
+          // Ürün listesi - responsive padding ve spacing
           Expanded(
             child: products.isEmpty
-                ? _buildEmptyState()
+                ? _buildEmptyState(isSmallScreen)
                 : ListView.builder(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
                     itemCount: sortedProducts.length,
                     itemBuilder: (context, index) {
                       final entry = sortedProducts[index];
                       final product = entry.value;
-                      return _buildCompactProductRow(context, product);
+                      return _buildCompactProductRow(
+                          context, product, isSmallScreen);
                     },
                   ),
           ),
@@ -119,7 +143,7 @@ class AllDailyProductsScreen extends StatelessWidget {
   }
 
   Widget _buildCompactProductRow(
-      BuildContext context, DailyProductSummary product) {
+      BuildContext context, DailyProductSummary product, bool isSmallScreen) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -130,25 +154,25 @@ class AllDailyProductsScreen extends StatelessWidget {
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
+        margin: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
+        padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.06),
-              blurRadius: 8,
+              blurRadius: isSmallScreen ? 6 : 8,
               offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Row(
           children: [
-            // Sol taraf - Kategori ikonu
+            // Sol taraf - Kategori ikonu (responsive boyut)
             Container(
-              width: 50,
-              height: 50,
+              width: isSmallScreen ? 40 : 50,
+              height: isSmallScreen ? 40 : 50,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -158,97 +182,160 @@ class AllDailyProductsScreen extends StatelessWidget {
                     _getCategoryColor(product.category).withOpacity(0.8),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
               ),
               child: Icon(
                 _getCategoryIcon(product.category),
                 color: Colors.white,
-                size: 24,
+                size: isSmallScreen ? 20 : 24,
               ),
             ),
 
-            const SizedBox(width: 12),
+            SizedBox(width: isSmallScreen ? 8 : 12),
 
-            // Orta kısım - Ürün bilgileri
+            // Orta kısım - Ürün bilgileri (responsive font ve spacing)
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     product.productName,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 13 : 16,
                       fontWeight: FontWeight.w700,
                       color: Colors.black87,
                     ),
-                    maxLines: 1,
+                    maxLines: isSmallScreen ? 1 : 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        _getCategorySmallIcon(product.category),
-                        size: 12,
-                        color: _getCategoryColor(product.category),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        product.category,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+                  SizedBox(height: isSmallScreen ? 2 : 4),
+
+                  // Telefonda daha kompakt layout
+                  if (isSmallScreen) ...[
+                    // Telefon layout - dikey
+                    Row(
+                      children: [
+                        Icon(
+                          _getCategorySmallIcon(product.category),
+                          size: 10,
+                          color: _getCategoryColor(product.category),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (product.firmaCounts != null &&
-                          product.firmaCounts!.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(
+                            product.category,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          decoration: BoxDecoration(
-                            color: _getCategoryColor(product.category)
-                                .withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.business_rounded,
-                                size: 10,
+                        ),
+                      ],
+                    ),
+                    if (product.firmaCounts != null &&
+                        product.firmaCounts!.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getCategoryColor(product.category)
+                              .withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.business_rounded,
+                              size: 8,
+                              color: _getCategoryColor(product.category),
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${product.firmaCounts!.length} firma',
+                              style: TextStyle(
+                                fontSize: 8,
+                                fontWeight: FontWeight.w600,
                                 color: _getCategoryColor(product.category),
                               ),
-                              const SizedBox(width: 3),
-                              Text(
-                                '${product.firmaCounts!.length} firma',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: _getCategoryColor(product.category),
-                                ),
-                              ),
-                            ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ] else ...[
+                    // Tablet layout - yatay
+                    Row(
+                      children: [
+                        Icon(
+                          _getCategorySmallIcon(product.category),
+                          size: 12,
+                          color: _getCategoryColor(product.category),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          product.category,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                    ],
-                  ),
+                        const SizedBox(width: 8),
+                        if (product.firmaCounts != null &&
+                            product.firmaCounts!.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _getCategoryColor(product.category)
+                                  .withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.business_rounded,
+                                  size: 10,
+                                  color: _getCategoryColor(product.category),
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '${product.firmaCounts!.length} firma',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: _getCategoryColor(product.category),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
 
-            // Sağ taraf - Miktar
+            // Sağ taraf - Miktar (responsive boyut)
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
+              padding: EdgeInsets.symmetric(
+                horizontal: isSmallScreen ? 6 : 12,
+                vertical: isSmallScreen ? 4 : 8,
               ),
               decoration: BoxDecoration(
                 color: _getCategoryColor(product.category).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 12),
                 border: Border.all(
                   color: _getCategoryColor(product.category).withOpacity(0.3),
                 ),
@@ -259,37 +346,38 @@ class AllDailyProductsScreen extends StatelessWidget {
                   Icon(
                     Icons.production_quantity_limits_rounded,
                     color: _getCategoryColor(product.category),
-                    size: 16,
+                    size: isSmallScreen ? 12 : 16,
                   ),
-                  const SizedBox(width: 6),
+                  SizedBox(width: isSmallScreen ? 3 : 6),
                   Text(
                     '${product.totalQuantity}',
                     style: TextStyle(
                       color: _getCategoryColor(product.category),
-                      fontSize: 16,
+                      fontSize: isSmallScreen ? 12 : 16,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(width: 2),
-                  Text(
-                    'adet',
-                    style: TextStyle(
-                      color: _getCategoryColor(product.category),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                  SizedBox(width: isSmallScreen ? 1 : 2),
+                  if (!isSmallScreen)
+                    Text(
+                      'adet',
+                      style: TextStyle(
+                        color: _getCategoryColor(product.category),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
 
-            const SizedBox(width: 8),
+            SizedBox(width: isSmallScreen ? 4 : 8),
 
-            // Detay ok ikonu
+            // Detay ok ikonu (responsive boyut)
             Icon(
               Icons.arrow_forward_ios_rounded,
               color: Colors.grey[400],
-              size: 16,
+              size: isSmallScreen ? 12 : 16,
             ),
           ],
         ),
@@ -297,39 +385,41 @@ class AllDailyProductsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(bool isSmallScreen) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(isSmallScreen ? 18 : 24),
             decoration: BoxDecoration(
               color: Colors.grey[100],
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.bakery_dining_rounded,
-              size: 48,
+              size: isSmallScreen ? 36 : 48,
               color: Colors.grey[400],
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: isSmallScreen ? 16 : 20),
           Text(
             'Bugün için üretilecek ürün yok',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: isSmallScreen ? 16 : 18,
               fontWeight: FontWeight.w600,
               color: Colors.grey[600],
             ),
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isSmallScreen ? 6 : 8),
           Text(
             'Yeni siparişler geldiğinde burada görünecek',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: isSmallScreen ? 12 : 14,
               color: Colors.grey[500],
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

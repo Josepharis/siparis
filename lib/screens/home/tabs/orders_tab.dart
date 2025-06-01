@@ -70,22 +70,95 @@ class _OrdersTabState extends State<OrdersTab>
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 12.0),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                colors: [
+                  Colors.grey.shade50,
+                  Colors.white,
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: TabBar(
               controller: _tabController,
               indicator: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(14),
+                gradient: LinearGradient(
+                  colors: [
+                    AppTheme.primaryColor,
+                    AppTheme.primaryColor.withOpacity(0.8),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryColor.withOpacity(0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              labelColor: AppTheme.primaryColor,
+              labelColor: Colors.white,
               unselectedLabelColor: AppTheme.textSecondaryColor,
-              tabs: const [
-                Tab(text: 'Bekleyen'),
-                Tab(text: 'Hazırlanıyor'),
-                Tab(text: 'Tamamlanan'),
-              ],
+              labelStyle: TextStyle(
+                fontSize: MediaQuery.of(context).size.width < 600 ? 11 : 14,
+                fontWeight: FontWeight.bold,
+              ),
+              unselectedLabelStyle: TextStyle(
+                fontSize: MediaQuery.of(context).size.width < 600 ? 10 : 13,
+                fontWeight: FontWeight.w500,
+              ),
+              indicatorPadding: const EdgeInsets.all(4),
+              tabs: MediaQuery.of(context).size.width < 600
+                  ? [
+                      const Tab(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text('Bekleyen'),
+                        ),
+                      ),
+                      const Tab(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text('Hazırlanıyor'),
+                        ),
+                      ),
+                      const Tab(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text('Tamamlanan'),
+                        ),
+                      ),
+                    ]
+                  : [
+                      const Tab(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text('Bekleyen'),
+                        ),
+                      ),
+                      const Tab(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text('Hazırlanıyor'),
+                        ),
+                      ),
+                      const Tab(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text('Tamamlanan'),
+                        ),
+                      ),
+                    ],
             ),
           ),
 

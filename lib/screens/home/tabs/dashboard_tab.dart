@@ -148,32 +148,6 @@ class _DashboardTabState extends State<DashboardTab> {
                           ),
                         ),
                       ),
-
-                    // Arama kutusu
-                    Container(
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Sipariş veya ürün ara...',
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                          prefixIcon: Icon(
-                            Icons.search,
-                            color: Colors.grey[500],
-                            size: 20,
-                          ),
-                          hintStyle: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -202,13 +176,19 @@ class _DashboardTabState extends State<DashboardTab> {
                         onTap: () =>
                             _showAllDailyProducts(context, dailyProducts),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: MediaQuery.of(context).size.width < 600
+                                ? 8
+                                : 12,
+                            vertical:
+                                MediaQuery.of(context).size.width < 600 ? 4 : 6,
                           ),
                           decoration: BoxDecoration(
                             color: Colors.orange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(
+                                MediaQuery.of(context).size.width < 600
+                                    ? 12
+                                    : 20),
                             border: Border.all(
                               color: Colors.orange.withOpacity(0.3),
                             ),
@@ -217,18 +197,28 @@ class _DashboardTabState extends State<DashboardTab> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'Hepsini Gör',
+                                MediaQuery.of(context).size.width < 600
+                                    ? 'Tümü'
+                                    : 'Hepsini Gör',
                                 style: TextStyle(
                                   color: Colors.orange[700],
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 12,
+                                  fontSize:
+                                      MediaQuery.of(context).size.width < 600
+                                          ? 10
+                                          : 12,
                                 ),
                               ),
-                              const SizedBox(width: 4),
+                              SizedBox(
+                                  width: MediaQuery.of(context).size.width < 600
+                                      ? 2
+                                      : 4),
                               Icon(
                                 Icons.arrow_forward_ios_rounded,
                                 color: Colors.orange[700],
-                                size: 12,
+                                size: MediaQuery.of(context).size.width < 600
+                                    ? 10
+                                    : 12,
                               ),
                             ],
                           ),
@@ -519,72 +509,158 @@ class _DashboardTabState extends State<DashboardTab> {
                 'Bugünün Siparişleri',
                 Icons.receipt_rounded,
                 AppTheme.primaryColor,
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Sıralama dropdown'ı
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                            color: AppTheme.primaryColor.withOpacity(0.3)),
-                      ),
-                      child: DropdownButton<String>(
-                        value: _selectedSortOption,
-                        underline: const SizedBox(),
-                        icon: Icon(
-                          Icons.sort_rounded,
-                          color: AppTheme.primaryColor,
-                          size: 16,
-                        ),
-                        style: TextStyle(
-                          color: AppTheme.primaryColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'Yakın Teslimat',
-                            child: Text('Yakın Teslimat'),
+                trailing: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isSmallScreen =
+                        MediaQuery.of(context).size.width < 600;
+
+                    if (isSmallScreen) {
+                      // Küçük ekranlar için kompakt tasarım
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Sıralama butonu - kompakt
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedSortOption =
+                                    _selectedSortOption == 'Yakın Teslimat'
+                                        ? 'Uzak Teslimat'
+                                        : 'Yakın Teslimat';
+                                // Sıralamayı hemen uygula
+                                _applySorting(todayActiveOrders);
+                              });
+                            },
+                            child: Container(
+                              padding: EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                    color:
+                                        AppTheme.primaryColor.withOpacity(0.3)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _selectedSortOption == 'Yakın Teslimat'
+                                        ? Icons.north_rounded
+                                        : Icons.south_rounded,
+                                    color: AppTheme.primaryColor,
+                                    size: 12,
+                                  ),
+                                  SizedBox(width: 2),
+                                  Text(
+                                    _selectedSortOption == 'Yakın Teslimat'
+                                        ? 'Yakın'
+                                        : 'Uzak',
+                                    style: TextStyle(
+                                      color: AppTheme.primaryColor,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                          DropdownMenuItem(
-                            value: 'Uzak Teslimat',
-                            child: Text('Uzak Teslimat'),
+                          SizedBox(width: 6),
+                          // Sipariş sayısı
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${todayActiveOrders.length}',
+                              style: TextStyle(
+                                color: AppTheme.primaryColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            ),
                           ),
                         ],
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() {
-                              _selectedSortOption = value;
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Sipariş sayısı
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Text(
-                        '${todayActiveOrders.length} Sipariş',
-                        style: TextStyle(
-                          color: AppTheme.primaryColor,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
+                      );
+                    } else {
+                      // Büyük ekranlar için orijinal tasarım
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Sıralama dropdown'ı
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                  color:
+                                      AppTheme.primaryColor.withOpacity(0.3)),
+                            ),
+                            child: DropdownButton<String>(
+                              value: _selectedSortOption,
+                              underline: const SizedBox(),
+                              icon: Icon(
+                                Icons.sort_rounded,
+                                color: AppTheme.primaryColor,
+                                size: 16,
+                              ),
+                              style: TextStyle(
+                                color: AppTheme.primaryColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'Yakın Teslimat',
+                                  child: Text('Yakın Teslimat'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Uzak Teslimat',
+                                  child: Text('Uzak Teslimat'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() {
+                                    _selectedSortOption = value;
+                                    // Sıralamayı hemen uygula
+                                    _applySorting(todayActiveOrders);
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Sipariş sayısı
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: Text(
+                              '${todayActiveOrders.length} Sipariş',
+                              style: TextStyle(
+                                color: AppTheme.primaryColor,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                  },
                 ),
               ),
             ),
@@ -649,6 +725,7 @@ class _DashboardTabState extends State<DashboardTab> {
     required int completed,
   }) {
     final totalOrders = waiting + processing + completed;
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
     return Card(
       margin: EdgeInsets.zero, // Kenar boşluklarını kaldır
@@ -674,7 +751,11 @@ class _DashboardTabState extends State<DashboardTab> {
             // Üst başlık kısmı - şık ayraç tasarımı ile
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              padding: EdgeInsets.fromLTRB(
+                  isSmallScreen ? 12 : 16,
+                  isSmallScreen ? 10 : 14,
+                  isSmallScreen ? 12 : 16,
+                  isSmallScreen ? 10 : 14),
               decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
@@ -686,7 +767,7 @@ class _DashboardTabState extends State<DashboardTab> {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(6),
+                    padding: EdgeInsets.all(isSmallScreen ? 4 : 6),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(8),
@@ -694,22 +775,24 @@ class _DashboardTabState extends State<DashboardTab> {
                     child: Icon(
                       Icons.receipt_long_rounded,
                       color: Colors.white,
-                      size: 16,
+                      size: isSmallScreen ? 14 : 16,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  const Text(
+                  SizedBox(width: isSmallScreen ? 8 : 12),
+                  Text(
                     'Günlük Sipariş Özeti',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 14,
+                      fontSize: isSmallScreen ? 12 : 14,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0,
                     ),
                   ),
                   const Spacer(),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 6 : 10,
+                        vertical: isSmallScreen ? 3 : 5),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
@@ -724,14 +807,14 @@ class _DashboardTabState extends State<DashboardTab> {
                         Icon(
                           Icons.shopping_bag_outlined,
                           color: Colors.white,
-                          size: 14,
+                          size: isSmallScreen ? 12 : 14,
                         ),
-                        const SizedBox(width: 6),
+                        SizedBox(width: isSmallScreen ? 4 : 6),
                         Text(
                           '$totalOrders Sipariş',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 12,
+                            fontSize: isSmallScreen ? 10 : 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -744,7 +827,11 @@ class _DashboardTabState extends State<DashboardTab> {
 
             // Ana içerik - yeniden düzenlenmiş durum kartları
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
+              padding: EdgeInsets.fromLTRB(
+                  isSmallScreen ? 6 : 8,
+                  isSmallScreen ? 8 : 12,
+                  isSmallScreen ? 6 : 8,
+                  isSmallScreen ? 8 : 12),
               child: Row(
                 children: [
                   _buildStatusCard(
@@ -786,93 +873,132 @@ class _DashboardTabState extends State<DashboardTab> {
     IconData icon,
   ) {
     final double percentage = total > 0 ? (count / total) * 100 : 0;
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
     return Expanded(
       child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
+        margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 2 : 4),
         elevation: 0,
         color: Colors.white.withOpacity(0.1),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
+        child: Container(
+          constraints: BoxConstraints(
+            minHeight: isSmallScreen ? 80 : 100,
+            minWidth: 0,
+          ),
+          padding: EdgeInsets.all(isSmallScreen ? 6 : 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               // İkon ve sayaç
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(6),
+                    padding: EdgeInsets.all(isSmallScreen ? 4 : 6),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(icon, color: color, size: 12),
+                    child:
+                        Icon(icon, color: color, size: isSmallScreen ? 10 : 12),
                   ),
-                  Text(
-                    count.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    constraints: BoxConstraints(
+                      minWidth: isSmallScreen ? 20 : 25,
+                    ),
+                    child: Text(
+                      count.toString(),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: isSmallScreen ? 14 : 16,
+                        fontWeight: FontWeight.bold,
+                        height: 1.0,
+                      ),
+                      textAlign: TextAlign.right,
+                      maxLines: 1,
+                      overflow: TextOverflow.visible,
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 8),
+              SizedBox(height: isSmallScreen ? 6 : 8),
 
               // Etiket
-              Text(
-                label,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+              Container(
+                constraints: BoxConstraints(
+                  minHeight: isSmallScreen ? 12 : 15,
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: isSmallScreen ? 10 : 12,
+                    fontWeight: FontWeight.w500,
+                    height: 1.0,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
 
-              const SizedBox(height: 6),
+              SizedBox(height: isSmallScreen ? 4 : 6),
 
               // Mini ilerleme çubuğu
-              Stack(
-                children: [
-                  // Arkaplan
-                  Container(
-                    height: 4,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(2),
+              Container(
+                height: 4,
+                constraints: const BoxConstraints(
+                  minWidth: double.infinity,
+                ),
+                child: Stack(
+                  children: [
+                    // Arkaplan
+                    Container(
+                      height: 4,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
 
-                  // Değer
-                  Container(
-                    height: 4,
-                    width: percentage > 0
-                        ? (percentage / 100) *
-                            MediaQuery.of(context).size.width *
-                            0.25
-                        : 0, // Ekran genişliğine göre ayarlanmış max genişlik
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ],
+                    // Değer
+                    if (percentage > 0)
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          return Container(
+                            height: 4,
+                            width: (percentage / 100) * constraints.maxWidth,
+                            decoration: BoxDecoration(
+                              color: color,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          );
+                        },
+                      ),
+                  ],
+                ),
               ),
 
-              const SizedBox(height: 6),
+              SizedBox(height: isSmallScreen ? 4 : 6),
 
               // Yüzde göstergesi
-              Text(
-                '%${percentage.toStringAsFixed(0)}',
-                style: TextStyle(
-                  color: color,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+              Container(
+                constraints: BoxConstraints(
+                  minHeight: isSmallScreen ? 10 : 12,
+                ),
+                child: Text(
+                  '%${percentage.toStringAsFixed(0)}',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: isSmallScreen ? 9 : 11,
+                    fontWeight: FontWeight.w600,
+                    height: 1.0,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.visible,
                 ),
               ),
             ],

@@ -98,6 +98,37 @@ class OrderService {
     }
   }
 
+  /// Belirli üretici firmaya ait siparişleri çek
+  static Future<List<order_models.Order>> getOrdersByProducerCompanyId(
+      String producerCompanyId) async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection(_ordersCollection)
+          .where('producerCompanyId', isEqualTo: producerCompanyId)
+          .orderBy('orderDate', descending: true)
+          .get();
+
+      List<order_models.Order> orders = [];
+
+      for (var doc in querySnapshot.docs) {
+        try {
+          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+          order_models.Order order = order_models.Order.fromJson(data);
+          orders.add(order);
+        } catch (e) {
+          print('❌ Üretici siparişi parse edilirken hata: $e');
+        }
+      }
+
+      print(
+          '✅ ${orders.length} adet üretici siparişi çekildi (CompanyID: $producerCompanyId)');
+      return orders;
+    } catch (e) {
+      print('❌ Üretici siparişleri çekilirken hata: $e');
+      return [];
+    }
+  }
+
   /// Belirli bir müşterinin siparişlerini çek
   static Future<List<order_models.Order>> getOrdersByCustomer(
       String customerName) async {
@@ -147,6 +178,33 @@ class OrderService {
         }
       }
 
+      return orders;
+    });
+  }
+
+  /// Belirli üretici firmaya ait siparişleri gerçek zamanlı dinleme
+  static Stream<List<order_models.Order>> getOrdersStreamByProducerCompanyId(
+      String producerCompanyId) {
+    return _firestore
+        .collection(_ordersCollection)
+        .where('producerCompanyId', isEqualTo: producerCompanyId)
+        .orderBy('orderDate', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      List<order_models.Order> orders = [];
+
+      for (var doc in snapshot.docs) {
+        try {
+          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+          order_models.Order order = order_models.Order.fromJson(data);
+          orders.add(order);
+        } catch (e) {
+          print('❌ Stream üretici siparişi parse edilirken hata: $e');
+        }
+      }
+
+      print(
+          '🔥 ${orders.length} adet üretici siparişi stream\'den alındı (CompanyID: $producerCompanyId)');
       return orders;
     });
   }

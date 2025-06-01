@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:siparis/models/order.dart';
 import 'package:siparis/services/order_service.dart';
+import 'package:siparis/models/user_model.dart';
 import 'dart:async';
 
 class OrderProvider extends ChangeNotifier {
@@ -19,6 +20,9 @@ class OrderProvider extends ChangeNotifier {
   // Firebase stream subscription
   StreamSubscription<List<Order>>? _ordersStreamSubscription;
 
+  // Mevcut kullanıcı bilgisi
+  UserModel? _currentUser;
+
   // Getters
   List<Order> get orders => _orders;
   List<Order> get waitingOrders =>
@@ -32,13 +36,72 @@ class OrderProvider extends ChangeNotifier {
   FinancialSummary? get financialSummary => _financialSummary;
   List<CompanySummary> get companySummaries => _companySummaries;
 
-  // Real-time Firebase listener başlat
+  // Kullanıcı bilgisini ayarla
+  void setCurrentUser(UserModel? user) {
+    _currentUser = user;
+    print(
+        '🔄 OrderProvider: Kullanıcı güncellendi - ${user?.name} (${user?.role})');
+
+    // Kullanıcı değiştiğinde siparişleri yeniden yükle
+    if (user != null) {
+      stopListeningToOrders();
+      startListeningToOrders();
+    } else {
+      stopListeningToOrders();
+      _orders = [];
+      _updateSummaries();
+      notifyListeners();
+    }
+  }
+
+  // Real-time Firebase listener başlat - Kullanıcı tipine göre
   void startListeningToOrders() {
     _ordersStreamSubscription?.cancel(); // Önceki listener'ı iptal et
 
-    _ordersStreamSubscription = OrderService.getOrdersStream().listen(
+    if (_currentUser == null) {
+      print('❌ Kullanıcı bilgisi yok, sipariş stream başlatılamıyor');
+      return;
+    }
+
+    Stream<List<Order>> ordersStream;
+
+    if (_currentUser!.isProducer) {
+      if (_currentUser!.companyId != null &&
+          _currentUser!.companyId!.isNotEmpty) {
+        // Üretici ise ve firma ID'si varsa: Sadece kendi firma ID'sine ait siparişleri dinle
+        print(
+            '🏭 Üretici siparişleri dinleniyor - CompanyID: ${_currentUser!.companyId}');
+        ordersStream = OrderService.getOrdersStreamByProducerCompanyId(
+            _currentUser!.companyId!);
+      } else {
+        // Üretici ama firma ID'si yoksa: Firma adına göre filtrele (backward compatibility)
+        print(
+            '🏭 Üretici siparişleri dinleniyor - CompanyName: ${_currentUser!.companyName}');
+        ordersStream = OrderService.getOrdersStream();
+      }
+    } else {
+      // Müşteri ise: Tüm siparişleri dinle (müşteri dashboard'ında filtreleme yapılacak)
+      print('👤 Müşteri siparişleri dinleniyor - Tüm siparişler');
+      ordersStream = OrderService.getOrdersStream();
+    }
+
+    _ordersStreamSubscription = ordersStream.listen(
       (firebaseOrders) {
-        print('🔥 Firebase\'den ${firebaseOrders.length} siparis alindi');
+        // Eğer producer ama companyId yoksa, companyName ile filtrele
+        if (_currentUser!.isProducer &&
+            (_currentUser!.companyId == null ||
+                _currentUser!.companyId!.isEmpty) &&
+            _currentUser!.companyName != null) {
+          firebaseOrders = firebaseOrders
+              .where((order) =>
+                  order.producerCompanyName == _currentUser!.companyName)
+              .toList();
+          print(
+              '🔄 Producer firma adına göre filtrelendi: ${firebaseOrders.length} sipariş');
+        }
+
+        print(
+            '🔥 Firebase\'den ${firebaseOrders.length} siparis alindi (${_currentUser!.role})');
 
         // Sadece Firebase verilerini kullan
         _orders = firebaseOrders;
@@ -46,7 +109,8 @@ class OrderProvider extends ChangeNotifier {
         _updateSummaries();
         notifyListeners();
 
-        print('✅ Toplam ${_orders.length} siparis guncellendi (Real-time)');
+        print(
+            '✅ Toplam ${_orders.length} siparis guncellendi (Real-time - ${_currentUser!.role})');
       },
       onError: (error) {
         print('❌ Firebase stream hatasi: $error');
@@ -64,16 +128,54 @@ class OrderProvider extends ChangeNotifier {
     _ordersStreamSubscription = null;
   }
 
-  // Siparişleri yükle (Firebase'den) - Artık sadece ilk yükleme için
+  // Siparişleri yükle (Firebase'den) - Kullanıcı tipine göre
   Future<void> loadOrders() async {
     try {
+      if (_currentUser == null) {
+        print('❌ Kullanıcı bilgisi yok, siparişler yüklenemez');
+        _orders = [];
+        _updateSummaries();
+        notifyListeners();
+        return;
+      }
+
       // Eğer listener aktif değilse başlat
       if (_ordersStreamSubscription == null) {
         startListeningToOrders();
       }
 
       // İlk yükleme için Firebase'den siparişleri çek
-      List<Order> firebaseOrders = await OrderService.getAllOrders();
+      List<Order> firebaseOrders;
+
+      if (_currentUser!.isProducer) {
+        if (_currentUser!.companyId != null &&
+            _currentUser!.companyId!.isNotEmpty) {
+          // Üretici ise ve firma ID'si varsa: Sadece kendi firma ID'sine ait siparişleri çek
+          print(
+              '🏭 Üretici siparişleri yükleniyor - CompanyID: ${_currentUser!.companyId}');
+          firebaseOrders = await OrderService.getOrdersByProducerCompanyId(
+              _currentUser!.companyId!);
+        } else {
+          // Üretici ama firma ID'si yoksa: Tüm siparişleri çek ve firma adına göre filtrele
+          print(
+              '🏭 Üretici siparişleri yükleniyor - CompanyName: ${_currentUser!.companyName}');
+          firebaseOrders = await OrderService.getAllOrders();
+
+          // Firma adına göre filtrele (backward compatibility)
+          if (_currentUser!.companyName != null) {
+            firebaseOrders = firebaseOrders
+                .where((order) =>
+                    order.producerCompanyName == _currentUser!.companyName)
+                .toList();
+            print(
+                '🔄 Producer firma adına göre filtrelendi: ${firebaseOrders.length} sipariş');
+          }
+        }
+      } else {
+        // Müşteri ise: Tüm siparişleri çek (müşteri dashboard'ında filtreleme yapılacak)
+        print('👤 Müşteri siparişleri yükleniyor - Tüm siparişler');
+        firebaseOrders = await OrderService.getAllOrders();
+      }
 
       // Sadece Firebase verilerini kullan
       _orders = firebaseOrders;
@@ -81,7 +183,8 @@ class OrderProvider extends ChangeNotifier {
       _updateSummaries();
       notifyListeners();
 
-      print('✅ Toplam ${_orders.length} siparis yuklendi (Firebase)');
+      print(
+          '✅ Toplam ${_orders.length} siparis yuklendi (Firebase - ${_currentUser!.role})');
     } catch (e) {
       print('❌ Siparisler yuklenirken hata: $e');
       // Hata durumunda boş liste

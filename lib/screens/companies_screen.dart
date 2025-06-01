@@ -534,29 +534,16 @@ class _CompaniesScreenState extends State<CompaniesScreen>
                             Expanded(
                               child: Text(
                                 company.name,
-                                style: const TextStyle(
-                                  fontSize: 16,
+                                style: TextStyle(
+                                  fontSize:
+                                      MediaQuery.of(context).size.width < 600
+                                          ? 14
+                                          : 16,
                                   fontWeight: FontWeight.w600,
                                   color: AppTheme.textPrimaryColor,
                                 ),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text(
-                                'Örnek',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.blue,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -756,29 +743,16 @@ class _CompaniesScreenState extends State<CompaniesScreen>
                             Expanded(
                               child: Text(
                                 company.name,
-                                style: const TextStyle(
-                                  fontSize: 16,
+                                style: TextStyle(
+                                  fontSize:
+                                      MediaQuery.of(context).size.width < 600
+                                          ? 14
+                                          : 16,
                                   fontWeight: FontWeight.w600,
                                   color: AppTheme.textPrimaryColor,
                                 ),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text(
-                                'Firebase',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.orange,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],

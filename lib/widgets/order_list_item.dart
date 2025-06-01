@@ -83,9 +83,10 @@ class OrderListItem extends StatelessWidget {
               children: [
                 // Üst kısım: Statü barı ve müşteri bilgisi
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 8,
-                    horizontal: 10,
+                  padding: EdgeInsets.symmetric(
+                    vertical: MediaQuery.of(context).size.width < 600 ? 6 : 8,
+                    horizontal:
+                        MediaQuery.of(context).size.width < 600 ? 8 : 10,
                   ),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -102,8 +103,10 @@ class OrderListItem extends StatelessWidget {
                     children: [
                       // Müşteri baş harfi
                       Container(
-                        width: 28,
-                        height: 28,
+                        width:
+                            MediaQuery.of(context).size.width < 600 ? 24 : 28,
+                        height:
+                            MediaQuery.of(context).size.width < 600 ? 24 : 28,
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           shape: BoxShape.circle,
@@ -113,24 +116,30 @@ class OrderListItem extends StatelessWidget {
                             order.customer.name.isNotEmpty
                                 ? order.customer.name[0].toUpperCase()
                                 : '?',
-                            style: const TextStyle(
-                              fontSize: 14,
+                            style: TextStyle(
+                              fontSize: MediaQuery.of(context).size.width < 600
+                                  ? 12
+                                  : 14,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(
+                          width:
+                              MediaQuery.of(context).size.width < 600 ? 6 : 8),
 
                       // Müşteri bilgisi
                       Expanded(
-                        flex: 2,
+                        flex: MediaQuery.of(context).size.width < 600 ? 3 : 2,
                         child: Text(
                           order.customer.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                            fontSize: MediaQuery.of(context).size.width < 600
+                                ? 12
+                                : 14,
                             color: Colors.white,
                           ),
                           maxLines: 1,
@@ -140,16 +149,22 @@ class OrderListItem extends StatelessWidget {
 
                       // Durum ve fiyat
                       Expanded(
-                        flex: 3,
+                        flex: MediaQuery.of(context).size.width < 600 ? 2 : 3,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             // Fiyat alanı
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
+                              padding: EdgeInsets.symmetric(
+                                horizontal:
+                                    MediaQuery.of(context).size.width < 600
+                                        ? 6
+                                        : 8,
+                                vertical:
+                                    MediaQuery.of(context).size.width < 600
+                                        ? 3
+                                        : 4,
                               ),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
@@ -177,24 +192,38 @@ class OrderListItem extends StatelessWidget {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    '₺${order.totalAmount.toStringAsFixed(0)}',
-                                    style: const TextStyle(
+                                    '₺${order.totalAmount >= 1000 ? '${(order.totalAmount / 1000).toStringAsFixed(order.totalAmount % 1000 == 0 ? 0 : 1)}K' : order.totalAmount.toStringAsFixed(0)}',
+                                    style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 12,
+                                      fontSize:
+                                          MediaQuery.of(context).size.width <
+                                                  600
+                                              ? 10
+                                              : 12,
                                       color: Colors.white,
                                     ),
                                   ),
-                                  const SizedBox(width: 4),
+                                  SizedBox(
+                                      width: MediaQuery.of(context).size.width <
+                                              600
+                                          ? 2
+                                          : 4),
                                   Icon(
                                     _getPaymentStatusIcon(order.paymentStatus),
-                                    size: 10,
+                                    size:
+                                        MediaQuery.of(context).size.width < 600
+                                            ? 8
+                                            : 10,
                                     color: Colors.white.withOpacity(0.9),
                                   ),
                                 ],
                               ),
                             ),
 
-                            const SizedBox(width: 4),
+                            SizedBox(
+                                width: MediaQuery.of(context).size.width < 600
+                                    ? 2
+                                    : 4),
 
                             // Durum etiketi
                             Flexible(
@@ -241,7 +270,8 @@ class OrderListItem extends StatelessWidget {
 
                 // İçerik alanı
                 Padding(
-                  padding: const EdgeInsets.all(10),
+                  padding: EdgeInsets.all(
+                      MediaQuery.of(context).size.width < 600 ? 8 : 10),
                   child: Column(
                     children: [
                       // Üst bölüm - Teslimat bilgisi ve durum değişimi butonları
@@ -259,7 +289,9 @@ class OrderListItem extends StatelessWidget {
                                   isUrgent
                                       ? Icons.timer
                                       : Icons.event_available,
-                                  size: 14,
+                                  size: MediaQuery.of(context).size.width < 600
+                                      ? 12
+                                      : 14,
                                   color: isUrgent
                                       ? Colors.red.shade700
                                       : Colors.blue.shade700,
@@ -271,7 +303,10 @@ class OrderListItem extends StatelessWidget {
                                   ).format(order.deliveryDate),
                                   style: TextStyle(
                                     color: Colors.grey.shade700,
-                                    fontSize: 12,
+                                    fontSize:
+                                        MediaQuery.of(context).size.width < 600
+                                            ? 10
+                                            : 12,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -279,12 +314,18 @@ class OrderListItem extends StatelessWidget {
                                   deliveryTime,
                                   style: TextStyle(
                                     color: Colors.grey.shade600,
-                                    fontSize: 12,
+                                    fontSize:
+                                        MediaQuery.of(context).size.width < 600
+                                            ? 10
+                                            : 12,
                                   ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 4,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal:
+                                        MediaQuery.of(context).size.width < 600
+                                            ? 3
+                                            : 4,
                                     vertical: 1,
                                   ),
                                   decoration: BoxDecoration(
@@ -305,7 +346,11 @@ class OrderListItem extends StatelessWidget {
                                       color: isUrgent
                                           ? Colors.red.shade800
                                           : Colors.blue.shade800,
-                                      fontSize: 10,
+                                      fontSize:
+                                          MediaQuery.of(context).size.width <
+                                                  600
+                                              ? 8
+                                              : 10,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -348,20 +393,42 @@ class OrderListItem extends StatelessWidget {
                                             borderRadius:
                                                 BorderRadius.circular(8),
                                           ),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 8,
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: MediaQuery.of(context)
+                                                        .size
+                                                        .width <
+                                                    600
+                                                ? 6
+                                                : 8,
+                                            vertical: MediaQuery.of(context)
+                                                        .size
+                                                        .width <
+                                                    600
+                                                ? 6
+                                                : 8,
                                           ),
-                                          minimumSize: const Size(0, 36),
+                                          minimumSize: Size(
+                                              0,
+                                              MediaQuery.of(context)
+                                                          .size
+                                                          .width <
+                                                      600
+                                                  ? 32
+                                                  : 36),
                                           tapTargetSize:
                                               MaterialTapTargetSize.shrinkWrap,
                                         ),
                                         child: FittedBox(
                                           fit: BoxFit.scaleDown,
-                                          child: const Text(
+                                          child: Text(
                                             'İptal',
                                             style: TextStyle(
-                                              fontSize: 13,
+                                              fontSize: MediaQuery.of(context)
+                                                          .size
+                                                          .width <
+                                                      600
+                                                  ? 11
+                                                  : 13,
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
@@ -370,7 +437,11 @@ class OrderListItem extends StatelessWidget {
                                     ),
                                   ),
 
-                                  const SizedBox(width: 8),
+                                  SizedBox(
+                                      width: MediaQuery.of(context).size.width <
+                                              600
+                                          ? 6
+                                          : 8),
 
                                   // İlerleme butonu
                                   Flexible(
@@ -406,11 +477,28 @@ class OrderListItem extends StatelessWidget {
                                             borderRadius:
                                                 BorderRadius.circular(8),
                                           ),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 8,
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: MediaQuery.of(context)
+                                                        .size
+                                                        .width <
+                                                    600
+                                                ? 6
+                                                : 8,
+                                            vertical: MediaQuery.of(context)
+                                                        .size
+                                                        .width <
+                                                    600
+                                                ? 6
+                                                : 8,
                                           ),
-                                          minimumSize: const Size(0, 36),
+                                          minimumSize: Size(
+                                              0,
+                                              MediaQuery.of(context)
+                                                          .size
+                                                          .width <
+                                                      600
+                                                  ? 32
+                                                  : 36),
                                           tapTargetSize:
                                               MaterialTapTargetSize.shrinkWrap,
                                         ),
@@ -420,8 +508,13 @@ class OrderListItem extends StatelessWidget {
                                             order.status == OrderStatus.waiting
                                                 ? 'Hazırla'
                                                 : 'Tamamla',
-                                            style: const TextStyle(
-                                              fontSize: 13,
+                                            style: TextStyle(
+                                              fontSize: MediaQuery.of(context)
+                                                          .size
+                                                          .width <
+                                                      600
+                                                  ? 11
+                                                  : 13,
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
@@ -435,7 +528,9 @@ class OrderListItem extends StatelessWidget {
                         ],
                       ),
 
-                      const SizedBox(height: 8),
+                      SizedBox(
+                          height:
+                              MediaQuery.of(context).size.width < 600 ? 6 : 8),
 
                       // Sipariş içeriği detaylı
                       Column(
@@ -445,25 +540,41 @@ class OrderListItem extends StatelessWidget {
                             children: [
                               Icon(
                                 Icons.shopping_bag_outlined,
-                                size: 14,
+                                size: MediaQuery.of(context).size.width < 600
+                                    ? 12
+                                    : 14,
                                 color: statusColor,
                               ),
-                              const SizedBox(width: 4),
+                              SizedBox(
+                                  width: MediaQuery.of(context).size.width < 600
+                                      ? 3
+                                      : 4),
                               Text(
                                 'Ürünler (${order.items.length})',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 12,
+                                  fontSize:
+                                      MediaQuery.of(context).size.width < 600
+                                          ? 10
+                                          : 12,
                                   color: Colors.grey.shade700,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(
+                              height: MediaQuery.of(context).size.width < 600
+                                  ? 3
+                                  : 4),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 4,
+                            padding: EdgeInsets.symmetric(
+                              horizontal:
+                                  MediaQuery.of(context).size.width < 600
+                                      ? 4
+                                      : 6,
+                              vertical: MediaQuery.of(context).size.width < 600
+                                  ? 3
+                                  : 4,
                             ),
                             decoration: BoxDecoration(
                               color: Colors.grey.shade50,
@@ -477,13 +588,22 @@ class OrderListItem extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: order.items.map((item) {
                                 return Padding(
-                                  padding: const EdgeInsets.only(bottom: 2),
+                                  padding: EdgeInsets.only(
+                                      bottom:
+                                          MediaQuery.of(context).size.width <
+                                                  600
+                                              ? 1
+                                              : 2),
                                   child: RichText(
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     text: TextSpan(
                                       style: TextStyle(
-                                        fontSize: 11,
+                                        fontSize:
+                                            MediaQuery.of(context).size.width <
+                                                    600
+                                                ? 9
+                                                : 11,
                                         color: Colors.grey.shade800,
                                       ),
                                       children: [

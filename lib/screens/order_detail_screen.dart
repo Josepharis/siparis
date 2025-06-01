@@ -339,10 +339,11 @@ class OrderDetailScreen extends StatelessWidget {
       BuildContext context, Color statusColor, Order order) {
     final isCompleted = order.status == OrderStatus.completed;
     final isProcessing = order.status == OrderStatus.processing || isCompleted;
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.all(isSmallScreen ? 12 : 16),
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -365,11 +366,12 @@ class OrderDetailScreen extends StatelessWidget {
               isCompleted: true,
               color: Colors.amber,
               icon: Icons.receipt_rounded,
+              isSmallScreen: isSmallScreen,
             ),
           ),
 
           // Çizgi
-          _buildConnector(isActive: isProcessing),
+          _buildConnector(isActive: isProcessing, isSmallScreen: isSmallScreen),
 
           // Hazırlanıyor
           Expanded(
@@ -380,11 +382,12 @@ class OrderDetailScreen extends StatelessWidget {
               isCompleted: isProcessing,
               color: Colors.orange,
               icon: Icons.sync_rounded,
+              isSmallScreen: isSmallScreen,
             ),
           ),
 
           // Çizgi
-          _buildConnector(isActive: isCompleted),
+          _buildConnector(isActive: isCompleted, isSmallScreen: isSmallScreen),
 
           // Teslim edildi
           Expanded(
@@ -397,6 +400,7 @@ class OrderDetailScreen extends StatelessWidget {
               isCompleted: isCompleted,
               color: Colors.green,
               icon: Icons.check_circle_outline_rounded,
+              isSmallScreen: isSmallScreen,
             ),
           ),
         ],
@@ -405,9 +409,10 @@ class OrderDetailScreen extends StatelessWidget {
   }
 
   // Zaman çizelgesi bağlantı çizgisi
-  Widget _buildConnector({required bool isActive}) {
+  Widget _buildConnector(
+      {required bool isActive, required bool isSmallScreen}) {
     return SizedBox(
-      width: 20,
+      width: isSmallScreen ? 15 : 20,
       child: Column(
         children: [
           Container(
@@ -427,12 +432,13 @@ class OrderDetailScreen extends StatelessWidget {
     required bool isCompleted,
     required Color color,
     required IconData icon,
+    required bool isSmallScreen,
   }) {
     return Column(
       children: [
         // İkon
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
           decoration: BoxDecoration(
             color: isCompleted ? color : Colors.grey[200],
             shape: BoxShape.circle,
@@ -451,11 +457,11 @@ class OrderDetailScreen extends StatelessWidget {
           child: Icon(
             icon,
             color: isCompleted ? Colors.white : Colors.grey[400],
-            size: 18,
+            size: isSmallScreen ? 14 : 18,
           ),
         ),
 
-        const SizedBox(height: 8),
+        SizedBox(height: isSmallScreen ? 6 : 8),
 
         // Başlık
         Text(
@@ -464,11 +470,13 @@ class OrderDetailScreen extends StatelessWidget {
           style: TextStyle(
             fontWeight: isCompleted ? FontWeight.bold : FontWeight.normal,
             color: isCompleted ? Colors.black87 : Colors.grey,
-            fontSize: 13,
+            fontSize: isSmallScreen ? 10 : 13,
           ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
 
-        const SizedBox(height: 4),
+        SizedBox(height: isSmallScreen ? 2 : 4),
 
         // Tarih/saat
         if (date != '-')
@@ -477,8 +485,10 @@ class OrderDetailScreen extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               color: isCompleted ? Colors.grey[700] : Colors.grey[400],
-              fontSize: 12,
+              fontSize: isSmallScreen ? 9 : 12,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
 
         if (time != '-')
@@ -487,8 +497,10 @@ class OrderDetailScreen extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               color: isCompleted ? Colors.grey[700] : Colors.grey[400],
-              fontSize: 12,
+              fontSize: isSmallScreen ? 9 : 12,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
       ],
     );
@@ -636,9 +648,12 @@ class OrderDetailScreen extends StatelessWidget {
   // Teslimat bilgileri kartı
   Widget _buildDeliveryInfoCard(
       BuildContext context, Color statusColor, Order order) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.symmetric(
+          horizontal: isSmallScreen ? 12 : 16, vertical: 8),
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -656,55 +671,86 @@ class OrderDetailScreen extends StatelessWidget {
           // Başlık
           Row(
             children: [
-              Icon(Icons.local_shipping_rounded, size: 18, color: statusColor),
-              const SizedBox(width: 8),
-              const Text(
+              Icon(Icons.local_shipping_rounded,
+                  size: isSmallScreen ? 16 : 18, color: statusColor),
+              SizedBox(width: isSmallScreen ? 6 : 8),
+              Text(
                 'Teslimat Bilgileri',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: isSmallScreen ? 14 : 16),
               ),
             ],
           ),
 
-          const Divider(height: 24),
+          Divider(height: isSmallScreen ? 20 : 24),
 
           // ✅ Sadece Müşteri Tercihi
           if (order.requestedDate != null || order.requestedTime != null) ...[
             // Müşteri tercihi detayları
-            Row(
-              children: [
-                // Tercih edilen tarih
-                if (order.requestedDate != null)
-                  Expanded(
-                    child: _buildDeliveryInfoItem(
-                      icon: Icons.calendar_today_rounded,
-                      title: 'Tercih Edilen Tarih',
-                      value: DateFormat('d MMMM yyyy', 'tr_TR')
-                          .format(order.requestedDate!),
-                      color: Colors.indigo,
-                    ),
-                  ),
-
-                if (order.requestedDate != null && order.requestedTime != null)
-                  const SizedBox(width: 16),
-
-                // Tercih edilen saat
-                if (order.requestedTime != null)
-                  Expanded(
-                    child: _buildDeliveryInfoItem(
-                      icon: Icons.access_time_rounded,
-                      title: 'Tercih Edilen Saat',
-                      value:
-                          '${order.requestedTime!.hour.toString().padLeft(2, '0')}:${order.requestedTime!.minute.toString().padLeft(2, '0')}',
-                      color: Colors.orange,
-                    ),
-                  ),
+            if (isSmallScreen) ...[
+              // Telefon ekranında dikey layout
+              if (order.requestedDate != null) ...[
+                _buildDeliveryInfoItem(
+                  icon: Icons.calendar_today_rounded,
+                  title: 'Tercih Edilen Tarih',
+                  value: DateFormat('d MMMM yyyy', 'tr_TR')
+                      .format(order.requestedDate!),
+                  color: Colors.indigo,
+                  isSmallScreen: isSmallScreen,
+                ),
+                if (order.requestedTime != null) SizedBox(height: 12),
               ],
-            ),
+              if (order.requestedTime != null)
+                _buildDeliveryInfoItem(
+                  icon: Icons.access_time_rounded,
+                  title: 'Tercih Edilen Saat',
+                  value:
+                      '${order.requestedTime!.hour.toString().padLeft(2, '0')}:${order.requestedTime!.minute.toString().padLeft(2, '0')}',
+                  color: Colors.orange,
+                  isSmallScreen: isSmallScreen,
+                ),
+            ] else ...[
+              // Büyük ekranlarda yatay layout
+              Row(
+                children: [
+                  // Tercih edilen tarih
+                  if (order.requestedDate != null)
+                    Expanded(
+                      child: _buildDeliveryInfoItem(
+                        icon: Icons.calendar_today_rounded,
+                        title: 'Tercih Edilen Tarih',
+                        value: DateFormat('d MMMM yyyy', 'tr_TR')
+                            .format(order.requestedDate!),
+                        color: Colors.indigo,
+                        isSmallScreen: isSmallScreen,
+                      ),
+                    ),
+
+                  if (order.requestedDate != null &&
+                      order.requestedTime != null)
+                    const SizedBox(width: 16),
+
+                  // Tercih edilen saat
+                  if (order.requestedTime != null)
+                    Expanded(
+                      child: _buildDeliveryInfoItem(
+                        icon: Icons.access_time_rounded,
+                        title: 'Tercih Edilen Saat',
+                        value:
+                            '${order.requestedTime!.hour.toString().padLeft(2, '0')}:${order.requestedTime!.minute.toString().padLeft(2, '0')}',
+                        color: Colors.orange,
+                        isSmallScreen: isSmallScreen,
+                      ),
+                    ),
+                ],
+              ),
+            ],
 
             // Bilgi notu
-            const SizedBox(height: 16),
+            SizedBox(height: isSmallScreen ? 12 : 16),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
               decoration: BoxDecoration(
                 color: Colors.amber.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
@@ -712,13 +758,14 @@ class OrderDetailScreen extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, size: 16, color: Colors.amber[700]),
-                  const SizedBox(width: 8),
+                  Icon(Icons.info_outline,
+                      size: isSmallScreen ? 14 : 16, color: Colors.amber[700]),
+                  SizedBox(width: isSmallScreen ? 6 : 8),
                   Expanded(
                     child: Text(
                       'Bu bilgiler müşterinin tercihi olup, kesin teslimat zamanı değildir.',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: isSmallScreen ? 10 : 12,
                         color: Colors.amber[700],
                         fontStyle: FontStyle.italic,
                       ),
@@ -730,7 +777,7 @@ class OrderDetailScreen extends StatelessWidget {
           ] else ...[
             // Müşteri tercihi yoksa
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
               decoration: BoxDecoration(
                 color: Colors.grey.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
@@ -738,13 +785,14 @@ class OrderDetailScreen extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, size: 16, color: Colors.grey[600]),
-                  const SizedBox(width: 8),
+                  Icon(Icons.info_outline,
+                      size: isSmallScreen ? 14 : 16, color: Colors.grey[600]),
+                  SizedBox(width: isSmallScreen ? 6 : 8),
                   Expanded(
                     child: Text(
                       'Müşteri herhangi bir teslimat tercihi belirtmemiştir.',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: isSmallScreen ? 10 : 12,
                         color: Colors.grey[600],
                         fontStyle: FontStyle.italic,
                       ),
@@ -807,9 +855,10 @@ class OrderDetailScreen extends StatelessWidget {
     required String title,
     required String value,
     required Color color,
+    required bool isSmallScreen,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
       decoration: BoxDecoration(
         color: color.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
@@ -820,22 +869,30 @@ class OrderDetailScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(color: color.withOpacity(0.8), fontSize: 12),
+              Icon(icon, size: isSmallScreen ? 14 : 16, color: color),
+              SizedBox(width: isSmallScreen ? 6 : 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                      color: color.withOpacity(0.8),
+                      fontSize: isSmallScreen ? 10 : 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isSmallScreen ? 6 : 8),
           Text(
             value,
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 15,
+              fontSize: isSmallScreen ? 13 : 15,
               color: Colors.grey[800],
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
