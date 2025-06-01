@@ -45,8 +45,7 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
   Widget build(BuildContext context) {
     return Consumer2<CompanyProvider, WorkRequestProvider>(
       builder: (context, companyProvider, workRequestProvider, child) {
-        // Hem örnek hem de Firebase firmalarını al
-        final sampleCompanies = companyProvider.activeCompanies;
+        // Sadece Firebase firmalarını kullan (sample companies kaldırıldı)
         final firestoreCompanies = companyProvider.activeFirestoreCompanies;
 
         // Firebase firmalarını Company tipine dönüştür
@@ -86,66 +85,41 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
             }
 
             final convertedFirestoreCompanies = snapshot.data ?? [];
-
             final partneredCompanyIds = workRequestProvider.partneredCompanies;
 
             // Debug log'ları
             print('DEBUG: CustomerCompaniesTab build çağrıldı');
-            print('DEBUG: Örnek firma sayısı: ${sampleCompanies.length}');
             print(
                 'DEBUG: Firebase firma sayısı: ${convertedFirestoreCompanies.length}');
             print('DEBUG: Partner firma ID\'leri: $partneredCompanyIds');
-
-            for (var company in sampleCompanies) {
-              print(
-                  'DEBUG: Örnek Firma - ID: ${company.id}, Name: ${company.name}');
-            }
 
             for (var company in convertedFirestoreCompanies) {
               print(
                   'DEBUG: Firebase Firma - ID: ${company.id}, Name: ${company.name}');
             }
 
-            // İş ortağı firmaları - hem örnek hem Firebase'den
-            final partneredSampleCompanies = sampleCompanies
-                .where((company) => partneredCompanyIds.contains(company.id))
-                .toList();
-
+            // İş ortağı firmaları - sadece Firebase'den
             final partneredFirestoreCompanies = convertedFirestoreCompanies
                 .where((company) => partneredCompanyIds.contains(company.id))
                 .toList();
 
-            final totalPartneredCompanies = partneredSampleCompanies.length +
-                partneredFirestoreCompanies.length;
+            final totalPartneredCompanies = partneredFirestoreCompanies.length;
 
-            print(
-                'DEBUG: Bulunan örnek partner firma sayısı: ${partneredSampleCompanies.length}');
             print(
                 'DEBUG: Bulunan Firebase partner firma sayısı: ${partneredFirestoreCompanies.length}');
             print(
                 'DEBUG: Toplam partner firma sayısı: $totalPartneredCompanies');
-
-            for (var company in partneredSampleCompanies) {
-              print(
-                  'DEBUG: Örnek Partner firma: ${company.name} (${company.id})');
-            }
 
             for (var company in partneredFirestoreCompanies) {
               print(
                   'DEBUG: Firebase Partner firma: ${company.name} (${company.id})');
             }
 
-            // Diğer firmalar (iş ortağı olmayanlar)
-            final otherSampleCompanies = sampleCompanies
-                .where((company) => !partneredCompanyIds.contains(company.id))
-                .toList();
-
+            // Diğer firmalar (iş ortağı olmayanlar) - sadece Firebase'den
             final otherFirestoreCompanies = convertedFirestoreCompanies
                 .where((company) => !partneredCompanyIds.contains(company.id))
                 .toList();
 
-            final filteredOtherSampleCompanies =
-                _getFilteredCompanies(otherSampleCompanies);
             final filteredOtherFirestoreCompanies =
                 _getFilteredCompanies(otherFirestoreCompanies);
 
@@ -365,16 +339,9 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
                             padding: const EdgeInsets.symmetric(horizontal: 24),
                             itemCount: totalPartneredCompanies,
                             itemBuilder: (context, index) {
-                              if (index < partneredSampleCompanies.length) {
-                                final company = partneredSampleCompanies[index];
-                                return _buildPartnerCompanyCard(company, index);
-                              } else {
-                                final firestoreIndex =
-                                    index - partneredSampleCompanies.length;
-                                final company =
-                                    partneredFirestoreCompanies[firestoreIndex];
-                                return _buildPartnerCompanyCard(company, index);
-                              }
+                              final company =
+                                  partneredFirestoreCompanies[index];
+                              return _buildPartnerCompanyCard(company, index);
                             },
                           ),
                         ),
@@ -428,11 +395,14 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
                                   ),
                                 ],
                               ),
-                              child: TextField(
+                              child: TextFormField(
+                                initialValue: _searchQuery,
                                 onChanged: (value) {
-                                  setState(() {
-                                    _searchQuery = value.toLowerCase();
-                                  });
+                                  if (mounted) {
+                                    setState(() {
+                                      _searchQuery = value.toLowerCase();
+                                    });
+                                  }
                                 },
                                 decoration: InputDecoration(
                                   hintText: 'Firma veya ürün ara...',
@@ -450,9 +420,11 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
                                   suffixIcon: _searchQuery.isNotEmpty
                                       ? IconButton(
                                           onPressed: () {
-                                            setState(() {
-                                              _searchQuery = '';
-                                            });
+                                            if (mounted) {
+                                              setState(() {
+                                                _searchQuery = '';
+                                              });
+                                            }
                                           },
                                           icon: Icon(
                                             Icons.clear_rounded,
@@ -462,6 +434,8 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
                                         )
                                       : null,
                                   border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
                                   contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 20,
                                   ),
@@ -484,19 +458,11 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
                           mainAxisSpacing: 20,
                           crossAxisSpacing: 20,
                         ),
-                        itemCount: filteredOtherSampleCompanies.length +
-                            filteredOtherFirestoreCompanies.length,
+                        itemCount: filteredOtherFirestoreCompanies.length,
                         itemBuilder: (context, index) {
-                          if (index < filteredOtherSampleCompanies.length) {
-                            final company = filteredOtherSampleCompanies[index];
-                            return _buildCompanyCard(company, index);
-                          } else {
-                            final firestoreIndex =
-                                index - filteredOtherSampleCompanies.length;
-                            final company =
-                                filteredOtherFirestoreCompanies[firestoreIndex];
-                            return _buildCompanyCard(company, index);
-                          }
+                          final company =
+                              filteredOtherFirestoreCompanies[index];
+                          return _buildCompanyCard(company, index);
                         },
                       ),
                     ],

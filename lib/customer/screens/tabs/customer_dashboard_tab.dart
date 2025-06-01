@@ -221,7 +221,7 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
                 ),
               ),
 
-              // Arama kutusu ve tarih
+              // Sadece tarih göstergesi
               SliverToBoxAdapter(
                 child: Container(
                   decoration: BoxDecoration(
@@ -273,59 +273,6 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
                             ),
                           ),
                         ),
-
-                      // Arama kutusu
-                      Container(
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey[200]!),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: TextField(
-                          decoration: InputDecoration(
-                            hintText: 'Sipariş ara...',
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 16),
-                            prefixIcon: Container(
-                              padding: const EdgeInsets.all(12),
-                              child: Icon(
-                                Icons.search_rounded,
-                                color: AppTheme.primaryColor,
-                                size: 22,
-                              ),
-                            ),
-                            suffixIcon: Container(
-                              padding: const EdgeInsets.all(8),
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  Icons.tune_rounded,
-                                  color: AppTheme.primaryColor,
-                                  size: 16,
-                                ),
-                              ),
-                            ),
-                            hintStyle: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -339,6 +286,7 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
                     waiting: waitingOrders.length,
                     processing: processingOrders.length,
                     completed: completedOrders.length,
+                    processingProducts: processingOrders,
                   ),
                 ),
               ),
@@ -475,20 +423,21 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
     required int waiting,
     required int processing,
     required int completed,
+    required List<Order> processingProducts,
   }) {
-    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
     final totalOrders = waiting + processing + completed;
     final activeOrders = waiting + processing;
 
     // Hazırlanıyor durumundaki ürünleri al
-    final processingProducts = orderProvider.processingOrders
+    final processingProductsList = processingProducts
         .expand((order) => order.items)
         .map((item) => item.product.name)
         .take(3)
         .toList();
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10),
+      margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 8 : 10),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -498,17 +447,17 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
             AppTheme.primaryColor.withBlue(255).withRed(60),
           ],
         ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
         boxShadow: [
           BoxShadow(
             color: AppTheme.primaryColor.withOpacity(0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            blurRadius: isSmallScreen ? 6 : 8,
+            offset: Offset(0, isSmallScreen ? 1 : 2),
           ),
         ],
       ),
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -516,18 +465,18 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(6),
+                  padding: EdgeInsets.all(isSmallScreen ? 4 : 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.dashboard_rounded,
                     color: Colors.white,
-                    size: 14,
+                    size: isSmallScreen ? 12 : 14,
                   ),
                 ),
-                const SizedBox(width: 6),
+                SizedBox(width: isSmallScreen ? 4 : 6),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -536,16 +485,16 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
                         'Sipariş Özeti',
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.9),
-                          fontSize: 11,
+                          fontSize: isSmallScreen ? 9 : 11,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 1),
+                      SizedBox(height: isSmallScreen ? 0 : 1),
                       Text(
                         '$totalOrders Toplam • $activeOrders Aktif',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
-                          fontSize: 12,
+                          fontSize: isSmallScreen ? 10 : 12,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -555,7 +504,7 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
               ],
             ),
 
-            const SizedBox(height: 8),
+            SizedBox(height: isSmallScreen ? 6 : 8),
 
             // Kompakt durum kartları
             Row(
@@ -566,37 +515,40 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
                     waiting.toString(),
                     Colors.orange,
                     Icons.schedule_rounded,
+                    isSmallScreen,
                   ),
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: isSmallScreen ? 3 : 4),
                 Expanded(
                   child: _buildCompactSummaryItem(
                     'Hazırlanıyor',
                     processing.toString(),
                     Colors.blue,
                     Icons.construction_rounded,
+                    isSmallScreen,
                   ),
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: isSmallScreen ? 3 : 4),
                 Expanded(
                   child: _buildCompactSummaryItem(
                     'Tamamlandı',
                     completed.toString(),
                     Colors.green,
                     Icons.check_circle_rounded,
+                    isSmallScreen,
                   ),
                 ),
               ],
             ),
 
             // Hazırlanıyor ürünleri (varsa)
-            if (processingProducts.isNotEmpty) ...[
-              const SizedBox(height: 8),
+            if (processingProductsList.isNotEmpty) ...[
+              SizedBox(height: isSmallScreen ? 6 : 8),
               Container(
-                padding: const EdgeInsets.all(6),
+                padding: EdgeInsets.all(isSmallScreen ? 4 : 6),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
                   border: Border.all(
                     color: Colors.white.withOpacity(0.2),
                   ),
@@ -609,36 +561,38 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
                         Icon(
                           Icons.construction_rounded,
                           color: Colors.white.withOpacity(0.9),
-                          size: 12,
+                          size: isSmallScreen ? 10 : 12,
                         ),
-                        const SizedBox(width: 3),
+                        SizedBox(width: isSmallScreen ? 2 : 3),
                         Text(
                           'Şu an hazırlanıyor:',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
-                            fontSize: 10,
+                            fontSize: isSmallScreen ? 8 : 10,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: isSmallScreen ? 3 : 4),
                     Wrap(
-                      spacing: 3,
-                      runSpacing: 3,
-                      children: processingProducts
+                      spacing: isSmallScreen ? 2 : 3,
+                      runSpacing: isSmallScreen ? 2 : 3,
+                      children: processingProductsList
                           .map((product) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 4, vertical: 2),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: isSmallScreen ? 3 : 4,
+                                    vertical: isSmallScreen ? 1 : 2),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(4),
+                                  borderRadius: BorderRadius.circular(
+                                      isSmallScreen ? 3 : 4),
                                 ),
                                 child: Text(
                                   product,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 9,
+                                    fontSize: isSmallScreen ? 7 : 9,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -655,44 +609,78 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
     );
   }
 
-  Widget _buildCompactSummaryItem(
-      String title, String count, Color color, IconData icon) {
+  Widget _buildCompactSummaryItem(String title, String count, Color color,
+      IconData icon, bool isSmallScreen) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      padding: EdgeInsets.symmetric(
+          vertical: isSmallScreen ? 4 : 6, horizontal: isSmallScreen ? 2 : 4),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
         border: Border.all(
           color: Colors.white.withOpacity(0.2),
           width: 1,
         ),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon,
             color: color,
-            size: 14,
+            size: isSmallScreen ? 12 : 14,
           ),
-          const SizedBox(height: 2),
-          Text(
-            count,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 1),
+          SizedBox(height: isSmallScreen ? 1 : 2),
           Text(
             title,
             style: TextStyle(
-              fontSize: 8,
               color: Colors.white.withOpacity(0.9),
+              fontSize: isSmallScreen ? 8 : 10,
               fontWeight: FontWeight.w500,
             ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
+          SizedBox(height: isSmallScreen ? 2 : 4),
+          Text(
+            count,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: isSmallScreen ? 12 : 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: isSmallScreen ? 2 : 4),
+
+          // Progress bar oranı hesapla (basit örnek)
+          if (count != '0') ...[
+            Builder(
+              builder: (context) {
+                final totalItems = int.tryParse(count) ?? 0;
+                final percentage =
+                    totalItems > 0 ? (totalItems / 10).clamp(0.0, 1.0) : 0.0;
+
+                return Container(
+                  height: isSmallScreen ? 2 : 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 1 : 2),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: percentage,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius:
+                            BorderRadius.circular(isSmallScreen ? 1 : 2),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
         ],
       ),
     );
@@ -778,24 +766,30 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
 
   Widget _buildSectionTitle(String title, IconData icon, Color color,
       {bool showSortOptions = false}) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.fromLTRB(
+          isSmallScreen ? 12 : 16,
+          isSmallScreen ? 16 : 24,
+          isSmallScreen ? 12 : 16,
+          isSmallScreen ? 8 : 12),
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            blurRadius: isSmallScreen ? 6 : 10,
+            offset: Offset(0, isSmallScreen ? 1 : 2),
           ),
         ],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -805,18 +799,19 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
                   color.withOpacity(0.8),
                 ],
               ),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
               boxShadow: [
                 BoxShadow(
                   color: color.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+                  blurRadius: isSmallScreen ? 6 : 8,
+                  offset: Offset(0, isSmallScreen ? 1 : 2),
                 ),
               ],
             ),
-            child: Icon(icon, color: Colors.white, size: 18),
+            child:
+                Icon(icon, color: Colors.white, size: isSmallScreen ? 16 : 18),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: isSmallScreen ? 12 : 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -824,16 +819,16 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: isSmallScreen ? 14 : 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.grey[800],
                   ),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: isSmallScreen ? 1 : 2),
                 Text(
                   'Siparişlerinizi takip edin',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: isSmallScreen ? 10 : 12,
                     color: Colors.grey[600],
                   ),
                 ),
@@ -843,10 +838,12 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
           if (showSortOptions) ...[
             // Kompakt sıralama dropdown'ı
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 6 : 8,
+                  vertical: isSmallScreen ? 4 : 6),
               decoration: BoxDecoration(
                 color: AppTheme.primaryColor.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
                 border: Border.all(
                   color: AppTheme.primaryColor.withOpacity(0.2),
                 ),
@@ -858,15 +855,15 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
                   icon: Icon(
                     Icons.sort_rounded,
                     color: AppTheme.primaryColor,
-                    size: 16,
+                    size: isSmallScreen ? 14 : 16,
                   ),
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: isSmallScreen ? 10 : 11,
                     fontWeight: FontWeight.w500,
                     color: AppTheme.primaryColor,
                   ),
                   dropdownColor: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
                   elevation: 8,
                   onChanged: (String? newValue) {
                     if (newValue != null) {
@@ -883,11 +880,11 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
                         children: [
                           Icon(
                             Icons.schedule_rounded,
-                            size: 14,
+                            size: isSmallScreen ? 12 : 14,
                             color: Colors.orange[600],
                           ),
-                          const SizedBox(width: 6),
-                          const Text('Yakın Teslimat'),
+                          SizedBox(width: isSmallScreen ? 4 : 6),
+                          const Text('Yakın'),
                         ],
                       ),
                     ),
@@ -898,11 +895,11 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
                         children: [
                           Icon(
                             Icons.event_rounded,
-                            size: 14,
+                            size: isSmallScreen ? 12 : 14,
                             color: Colors.purple[600],
                           ),
-                          const SizedBox(width: 6),
-                          const Text('Uzak Teslimat'),
+                          SizedBox(width: isSmallScreen ? 4 : 6),
+                          const Text('Uzak'),
                         ],
                       ),
                     ),
@@ -914,7 +911,7 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
             Icon(
               Icons.chevron_right_rounded,
               color: Colors.grey[400],
-              size: 20,
+              size: isSmallScreen ? 18 : 20,
             ),
         ],
       ),

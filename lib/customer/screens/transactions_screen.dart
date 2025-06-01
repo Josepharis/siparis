@@ -54,23 +54,29 @@ class _TransactionsScreenState extends State<TransactionsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'İşlemlerim',
           style: TextStyle(
-            color: Color(0xFF1F2937),
-            fontSize: 20,
+            color: const Color(0xFF1F2937),
+            fontSize: isSmallScreen ? 18 : 20,
             fontWeight: FontWeight.w700,
           ),
         ),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(85),
+          preferredSize: Size.fromHeight(isSmallScreen ? 75 : 85),
           child: Container(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+            padding: EdgeInsets.fromLTRB(
+                isSmallScreen ? 12 : 16,
+                isSmallScreen ? 6 : 8,
+                isSmallScreen ? 12 : 16,
+                isSmallScreen ? 16 : 20),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -82,11 +88,11 @@ class _TransactionsScreenState extends State<TransactionsScreen>
               ],
             ),
             child: Container(
-              height: 45,
-              padding: const EdgeInsets.all(4),
+              height: isSmallScreen ? 40 : 45,
+              padding: EdgeInsets.all(isSmallScreen ? 3 : 4),
               decoration: BoxDecoration(
                 color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
               ),
               child: TabBar(
                 controller: _tabController,
@@ -99,19 +105,19 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                       AppTheme.primaryColor.withOpacity(0.9),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
                   boxShadow: [
                     BoxShadow(
                       color: AppTheme.primaryColor.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      blurRadius: isSmallScreen ? 6 : 8,
+                      offset: Offset(0, isSmallScreen ? 1 : 2),
                     ),
                   ],
                 ),
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.grey[600],
-                labelStyle: const TextStyle(
-                  fontSize: 14,
+                labelStyle: TextStyle(
+                  fontSize: isSmallScreen ? 12 : 14,
                   fontWeight: FontWeight.w600,
                 ),
                 tabs: [
@@ -121,10 +127,10 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                       children: [
                         Icon(
                           Icons.receipt_long_rounded,
-                          size: 18,
+                          size: isSmallScreen ? 16 : 18,
                         ),
-                        const SizedBox(width: 6),
-                        const Text('Siparişler'),
+                        SizedBox(width: isSmallScreen ? 4 : 6),
+                        Text(isSmallScreen ? 'Sipariş' : 'Siparişler'),
                       ],
                     ),
                   ),
@@ -134,10 +140,10 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                       children: [
                         Icon(
                           Icons.account_balance_wallet_rounded,
-                          size: 18,
+                          size: isSmallScreen ? 16 : 18,
                         ),
-                        const SizedBox(width: 6),
-                        const Text('Ödemeler'),
+                        SizedBox(width: isSmallScreen ? 4 : 6),
+                        Text(isSmallScreen ? 'Ödeme' : 'Ödemeler'),
                       ],
                     ),
                   ),
@@ -233,6 +239,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
 
   // Gerçek Firebase siparişi için kart
   Widget _buildRealOrderCard(Order order) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
     final formatter = DateFormat('d MMMM yyyy', 'tr_TR');
     final statusText = _getStatusText(order.status);
     final statusColor = _getStatusColor(order.status);
@@ -277,12 +284,12 @@ class _TransactionsScreenState extends State<TransactionsScreen>
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
+              blurRadius: isSmallScreen ? 6 : 8,
+              offset: Offset(0, isSmallScreen ? 2 : 3),
             ),
           ],
           border: Border.all(
@@ -291,7 +298,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
           child: Column(
             children: [
               // Üst Kısım - Firma ve Sipariş Bilgileri
@@ -299,8 +306,8 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                 children: [
                   // Firma Avatar
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: isSmallScreen ? 36 : 44,
+                    height: isSmallScreen ? 36 : 44,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
@@ -310,7 +317,8 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                           AppTheme.primaryColor.withOpacity(0.05),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius:
+                          BorderRadius.circular(isSmallScreen ? 10 : 12),
                     ),
                     child: Center(
                       child: Text(
@@ -319,13 +327,13 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                             : companyName.toUpperCase(),
                         style: TextStyle(
                           color: AppTheme.primaryColor,
-                          fontSize: 16,
+                          fontSize: isSmallScreen ? 14 : 16,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: isSmallScreen ? 8 : 12),
                   // Sipariş Bilgileri
                   Expanded(
                     child: Column(
@@ -334,46 +342,53 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                         // Firma ismini büyük ve öne çıkan şekilde göster
                         Text(
                           companyName,
-                          style: const TextStyle(
-                            fontSize: 18,
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 14 : 18,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF1F2937),
+                            color: const Color(0xFF1F2937),
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 6),
+                        SizedBox(height: isSmallScreen ? 4 : 6),
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isSmallScreen ? 6 : 8,
+                                vertical: isSmallScreen ? 2 : 3,
                               ),
                               decoration: BoxDecoration(
                                 color: statusColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(
+                                    isSmallScreen ? 6 : 8),
                               ),
                               child: Text(
                                 statusText,
                                 style: TextStyle(
                                   color: statusColor,
-                                  fontSize: 12,
+                                  fontSize: isSmallScreen ? 10 : 12,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            SizedBox(width: isSmallScreen ? 8 : 12),
                             Icon(
                               Icons.calendar_today,
-                              size: 14,
+                              size: isSmallScreen ? 12 : 14,
                               color: Colors.grey[500],
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              formatter.format(order.orderDate),
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey[600],
+                            SizedBox(width: isSmallScreen ? 3 : 4),
+                            Expanded(
+                              child: Text(
+                                formatter.format(order.orderDate),
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 11 : 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey[600],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -386,28 +401,31 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '₺${order.totalAmount.toStringAsFixed(2)}',
+                        order.totalAmount >= 1000
+                            ? '₺${(order.totalAmount / 1000).toStringAsFixed(order.totalAmount % 1000 == 0 ? 0 : 1)}K'
+                            : '₺${order.totalAmount.toStringAsFixed(0)}',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: isSmallScreen ? 14 : 16,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.primaryColor,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: isSmallScreen ? 1 : 2),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 4 : 6,
+                          vertical: isSmallScreen ? 1 : 2,
                         ),
                         decoration: BoxDecoration(
                           color: paymentColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius:
+                              BorderRadius.circular(isSmallScreen ? 4 : 6),
                         ),
                         child: Text(
                           paymentStatusText,
                           style: TextStyle(
                             color: paymentColor,
-                            fontSize: 10,
+                            fontSize: isSmallScreen ? 8 : 10,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -416,20 +434,21 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: isSmallScreen ? 8 : 12),
               // Ürün Listesi - Kompakt
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
                 decoration: BoxDecoration(
                   color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
                 ),
                 child: Column(
                   children: [
-                    // İlk 2 ürünü göster
-                    ...items.take(2).map(
+                    // İlk 2 ürünü göster (telefonda 1 ürün)
+                    ...items.take(isSmallScreen ? 1 : 2).map(
                           (item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
+                            padding:
+                                EdgeInsets.only(bottom: isSmallScreen ? 4 : 6),
                             child: Row(
                               children: [
                                 Container(
@@ -441,7 +460,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                                     shape: BoxShape.circle,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     item,
@@ -458,7 +477,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                           ),
                         ),
                     // Eğer daha fazla ürün varsa göster
-                    if (items.length > 2)
+                    if (items.length > (isSmallScreen ? 1 : 2))
                       Row(
                         children: [
                           Container(
@@ -471,9 +490,9 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            '+${items.length - 2} ürün daha',
+                            '+${items.length - (isSmallScreen ? 1 : 2)} ürün daha',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: isSmallScreen ? 10 : 12,
                               color: Colors.grey[600],
                               fontStyle: FontStyle.italic,
                             ),
@@ -483,7 +502,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: isSmallScreen ? 12 : 16),
               // Alt Kısım - Ödeme Özeti
               Row(
                 children: [
@@ -612,29 +631,33 @@ class _TransactionsScreenState extends State<TransactionsScreen>
     Color color,
     IconData icon,
   ) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     return Row(
       children: [
         Icon(
           icon,
-          size: 16,
+          size: isSmallScreen ? 14 : 16,
           color: color,
         ),
-        const SizedBox(width: 6),
+        SizedBox(width: isSmallScreen ? 4 : 6),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: isSmallScreen ? 9 : 11,
                 color: Colors.grey[600],
                 fontWeight: FontWeight.w500,
               ),
             ),
             Text(
-              '₺${amount.toStringAsFixed(2)}',
+              amount >= 1000
+                  ? '₺${(amount / 1000).toStringAsFixed(amount % 1000 == 0 ? 0 : 1)}K'
+                  : '₺${amount.toStringAsFixed(0)}',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: isSmallScreen ? 12 : 13,
                 fontWeight: FontWeight.w700,
                 color: color,
               ),
@@ -944,13 +967,14 @@ class _TransactionsScreenState extends State<TransactionsScreen>
         }
 
         final totalRemainingDebt = totalOrderAmount - totalPaidAmount;
+        final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
           children: [
             // Özet Kartı
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -961,12 +985,12 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                     const Color(0xFF1E40AF),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
                 boxShadow: [
                   BoxShadow(
                     color: AppTheme.primaryColor.withOpacity(0.2),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
+                    blurRadius: isSmallScreen ? 8 : 12,
+                    offset: Offset(0, isSmallScreen ? 4 : 6),
                   ),
                 ],
               ),
@@ -975,22 +999,23 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                 children: [
                   // Başlık
                   Padding(
-                    padding: const EdgeInsets.all(8),
+                    padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(6),
+                          padding: EdgeInsets.all(isSmallScreen ? 4 : 6),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius:
+                                BorderRadius.circular(isSmallScreen ? 6 : 8),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.account_balance_wallet_rounded,
                             color: Colors.white,
-                            size: 16,
+                            size: isSmallScreen ? 14 : 16,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: isSmallScreen ? 6 : 8),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -999,15 +1024,17 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                                 'Ödeme Özeti',
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.9),
-                                  fontSize: 12,
+                                  fontSize: isSmallScreen ? 10 : 12,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
                               Text(
-                                'Toplam Finansal Durum',
-                                style: const TextStyle(
+                                isSmallScreen
+                                    ? 'Finansal Durum'
+                                    : 'Toplam Finansal Durum',
+                                style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 14,
+                                  fontSize: isSmallScreen ? 12 : 14,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1019,11 +1046,13 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                   ),
                   // İstatistikler
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 6 : 8,
+                        vertical: isSmallScreen ? 4 : 6),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius:
+                          BorderRadius.circular(isSmallScreen ? 10 : 12),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1032,26 +1061,33 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                           'Sipariş',
                           customerOrders.length.toString(),
                           Icons.shopping_bag_rounded,
+                          isSmallScreen,
                         ),
                         Container(
                           width: 1,
-                          height: 30,
+                          height: isSmallScreen ? 24 : 30,
                           color: Colors.white.withOpacity(0.2),
                         ),
                         _buildCompactPaymentStat(
                           'Ödenen',
-                          '₺${totalPaidAmount.toStringAsFixed(0)}',
+                          totalPaidAmount >= 1000
+                              ? '₺${(totalPaidAmount / 1000).toStringAsFixed(totalPaidAmount % 1000 == 0 ? 0 : 1)}K'
+                              : '₺${totalPaidAmount.toStringAsFixed(0)}',
                           Icons.check_circle_rounded,
+                          isSmallScreen,
                         ),
                         Container(
                           width: 1,
-                          height: 30,
+                          height: isSmallScreen ? 24 : 30,
                           color: Colors.white.withOpacity(0.2),
                         ),
                         _buildCompactPaymentStat(
                           'Kalan',
-                          '₺${totalRemainingDebt.toStringAsFixed(0)}',
+                          totalRemainingDebt >= 1000
+                              ? '₺${(totalRemainingDebt / 1000).toStringAsFixed(totalRemainingDebt % 1000 == 0 ? 0 : 1)}K'
+                              : '₺${totalRemainingDebt.toStringAsFixed(0)}',
                           Icons.pending_rounded,
+                          isSmallScreen,
                         ),
                       ],
                     ),
@@ -1059,7 +1095,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: isSmallScreen ? 8 : 12),
 
             // Gerçek firma borç kartları
             ...companyDebts.values.map((companyInfo) => Padding(
@@ -1752,20 +1788,21 @@ class _TransactionsScreenState extends State<TransactionsScreen>
     );
   }
 
-  Widget _buildCompactPaymentStat(String label, String value, IconData icon) {
+  Widget _buildCompactPaymentStat(
+      String label, String value, IconData icon, bool isSmallScreen) {
     return Column(
       children: [
         Icon(
           icon,
           color: Colors.white.withOpacity(0.9),
-          size: 16,
+          size: isSmallScreen ? 14 : 16,
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: isSmallScreen ? 2 : 4),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.white,
-            fontSize: 13,
+            fontSize: isSmallScreen ? 11 : 13,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -1773,7 +1810,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
           label,
           style: TextStyle(
             color: Colors.white.withOpacity(0.7),
-            fontSize: 10,
+            fontSize: isSmallScreen ? 8 : 10,
           ),
         ),
       ],
