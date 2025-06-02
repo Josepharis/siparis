@@ -117,10 +117,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final screenSize = MediaQuery.of(context).size;
     final screenWidth = screenSize.width;
     final screenHeight = screenSize.height;
-    final isSmallScreen = screenHeight < 700;
+    final isSmallScreen = screenWidth < 600;
+    final isVerySmallScreen = screenHeight < 700;
     final isTablet = screenWidth > 600;
-    final padding = isTablet ? 48.0 : 24.0;
-    final formPadding = isSmallScreen ? 16.0 : 24.0;
+    final padding = isSmallScreen ? 12.0 : (isTablet ? 48.0 : 24.0);
+    final formPadding = isSmallScreen ? 12.0 : 20.0;
 
     return Scaffold(
       body: Container(
@@ -139,11 +140,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // Geri butonu ve başlık
+              // Geri butonu ve başlık - Kompakt
               Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: padding,
-                  vertical: isSmallScreen ? 8.0 : 16.0,
+                  vertical:
+                      isVerySmallScreen ? 4.0 : (isSmallScreen ? 8.0 : 16.0),
                 ),
                 child: Row(
                   children: [
@@ -152,24 +154,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       icon: Icon(
                         Icons.arrow_back_ios_new,
                         color: AppTheme.primaryColor,
-                        size: isSmallScreen ? 20 : 24,
+                        size: isSmallScreen ? 18 : 24,
+                      ),
+                      padding: EdgeInsets.all(isSmallScreen ? 4 : 8),
+                      constraints: BoxConstraints(
+                        minWidth: isSmallScreen ? 32 : 40,
+                        minHeight: isSmallScreen ? 32 : 40,
                       ),
                     ),
-                    SizedBox(width: isSmallScreen ? 8 : 16),
-                    Text(
-                      'Kayıt Ol',
-                      style: GoogleFonts.poppins(
-                        fontSize: isSmallScreen ? 20 : 24,
-                        fontWeight: FontWeight.bold,
-                        foreground: Paint()
-                          ..shader = LinearGradient(
-                            colors: [
-                              AppTheme.primaryColor,
-                              const Color(0xFF0D47A1),
-                            ],
-                          ).createShader(
-                            const Rect.fromLTWH(0.0, 0.0, 200.0, 70.0),
-                          ),
+                    SizedBox(width: isSmallScreen ? 4 : 16),
+                    Expanded(
+                      child: Text(
+                        'Kayıt Ol',
+                        style: GoogleFonts.poppins(
+                          fontSize: isVerySmallScreen
+                              ? 18
+                              : (isSmallScreen ? 20 : 24),
+                          fontWeight: FontWeight.bold,
+                          foreground: Paint()
+                            ..shader = LinearGradient(
+                              colors: [
+                                AppTheme.primaryColor,
+                                const Color(0xFF0D47A1),
+                              ],
+                            ).createShader(
+                              const Rect.fromLTWH(0.0, 0.0, 200.0, 70.0),
+                            ),
+                        ),
                       ),
                     ),
                   ],
@@ -181,7 +192,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: SingleChildScrollView(
                   padding: EdgeInsets.symmetric(
                     horizontal: padding,
-                    vertical: isSmallScreen ? 8.0 : 12.0,
+                    vertical:
+                        isVerySmallScreen ? 4.0 : (isSmallScreen ? 8.0 : 12.0),
                   ),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
@@ -194,25 +206,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Text(
                           'Firma bilgilerinizle kayıt olun',
                           style: GoogleFonts.poppins(
-                            fontSize: isSmallScreen ? 13 : 15,
+                            fontSize: isVerySmallScreen
+                                ? 11
+                                : (isSmallScreen ? 13 : 15),
                             color: const Color(0xFF666666),
                           ),
                         ),
 
-                        SizedBox(height: isSmallScreen ? 16 : 20),
+                        SizedBox(
+                            height: isVerySmallScreen
+                                ? 12
+                                : (isSmallScreen ? 16 : 20)),
 
-                        // Rol seçimi
+                        // Rol seçimi - Kompakt
                         Container(
                           padding: EdgeInsets.all(formPadding),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius:
+                                BorderRadius.circular(isSmallScreen ? 16 : 24),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.05),
-                                spreadRadius: 2,
-                                blurRadius: 20,
-                                offset: const Offset(0, 8),
+                                spreadRadius: 1,
+                                blurRadius: isSmallScreen ? 8 : 15,
+                                offset: Offset(0, isSmallScreen ? 3 : 6),
                               ),
                             ],
                           ),
@@ -224,9 +242,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   Icon(
                                     Icons.business,
                                     color: AppTheme.primaryColor,
-                                    size: isSmallScreen ? 20 : 24,
+                                    size: isSmallScreen ? 18 : 24,
                                   ),
-                                  SizedBox(width: isSmallScreen ? 8 : 12),
+                                  SizedBox(width: isSmallScreen ? 6 : 12),
                                   Text(
                                     'Giriş Türü',
                                     style: GoogleFonts.poppins(
@@ -237,7 +255,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   ),
                                 ],
                               ),
-                              SizedBox(height: isSmallScreen ? 12 : 16),
+                              SizedBox(height: isSmallScreen ? 8 : 16),
                               Row(
                                 children: [
                                   Expanded(
@@ -248,7 +266,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       isSmallScreen: isSmallScreen,
                                     ),
                                   ),
-                                  SizedBox(width: isSmallScreen ? 8 : 12),
+                                  SizedBox(width: isSmallScreen ? 6 : 12),
                                   Expanded(
                                     child: _buildRoleOption(
                                       role: UserRole.customer,
@@ -263,20 +281,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
 
-                        SizedBox(height: isSmallScreen ? 16 : 20),
+                        SizedBox(
+                            height: isVerySmallScreen
+                                ? 12
+                                : (isSmallScreen ? 16 : 20)),
 
-                        // Kayıt formu
+                        // Kayıt formu - Kompakt
                         Container(
                           padding: EdgeInsets.all(formPadding),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius:
+                                BorderRadius.circular(isSmallScreen ? 16 : 24),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.05),
-                                spreadRadius: 2,
-                                blurRadius: 20,
-                                offset: const Offset(0, 8),
+                                spreadRadius: 1,
+                                blurRadius: isSmallScreen ? 8 : 15,
+                                offset: Offset(0, isSmallScreen ? 3 : 6),
                               ),
                             ],
                           ),
@@ -288,12 +310,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 Text(
                                   'Firma Bilgileri',
                                   style: GoogleFonts.poppins(
-                                    fontSize: isSmallScreen ? 16 : 18,
+                                    fontSize: isSmallScreen ? 14 : 18,
                                     fontWeight: FontWeight.w600,
                                     color: const Color(0xFF1A1A1A),
                                   ),
                                 ),
-                                SizedBox(height: isSmallScreen ? 16 : 20),
+                                SizedBox(height: isSmallScreen ? 12 : 20),
                                 _buildResponsiveInputField(
                                   controller: _companyNameController,
                                   label: 'Firma Adı',
@@ -307,7 +329,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     return null;
                                   },
                                 ),
-                                SizedBox(height: isSmallScreen ? 12 : 16),
+                                SizedBox(height: isSmallScreen ? 8 : 16),
                                 _buildResponsiveInputField(
                                   controller: _nameController,
                                   label: 'Yetkili Kişi Ad Soyad',
@@ -321,7 +343,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     return null;
                                   },
                                 ),
-                                SizedBox(height: isSmallScreen ? 12 : 16),
+                                SizedBox(height: isSmallScreen ? 8 : 16),
                                 _buildResponsiveInputField(
                                   controller: _phoneController,
                                   label: 'Telefon Numarası',
@@ -336,13 +358,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     return null;
                                   },
                                 ),
-                                SizedBox(height: isSmallScreen ? 12 : 16),
+                                SizedBox(height: isSmallScreen ? 8 : 16),
                                 _buildResponsiveInputField(
                                   controller: _companyAddressController,
                                   label: 'Firma Adresi',
                                   hint: 'Firmanızın tam adresini girin',
                                   icon: Icons.location_on_outlined,
-                                  maxLines: 2,
+                                  maxLines: isSmallScreen ? 2 : 3,
                                   isSmallScreen: isSmallScreen,
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
@@ -351,7 +373,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     return null;
                                   },
                                 ),
-                                SizedBox(height: isSmallScreen ? 12 : 16),
+                                SizedBox(height: isSmallScreen ? 8 : 16),
                                 _buildResponsiveInputField(
                                   controller: _emailController,
                                   label: 'E-posta',
@@ -369,7 +391,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     return null;
                                   },
                                 ),
-                                SizedBox(height: isSmallScreen ? 12 : 16),
+                                SizedBox(height: isSmallScreen ? 8 : 16),
                                 _buildResponsiveInputField(
                                   controller: _passwordController,
                                   label: 'Şifre',
@@ -383,7 +405,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                           ? Icons.visibility_outlined
                                           : Icons.visibility_off_outlined,
                                       color: AppTheme.primaryColor,
-                                      size: isSmallScreen ? 20 : 24,
+                                      size: isSmallScreen ? 18 : 24,
                                     ),
                                     onPressed: () {
                                       setState(() {
@@ -402,7 +424,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     return null;
                                   },
                                 ),
-                                SizedBox(height: isSmallScreen ? 12 : 16),
+                                SizedBox(height: isSmallScreen ? 8 : 16),
                                 _buildResponsiveInputField(
                                   controller: _confirmPasswordController,
                                   label: 'Şifre Tekrar',
@@ -416,7 +438,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                           ? Icons.visibility_outlined
                                           : Icons.visibility_off_outlined,
                                       color: AppTheme.primaryColor,
-                                      size: isSmallScreen ? 20 : 24,
+                                      size: isSmallScreen ? 18 : 24,
                                     ),
                                     onPressed: () {
                                       setState(() {
@@ -440,27 +462,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
 
-                        SizedBox(height: isSmallScreen ? 16 : 20),
+                        SizedBox(
+                            height: isVerySmallScreen
+                                ? 12
+                                : (isSmallScreen ? 16 : 20)),
 
-                        // Kullanım şartları
+                        // Kullanım şartları - Kompakt
                         Container(
                           padding: EdgeInsets.all(formPadding),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius:
+                                BorderRadius.circular(isSmallScreen ? 12 : 16),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.05),
                                 spreadRadius: 1,
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
+                                blurRadius: isSmallScreen ? 6 : 10,
+                                offset: Offset(0, isSmallScreen ? 2 : 4),
                               ),
                             ],
                           ),
                           child: Row(
                             children: [
                               Transform.scale(
-                                scale: isSmallScreen ? 0.9 : 1.0,
+                                scale: isSmallScreen ? 0.8 : 1.0,
                                 child: Checkbox(
                                   value: _acceptTerms,
                                   onChanged: (value) {
@@ -475,7 +501,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 child: Text(
                                   'Kullanım şartlarını ve gizlilik politikasını kabul ediyorum',
                                   style: GoogleFonts.poppins(
-                                    fontSize: isSmallScreen ? 12 : 14,
+                                    fontSize: isSmallScreen ? 11 : 14,
                                     color: const Color(0xFF666666),
                                   ),
                                 ),
@@ -484,14 +510,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
 
-                        SizedBox(height: isSmallScreen ? 20 : 24),
+                        SizedBox(
+                            height: isVerySmallScreen
+                                ? 16
+                                : (isSmallScreen ? 20 : 24)),
 
-                        // Kayıt ol butonu
+                        // Kayıt ol butonu - Kompakt
                         Consumer<AuthProvider>(
                           builder: (context, authProvider, child) {
                             return Container(
                               width: double.infinity,
-                              height: isSmallScreen ? 48 : 56,
+                              height: isSmallScreen ? 44 : 56,
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   begin: Alignment.topLeft,
@@ -501,14 +530,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     const Color(0xFF0D47A1),
                                   ],
                                 ),
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(
+                                    isSmallScreen ? 12 : 16),
                                 boxShadow: [
                                   BoxShadow(
                                     color:
                                         AppTheme.primaryColor.withOpacity(0.3),
                                     spreadRadius: 1,
-                                    blurRadius: 15,
-                                    offset: const Offset(0, 8),
+                                    blurRadius: isSmallScreen ? 8 : 15,
+                                    offset: Offset(0, isSmallScreen ? 4 : 8),
                                   ),
                                 ],
                               ),
@@ -520,14 +550,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   foregroundColor: Colors.white,
                                   shadowColor: Colors.transparent,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
+                                    borderRadius: BorderRadius.circular(
+                                        isSmallScreen ? 12 : 16),
                                   ),
                                   elevation: 0,
                                 ),
                                 child: authProvider.isLoading
                                     ? SizedBox(
-                                        width: isSmallScreen ? 20 : 24,
-                                        height: isSmallScreen ? 20 : 24,
+                                        width: isSmallScreen ? 18 : 24,
+                                        height: isSmallScreen ? 18 : 24,
                                         child: const CircularProgressIndicator(
                                           color: Colors.white,
                                           strokeWidth: 2,
@@ -536,7 +567,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     : Text(
                                         'Kayıt Ol',
                                         style: GoogleFonts.poppins(
-                                          fontSize: isSmallScreen ? 16 : 18,
+                                          fontSize: isSmallScreen ? 14 : 18,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -545,16 +576,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           },
                         ),
 
-                        SizedBox(height: isSmallScreen ? 16 : 20),
+                        SizedBox(
+                            height: isVerySmallScreen
+                                ? 12
+                                : (isSmallScreen ? 16 : 20)),
 
-                        // Giriş yap linki
+                        // Giriş yap linki - Kompakt
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
                               'Zaten hesabınız var mı? ',
                               style: GoogleFonts.poppins(
-                                fontSize: isSmallScreen ? 12 : 14,
+                                fontSize: isSmallScreen ? 11 : 14,
                                 color: const Color(0xFF666666),
                               ),
                             ),
@@ -572,7 +606,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 child: Text(
                                   'Giriş Yap',
                                   style: GoogleFonts.poppins(
-                                    fontSize: isSmallScreen ? 12 : 14,
+                                    fontSize: isSmallScreen ? 11 : 14,
                                     color: Colors.white,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -581,7 +615,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           ],
                         ),
-                        SizedBox(height: isSmallScreen ? 16 : 20),
+                        SizedBox(
+                            height: isVerySmallScreen
+                                ? 8
+                                : (isSmallScreen ? 16 : 20)),
                       ],
                     ),
                   ),
@@ -601,9 +638,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required bool isSmallScreen,
   }) {
     return Container(
-      padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+      padding: EdgeInsets.all(isSmallScreen ? 6 : 12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 12),
         border: Border.all(
           color: _selectedRole == role
               ? AppTheme.primaryColor
@@ -620,7 +657,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             _selectedRole = role;
           });
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 12),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -628,17 +665,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
               icon,
               color:
                   _selectedRole == role ? AppTheme.primaryColor : Colors.grey,
-              size: isSmallScreen ? 16 : 20,
+              size: isSmallScreen ? 14 : 20,
             ),
-            SizedBox(width: isSmallScreen ? 4 : 8),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: isSmallScreen ? 12 : 14,
-                fontWeight: FontWeight.w600,
-                color: _selectedRole == role
-                    ? AppTheme.primaryColor
-                    : const Color(0xFF1A1A1A),
+            SizedBox(width: isSmallScreen ? 3 : 8),
+            Flexible(
+              child: Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: isSmallScreen ? 11 : 14,
+                  fontWeight: FontWeight.w600,
+                  color: _selectedRole == role
+                      ? AppTheme.primaryColor
+                      : const Color(0xFF1A1A1A),
+                ),
               ),
             ),
           ],
@@ -661,13 +700,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            blurRadius: isSmallScreen ? 6 : 10,
+            offset: Offset(0, isSmallScreen ? 2 : 4),
           ),
         ],
       ),
@@ -676,42 +715,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
         obscureText: obscureText,
         keyboardType: keyboardType,
         maxLines: maxLines,
-        style: GoogleFonts.poppins(fontSize: isSmallScreen ? 14 : 16),
+        style: GoogleFonts.poppins(fontSize: isSmallScreen ? 13 : 16),
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
           prefixIcon: Icon(
             icon,
             color: AppTheme.primaryColor,
-            size: isSmallScreen ? 20 : 24,
+            size: isSmallScreen ? 18 : 24,
           ),
           suffixIcon: suffixIcon,
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
             borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
             borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
             borderSide: BorderSide(
               color: AppTheme.primaryColor,
               width: 2,
             ),
           ),
           errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
             borderSide: BorderSide(
               color: Colors.red.shade400,
               width: 1,
             ),
           ),
           focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
             borderSide: BorderSide(
               color: Colors.red.shade400,
               width: 2,
@@ -719,19 +758,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
           labelStyle: GoogleFonts.poppins(
             color: const Color(0xFF666666),
-            fontSize: isSmallScreen ? 12 : 14,
+            fontSize: isSmallScreen ? 11 : 14,
           ),
           hintStyle: GoogleFonts.poppins(
             color: const Color(0xFF999999),
-            fontSize: isSmallScreen ? 12 : 14,
+            fontSize: isSmallScreen ? 11 : 14,
           ),
           errorStyle: GoogleFonts.poppins(
-            fontSize: isSmallScreen ? 10 : 12,
+            fontSize: isSmallScreen ? 9 : 12,
             color: Colors.red.shade600,
           ),
           contentPadding: EdgeInsets.symmetric(
-            horizontal: isSmallScreen ? 12 : 16,
-            vertical: isSmallScreen ? 12 : 16,
+            horizontal: isSmallScreen ? 10 : 16,
+            vertical: isSmallScreen ? 10 : 16,
           ),
         ),
         validator: validator,

@@ -4,6 +4,7 @@ import 'package:siparis/config/theme.dart';
 import 'package:siparis/screens/auth/login_screen.dart';
 import 'package:siparis/customer/screens/customer_home_screen.dart';
 import 'package:siparis/screens/home/home_screen.dart';
+import 'package:siparis/screens/admin/admin_home_screen.dart';
 import 'package:siparis/providers/auth_provider.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -73,6 +74,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     // Çalışan girişi kontrolü
     if (authProvider.isEmployeeLogin && authProvider.currentEmployee != null) {
+      print('🔄 Çalışan girişi tespit edildi, HomeScreen\'e yönlendiriliyor');
       // Çalışan girişi - direkt HomeScreen'e yönlendir
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -85,7 +87,19 @@ class _SplashScreenState extends State<SplashScreen>
     // Normal kullanıcı girişi kontrolü
     final user = authProvider.currentUser;
     if (user != null) {
-      if (user.isProducer) {
+      print('🔄 Kullanıcı rolü: ${user.role}');
+      // Admin kontrolü
+      if (user.isAdmin) {
+        print(
+            '✅ Admin girişi tespit edildi, AdminHomeScreen\'e yönlendiriliyor');
+        // Admin ise direkt admin paneline yönlendir
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const AdminHomeScreen(),
+          ),
+        );
+      } else if (user.isProducer) {
+        print('✅ Üretici girişi tespit edildi, HomeScreen\'e yönlendiriliyor');
         // Üretici ise screens/home/home_screen.dart'a git
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
@@ -93,6 +107,8 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         );
       } else {
+        print(
+            '✅ Müşteri girişi tespit edildi, CustomerHomeScreen\'e yönlendiriliyor');
         // Müşteri ise customer/screens/customer_home_screen.dart'a git
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
@@ -101,6 +117,7 @@ class _SplashScreenState extends State<SplashScreen>
         );
       }
     } else {
+      print('ℹ️ Kullanıcı girişi yok, LoginScreen\'e yönlendiriliyor');
       // Kullanıcı bilgisi yoksa login'e yönlendir
       _navigateToLogin();
     }

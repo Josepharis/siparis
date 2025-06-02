@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:siparis/config/theme.dart';
-import 'package:siparis/models/order.dart';
-import 'package:siparis/providers/order_provider.dart';
-import 'package:siparis/providers/auth_provider.dart';
-import 'package:siparis/providers/work_request_provider.dart';
 import 'package:siparis/customer/screens/tabs/customer_dashboard_tab.dart';
 import 'package:siparis/customer/screens/tabs/customer_companies_tab.dart';
 import 'package:siparis/customer/screens/cart_screen.dart';
 import 'package:siparis/customer/screens/transactions_screen.dart';
 import 'package:siparis/customer/screens/tabs/customer_profile_tab.dart';
+import 'package:siparis/providers/order_provider.dart';
+import 'package:siparis/providers/work_request_provider.dart';
+import 'package:siparis/providers/auth_provider.dart';
 import 'package:siparis/providers/cart_provider.dart';
 import 'package:siparis/services/company_service.dart';
+import 'package:siparis/providers/company_provider.dart';
+import 'package:siparis/customer/screens/partner_company_detail_screen.dart';
+import 'package:siparis/models/company.dart';
+import 'package:siparis/middleware/subscription_guard.dart';
 
 class CustomerHomeScreen extends StatefulWidget {
   final int initialIndex;
@@ -30,10 +33,24 @@ class CustomerHomeScreen extends StatefulWidget {
 class _CustomerHomeScreenState extends State<CustomerHomeScreen>
     with TickerProviderStateMixin {
   late int _selectedIndex;
-  final List<Widget> _tabs = [];
+  final List<Widget> _tabs = [
+    SubscriptionGuard(child: const CustomerDashboardTab()),
+    SubscriptionGuard(child: const CustomerCompaniesTab()),
+    SubscriptionGuard(
+      child: Container(
+        child: const Center(
+          child: Text('Siparişler'),
+        ),
+      ),
+    ),
+    SubscriptionGuard(child: const TransactionsScreen()),
+    SubscriptionGuard(child: const CustomerProfileTab()),
+  ];
   late bool _isLoading;
   late AnimationController _fabAnimationController;
   late Animation<double> _fabScaleAnimation;
+  bool _isDropdownOpen = false;
+  OverlayEntry? _overlayEntry;
 
   @override
   void initState() {
@@ -45,14 +62,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
 
     print(
         'DEBUG: Customer _isLoading: $_isLoading, skipLoading: ${widget.skipLoading}');
-
-    _tabs.addAll([
-      const CustomerDashboardTab(),
-      const CustomerCompaniesTab(),
-      Container(), // FAB için boş tab
-      const TransactionsScreen(),
-      const CustomerProfileTab(),
-    ]);
 
     // FAB animasyonu
     _fabAnimationController = AnimationController(
@@ -96,6 +105,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
   @override
   void dispose() {
     _fabAnimationController.dispose();
+    _hidePartnerDropdown(); // Overlay temizle
     super.dispose();
   }
 
@@ -170,8 +180,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
         child: FloatingActionButton(
           heroTag: 'customer_home_screen_fab',
           onPressed: () {
-            // Yeni sipariş oluşturma sayfasına yönlendir
-            _showNewOrderDialog();
+            if (_isDropdownOpen) {
+              _hidePartnerDropdown();
+            } else {
+              _showPartnerDropdown();
+            }
           },
           elevation: 2,
           highlightElevation: 5,
@@ -197,39 +210,300 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
                 ),
               ],
             ),
-            child: const Icon(Icons.add_shopping_cart,
-                size: 28, color: Colors.white),
+            child: AnimatedRotation(
+              turns: _isDropdownOpen ? 0.125 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: Icon(_isDropdownOpen ? Icons.close : Icons.shopping_cart,
+                  size: 28, color: Colors.white),
+            ),
           ),
         ),
       ),
     );
   }
 
-  void _showNewOrderDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Yeni Sipariş'),
-          content: const Text(
-              'Yeni sipariş oluşturmak için firmalar sekmesinden istediğiniz firmayı seçebilirsiniz.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Tamam'),
+  void _showPartnerDropdown() {
+    if (_isDropdownOpen) return;
+
+    setState(() {
+      _isDropdownOpen = true;
+    });
+
+    final overlay = Overlay.of(context);
+    final renderBox = context.findRenderObject() as RenderBox;
+    final size = renderBox.size;
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          // Arka plan tıklama alanı
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _hidePartnerDropdown,
+              child: Container(
+                color: Colors.transparent,
+              ),
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                setState(() {
-                  _selectedIndex = 1; // Firmalar sekmesine git
-                });
-              },
-              child: const Text('Firmalara Git'),
+          ),
+          // Partner firmaları dropdown
+          Positioned(
+            bottom: 140, // FAB'ın üstünde
+            left: size.width / 2 - 160, // Ortalanmış
+            child: Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                width: 320,
+                constraints: const BoxConstraints(maxHeight: 300),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.grey.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Başlık
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppTheme.primaryColor,
+                            AppTheme.primaryColor.withOpacity(0.8),
+                          ],
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          topRight: Radius.circular(16),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.handshake_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Partner Firmalar',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Partner firmalar listesi
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 240),
+                      child: Consumer2<WorkRequestProvider, CompanyProvider>(
+                        builder: (context, workRequestProvider, companyProvider,
+                            child) {
+                          final partneredCompanyIds =
+                              workRequestProvider.partneredCompanies;
+
+                          // Firestore firmalarını Company tipine dönüştür
+                          final firestoreCompanies =
+                              companyProvider.activeFirestoreCompanies;
+                          final sampleCompanies =
+                              companyProvider.activeCompanies;
+
+                          List<Company> allCompanies = [];
+
+                          // Firestore firmalarını dönüştür
+                          for (var companyModel in firestoreCompanies) {
+                            allCompanies.add(Company(
+                              id: companyModel.id,
+                              name: companyModel.name,
+                              description: companyModel.description ?? '',
+                              services: companyModel.categories ?? ['Genel'],
+                              address: companyModel.address,
+                              phone: companyModel.phone ?? '',
+                              email: companyModel.email ?? '',
+                              website: companyModel.website,
+                              rating: 4.5,
+                              totalProjects: 0,
+                              products: companyModel.products,
+                              isActive: companyModel.isActive,
+                            ));
+                          }
+
+                          // Sample firmaları ekle
+                          allCompanies.addAll(sampleCompanies);
+
+                          // Partner firmaları filtrele
+                          final partneredCompanies = allCompanies
+                              .where((company) =>
+                                  partneredCompanyIds.contains(company.id))
+                              .toList();
+
+                          if (partneredCompanies.isEmpty) {
+                            return Container(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.business_outlined,
+                                    size: 48,
+                                    color: Colors.grey[400],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Henüz Partner Firma Yok',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Firmalar sekmesinden iş ortaklığı kurun',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[500],
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          return ListView.builder(
+                            shrinkWrap: true,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            itemCount: partneredCompanies.length,
+                            itemBuilder: (context, index) {
+                              final company = partneredCompanies[index];
+                              return _buildDropdownCompanyItem(company);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+
+    overlay.insert(_overlayEntry!);
+  }
+
+  void _hidePartnerDropdown() {
+    if (!_isDropdownOpen) return;
+
+    setState(() {
+      _isDropdownOpen = false;
+    });
+
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  Widget _buildDropdownCompanyItem(Company company) {
+    return InkWell(
+      onTap: () {
+        _hidePartnerDropdown();
+        // Partner company detail sayfasına git
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                PartnerCompanyDetailScreen(company: company),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              const begin = Offset(1.0, 0.0);
+              const end = Offset.zero;
+              const curve = Curves.easeInOutCubic;
+
+              var tween = Tween(begin: begin, end: end).chain(
+                CurveTween(curve: curve),
+              );
+
+              return SlideTransition(
+                position: animation.drive(tween),
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 300),
+          ),
         );
       },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            // Firma logosu
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.green,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Text(
+                  company.name.length >= 2
+                      ? company.name.substring(0, 2).toUpperCase()
+                      : company.name.substring(0, 1).toUpperCase(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Firma bilgileri
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    company.name,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1F2937),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    company.services.first,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            // Arrow icon
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: Colors.grey[400],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -262,7 +536,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
             children: [
               _buildNavItem(0, Icons.home_rounded, 'Ana Sayfa'),
               _buildNavItem(1, Icons.business_rounded, 'Firmalar'),
-              const SizedBox(width: 40), // FAB için boşluk
+              _buildNavItem(2, Icons.shopping_cart_rounded, 'Siparişler'),
               _buildNavItem(3, Icons.receipt_long_rounded, 'İşlemler'),
               _buildNavItem(4, Icons.person_rounded, 'Profil'),
             ],
@@ -304,17 +578,20 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
                   : AppTheme.textSecondaryColor,
               size: isSelected ? 28 : 24,
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected
-                    ? AppTheme.primaryColor
-                    : AppTheme.textSecondaryColor,
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            // Siparişler tab'ı (index 2) için label'ı gizle
+            if (index != 2) ...[
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected
+                      ? AppTheme.primaryColor
+                      : AppTheme.textSecondaryColor,
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

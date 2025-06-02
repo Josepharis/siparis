@@ -121,6 +121,10 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       print('❌ Auth initialization hatası: $e');
       _isInitialized = true;
+      _currentUser = null;
+      _currentEmployee = null;
+      _isEmployeeLogin = false;
+      _errorMessage = e.toString();
       notifyListeners();
     }
   }
@@ -254,12 +258,21 @@ class AuthProvider with ChangeNotifier {
         password: password,
       );
 
-      _isEmployeeLogin = false; // Normal kullanıcı girişi
-      _currentEmployee = null;
+      if (_currentUser != null) {
+        print(
+            '✅ Kullanıcı girişi başarılı: ${_currentUser?.name} (${_currentUser?.role})');
+        _isEmployeeLogin = false;
+        _currentEmployee = null;
+      } else {
+        print('❌ Kullanıcı girişi başarısız: Kullanıcı bilgileri alınamadı');
+        _setError('Giriş başarısız. Lütfen bilgilerinizi kontrol edin.');
+        return false;
+      }
 
       _setLoading(false);
       return _currentUser != null;
     } catch (e) {
+      print('❌ Giriş hatası: $e');
       _setError(e.toString());
       _setLoading(false);
       return false;

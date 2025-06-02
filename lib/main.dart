@@ -9,6 +9,7 @@ import 'package:siparis/config/theme.dart';
 import 'package:siparis/models/order.dart';
 import 'package:siparis/providers/order_provider.dart';
 import 'package:siparis/providers/auth_provider.dart';
+import 'package:siparis/providers/subscription_provider.dart';
 import 'package:siparis/screens/home/home_screen.dart';
 import 'package:siparis/screens/splash_screen.dart';
 import 'package:siparis/screens/budget_screen.dart';
@@ -19,6 +20,7 @@ import 'package:siparis/customer/screens/customer_home_screen.dart';
 import 'package:siparis/providers/cart_provider.dart';
 import 'package:siparis/customer/screens/cart_screen.dart';
 import 'package:siparis/providers/employee_provider.dart';
+import 'package:siparis/screens/admin/admin_home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,11 +55,31 @@ class MainApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
         ChangeNotifierProxyProvider<AuthProvider, OrderProvider>(
           create: (_) => OrderProvider(),
           update: (_, authProvider, orderProvider) {
             orderProvider!.setCurrentUser(authProvider.currentUser);
             return orderProvider;
+          },
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, SubscriptionProvider>(
+          create: (_) => SubscriptionProvider(),
+          update: (_, authProvider, subscriptionProvider) {
+            // Kullanıcı değiştiğinde abonelik durumunu yükle
+            if (authProvider.currentUser != null) {
+              // Normal kullanıcı abonelik kontrolü
+              subscriptionProvider!
+                  .loadUserSubscription(authProvider.currentUser!.uid);
+            } else if (authProvider.currentEmployee != null &&
+                authProvider.currentEmployee!.companyId.isNotEmpty) {
+              // Çalışan için firma abonelik kontrolü
+              subscriptionProvider!.loadCompanySubscription(
+                  authProvider.currentEmployee!.companyId);
+            } else {
+              subscriptionProvider!.clearSubscription();
+            }
+            return subscriptionProvider;
           },
         ),
         ChangeNotifierProvider(create: (_) => StockProvider()),
@@ -92,6 +114,10 @@ class MainApp extends StatelessWidget {
             case '/home':
               return MaterialPageRoute(
                 builder: (_) => const HomeScreen(),
+              );
+            case '/admin':
+              return MaterialPageRoute(
+                builder: (_) => const AdminHomeScreen(),
               );
             case '/cart':
               return MaterialPageRoute(

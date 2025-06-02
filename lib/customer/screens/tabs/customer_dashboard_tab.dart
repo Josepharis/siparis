@@ -320,8 +320,8 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
                           final order = todayActiveOrders[index];
                           return Padding(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 4,
+                              horizontal: 4,
+                              vertical: 2,
                             ),
                             child: GestureDetector(
                               onTap: () {
@@ -370,8 +370,8 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
                       final order = completedOrders[index];
                       return Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 4,
+                          horizontal: 4,
+                          vertical: 2,
                         ),
                         child: GestureDetector(
                           onTap: () {
@@ -437,7 +437,7 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
         .toList();
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 8 : 10),
+      margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 4 : 6),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -447,164 +447,203 @@ class _CustomerDashboardTabState extends State<CustomerDashboardTab> {
             AppTheme.primaryColor.withBlue(255).withRed(60),
           ],
         ),
-        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryColor.withOpacity(0.15),
-            blurRadius: isSmallScreen ? 6 : 8,
-            offset: Offset(0, isSmallScreen ? 1 : 2),
+            color: AppTheme.primaryColor.withOpacity(0.3),
+            blurRadius: isSmallScreen ? 8 : 12,
+            offset: Offset(0, isSmallScreen ? 2 : 4),
           ),
         ],
       ),
-      child: Container(
-        padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Kompakt başlık
-            Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(isSmallScreen ? 4 : 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
-                  ),
-                  child: Icon(
-                    Icons.dashboard_rounded,
-                    color: Colors.white,
-                    size: isSmallScreen ? 12 : 14,
-                  ),
-                ),
-                SizedBox(width: isSmallScreen ? 4 : 6),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Sipariş Özeti',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: isSmallScreen ? 9 : 11,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      SizedBox(height: isSmallScreen ? 0 : 1),
-                      Text(
-                        '$totalOrders Toplam • $activeOrders Aktif',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: isSmallScreen ? 10 : 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+      child: Stack(
+        children: [
+          // Dekoratif elementler
+          Positioned(
+            top: -30,
+            right: -30,
+            child: Container(
+              width: isSmallScreen ? 80 : 120,
+              height: isSmallScreen ? 80 : 120,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
             ),
-
-            SizedBox(height: isSmallScreen ? 6 : 8),
-
-            // Kompakt durum kartları
-            Row(
-              children: [
-                Expanded(
-                  child: _buildCompactSummaryItem(
-                    'Bekliyor',
-                    waiting.toString(),
-                    Colors.orange,
-                    Icons.schedule_rounded,
-                    isSmallScreen,
-                  ),
-                ),
-                SizedBox(width: isSmallScreen ? 3 : 4),
-                Expanded(
-                  child: _buildCompactSummaryItem(
-                    'Hazırlanıyor',
-                    processing.toString(),
-                    Colors.blue,
-                    Icons.construction_rounded,
-                    isSmallScreen,
-                  ),
-                ),
-                SizedBox(width: isSmallScreen ? 3 : 4),
-                Expanded(
-                  child: _buildCompactSummaryItem(
-                    'Tamamlandı',
-                    completed.toString(),
-                    Colors.green,
-                    Icons.check_circle_rounded,
-                    isSmallScreen,
-                  ),
-                ),
-              ],
+          ),
+          Positioned(
+            bottom: -20,
+            left: -20,
+            child: Container(
+              width: isSmallScreen ? 60 : 80,
+              height: isSmallScreen ? 60 : 80,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                shape: BoxShape.circle,
+              ),
             ),
-
-            // Hazırlanıyor ürünleri (varsa)
-            if (processingProductsList.isNotEmpty) ...[
-              SizedBox(height: isSmallScreen ? 6 : 8),
-              Container(
-                padding: EdgeInsets.all(isSmallScreen ? 4 : 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.2),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          // Ana içerik
+          Padding(
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Üst kısım - İstatistikler
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.construction_rounded,
-                          color: Colors.white.withOpacity(0.9),
-                          size: isSmallScreen ? 10 : 12,
-                        ),
-                        SizedBox(width: isSmallScreen ? 2 : 3),
                         Text(
-                          'Şu an hazırlanıyor:',
+                          'Siparişlerim',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
-                            fontSize: isSmallScreen ? 8 : 10,
-                            fontWeight: FontWeight.w600,
+                            fontSize: isSmallScreen ? 12 : 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        SizedBox(height: isSmallScreen ? 2 : 4),
+                        Text(
+                          '$totalOrders Toplam',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isSmallScreen ? 18 : 24,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: isSmallScreen ? 3 : 4),
-                    Wrap(
-                      spacing: isSmallScreen ? 2 : 3,
-                      runSpacing: isSmallScreen ? 2 : 3,
-                      children: processingProductsList
-                          .map((product) => Container(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: isSmallScreen ? 3 : 4,
-                                    vertical: isSmallScreen ? 1 : 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(
-                                      isSmallScreen ? 3 : 4),
-                                ),
-                                child: Text(
-                                  product,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: isSmallScreen ? 7 : 9,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ))
-                          .toList(),
+                    Container(
+                      padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius:
+                            BorderRadius.circular(isSmallScreen ? 8 : 12),
+                      ),
+                      child: Icon(
+                        Icons.trending_up_rounded,
+                        color: Colors.white,
+                        size: isSmallScreen ? 20 : 24,
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ],
-          ],
-        ),
+                SizedBox(height: isSmallScreen ? 12 : 16),
+                // Alt kısım - Durum kartları
+                if (isSmallScreen)
+                  // Telefon için tek satır
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildCompactSummaryItem(
+                          'Bekliyor',
+                          waiting.toString(),
+                          Colors.orange,
+                          Icons.schedule_rounded,
+                          isSmallScreen,
+                        ),
+                      ),
+                      SizedBox(width: isSmallScreen ? 4 : 8),
+                      Expanded(
+                        child: _buildCompactSummaryItem(
+                          'Hazırlanıyor',
+                          processing.toString(),
+                          Colors.blue,
+                          Icons.kitchen_rounded,
+                          isSmallScreen,
+                        ),
+                      ),
+                      SizedBox(width: isSmallScreen ? 4 : 8),
+                      Expanded(
+                        child: _buildCompactSummaryItem(
+                          'Teslim',
+                          completed.toString(),
+                          Colors.green,
+                          Icons.check_circle_rounded,
+                          isSmallScreen,
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  // Tablet/büyük ekranlar için responsive grid
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Expanded(
+                        child: _buildCompactSummaryItem(
+                          'Bekleyen',
+                          waiting.toString(),
+                          Colors.orange,
+                          Icons.schedule_rounded,
+                          false,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildCompactSummaryItem(
+                          'Hazırlanan',
+                          processing.toString(),
+                          Colors.blue,
+                          Icons.kitchen_rounded,
+                          false,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildCompactSummaryItem(
+                          'Teslim',
+                          completed.toString(),
+                          Colors.green,
+                          Icons.check_circle_rounded,
+                          false,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                // Hazırlanan ürünler listesi (sadece varsa göster)
+                if (processingProductsList.isNotEmpty) ...[
+                  SizedBox(height: isSmallScreen ? 8 : 12),
+                  Container(
+                    padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius:
+                          BorderRadius.circular(isSmallScreen ? 6 : 8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Şu an hazırlananlar:',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: isSmallScreen ? 10 : 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        SizedBox(height: isSmallScreen ? 2 : 4),
+                        Text(
+                          processingProductsList.join(', '),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isSmallScreen ? 11 : 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

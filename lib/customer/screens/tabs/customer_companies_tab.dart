@@ -11,6 +11,8 @@ import 'package:siparis/services/partnership_service.dart';
 import 'package:siparis/models/order.dart';
 import 'package:siparis/services/company_service.dart';
 import 'package:siparis/providers/auth_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
 
 class CustomerCompaniesTab extends StatefulWidget {
   const CustomerCompaniesTab({super.key});
@@ -21,11 +23,131 @@ class CustomerCompaniesTab extends StatefulWidget {
 
 class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
   String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounceTimer;
+  List<Company>? _cachedCompanies;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _loadPartnerships();
+    // Provider verilerinin yüklenmesini beklemek için biraz gecikme
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadAndCacheCompanies();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadAndCacheCompanies() async {
+    try {
+      final companyProvider =
+          Provider.of<CompanyProvider>(context, listen: false);
+
+      // Önce direkt Firestore'dan kontrol et
+      await _testFirestoreConnection();
+
+      // Her durumda sample firmaları başlangıç olarak kullan
+      final sampleCompanies = companyProvider.activeCompanies;
+      List<Company> convertedCompanies = List.from(sampleCompanies);
+
+      print('DEBUG: Sample firmalar eklendi, sayı: ${sampleCompanies.length}');
+
+      // Eğer CompanyProvider'da Firebase veri yoksa, yüklemeyi dene
+      if (companyProvider.activeFirestoreCompanies.isEmpty) {
+        print('DEBUG: CompanyProvider boş, Firebase verileri yükleniyor...');
+        await companyProvider.loadFirestoreCompanies();
+      }
+
+      final firestoreCompanies = companyProvider.activeFirestoreCompanies;
+      print('DEBUG: Firebase firma sayısı: ${firestoreCompanies.length}');
+
+      // Firebase firmalarını sample firmalara ekle (duplicate olmadan)
+      for (var companyModel in firestoreCompanies) {
+        // Aynı ID'ye sahip firma var mı kontrol et
+        bool exists = convertedCompanies
+            .any((existing) => existing.id == companyModel.id);
+        if (!exists) {
+          await companyModel.loadProducts();
+          convertedCompanies.add(Company(
+            id: companyModel.id,
+            name: companyModel.name,
+            description: companyModel.description ?? '',
+            services: companyModel.categories ?? ['Genel'],
+            address: companyModel.address,
+            phone: companyModel.phone ?? '',
+            email: companyModel.email ?? '',
+            website: companyModel.website,
+            rating: 4.5,
+            totalProjects: 0,
+            products: companyModel.products,
+            isActive: companyModel.isActive,
+          ));
+        }
+      }
+
+      print(
+          'DEBUG: Toplam firma sayısı (sample + Firebase): ${convertedCompanies.length}');
+
+      // Her firmanın detaylarını logla
+      for (var company in convertedCompanies) {
+        print(
+            'DEBUG: Final Firma - ID: ${company.id}, Name: ${company.name}, Services: ${company.services}');
+      }
+
+      if (mounted) {
+        setState(() {
+          _cachedCompanies = convertedCompanies;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('DEBUG: Firma cache hatası: $e');
+
+      // Hata durumunda en azından sample firmaları göster
+      try {
+        final companyProvider =
+            Provider.of<CompanyProvider>(context, listen: false);
+        final sampleCompanies = companyProvider.activeCompanies;
+        print(
+            'DEBUG: Hata durumunda ${sampleCompanies.length} sample firma kullanılıyor');
+
+        if (mounted) {
+          setState(() {
+            _cachedCompanies = sampleCompanies;
+            _isLoading = false;
+          });
+        }
+      } catch (e2) {
+        print('DEBUG: Sample firmalar da yüklenemedi: $e2');
+        if (mounted) {
+          setState(() {
+            _cachedCompanies = [];
+            _isLoading = false;
+          });
+        }
+      }
+    }
+  }
+
+  void _onSearchChanged(String query) {
+    // Önceki timer'ı iptal et
+    _debounceTimer?.cancel();
+
+    // 500ms bekle, sonra arama yap (daha uzun süre)
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _searchQuery = query.toLowerCase().trim();
+        });
+      }
+    });
   }
 
   Future<void> _loadPartnerships() async {
@@ -45,741 +167,795 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
   Widget build(BuildContext context) {
     return Consumer2<CompanyProvider, WorkRequestProvider>(
       builder: (context, companyProvider, workRequestProvider, child) {
-        // Sadece Firebase firmalarını kullan (sample companies kaldırıldı)
-        final firestoreCompanies = companyProvider.activeFirestoreCompanies;
-
-        // Firebase firmalarını Company tipine dönüştür
-        Future<List<Company>> convertFirestoreCompanies() async {
-          List<Company> convertedCompanies = [];
-          for (var companyModel in firestoreCompanies) {
-            await companyModel.loadProducts(); // Ürünleri yükle
-            convertedCompanies.add(Company(
-              id: companyModel.id,
-              name: companyModel.name,
-              description: companyModel.description ?? '',
-              services: companyModel.categories ?? ['Genel'],
-              address: companyModel.address,
-              phone: companyModel.phone ?? '',
-              email: companyModel.email ?? '',
-              website: companyModel.website,
-              rating: 4.5, // Varsayılan rating
-              totalProjects: 0, // Varsayılan proje sayısı
-              products: companyModel.products,
-              isActive: companyModel.isActive,
-            ));
-          }
-          return convertedCompanies;
+        // Cache'den firma verilerini kullan, ama eğer cache boşsa ve provider'da veri varsa tekrar yükle
+        if (_isLoading) {
+          return const Scaffold(
+            backgroundColor: Color(0xFFF8FAFC),
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
-        return FutureBuilder<List<Company>>(
-          future: convertFirestoreCompanies(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+        // Eğer cache boş ama provider'da veri varsa, cache'i yenile
+        if ((_cachedCompanies == null || _cachedCompanies!.isEmpty) &&
+            companyProvider.activeFirestoreCompanies.isNotEmpty) {
+          print(
+              'DEBUG: Cache boş ama provider\'da veri var, yeniden yükleniyor...');
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _loadAndCacheCompanies();
+          });
+          return const Scaffold(
+            backgroundColor: Color(0xFFF8FAFC),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Firmalar yükleniyor...'),
+                ],
+              ),
+            ),
+          );
+        }
 
-            if (snapshot.hasError) {
-              print('DEBUG: Firma dönüştürme hatası: ${snapshot.error}');
-              return const Center(
-                  child: Text('Firmalar yüklenirken bir hata oluştu'));
-            }
+        if (_cachedCompanies == null || _cachedCompanies!.isEmpty) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF8FAFC),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.business_outlined,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Henüz firma bulunamadı',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Lütfen daha sonra tekrar deneyin',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _isLoading = true;
+                      });
+                      _loadAndCacheCompanies();
+                    },
+                    child: const Text('Yeniden Yükle'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
 
-            final convertedFirestoreCompanies = snapshot.data ?? [];
-            final partneredCompanyIds = workRequestProvider.partneredCompanies;
+        final convertedFirestoreCompanies = _cachedCompanies!;
+        final partneredCompanyIds = workRequestProvider.partneredCompanies;
 
-            // Debug log'ları
-            print('DEBUG: CustomerCompaniesTab build çağrıldı');
-            print(
-                'DEBUG: Firebase firma sayısı: ${convertedFirestoreCompanies.length}');
-            print('DEBUG: Partner firma ID\'leri: $partneredCompanyIds');
+        // Debug log'ları
+        print('DEBUG: CustomerCompaniesTab build çağrıldı');
+        print(
+            'DEBUG: Cache firma sayısı: ${convertedFirestoreCompanies.length}');
+        print('DEBUG: Partner firma ID\'leri: $partneredCompanyIds');
 
-            for (var company in convertedFirestoreCompanies) {
-              print(
-                  'DEBUG: Firebase Firma - ID: ${company.id}, Name: ${company.name}');
-            }
+        // İş ortağı firmaları - cache'den
+        final partneredFirestoreCompanies = convertedFirestoreCompanies
+            .where((company) => partneredCompanyIds.contains(company.id))
+            .toList();
 
-            // İş ortağı firmaları - sadece Firebase'den
-            final partneredFirestoreCompanies = convertedFirestoreCompanies
-                .where((company) => partneredCompanyIds.contains(company.id))
-                .toList();
+        final totalPartneredCompanies = partneredFirestoreCompanies.length;
 
-            final totalPartneredCompanies = partneredFirestoreCompanies.length;
+        print(
+            'DEBUG: Bulunan partner firma sayısı: ${partneredFirestoreCompanies.length}');
 
-            print(
-                'DEBUG: Bulunan Firebase partner firma sayısı: ${partneredFirestoreCompanies.length}');
-            print(
-                'DEBUG: Toplam partner firma sayısı: $totalPartneredCompanies');
+        // Diğer firmalar (iş ortağı olmayanlar) - cache'den
+        final otherFirestoreCompanies = convertedFirestoreCompanies
+            .where((company) => !partneredCompanyIds.contains(company.id))
+            .toList();
 
-            for (var company in partneredFirestoreCompanies) {
-              print(
-                  'DEBUG: Firebase Partner firma: ${company.name} (${company.id})');
-            }
+        final filteredOtherFirestoreCompanies =
+            _getFilteredCompanies(otherFirestoreCompanies);
 
-            // Diğer firmalar (iş ortağı olmayanlar) - sadece Firebase'den
-            final otherFirestoreCompanies = convertedFirestoreCompanies
-                .where((company) => !partneredCompanyIds.contains(company.id))
-                .toList();
+        // Responsive değerler
+        final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
-            final filteredOtherFirestoreCompanies =
-                _getFilteredCompanies(otherFirestoreCompanies);
-
-            return Scaffold(
-              backgroundColor: const Color(0xFFF8FAFC),
-              body: NestedScrollView(
-                headerSliverBuilder: (context, innerBoxIsScrolled) => [
-                  // Modern App Bar
-                  SliverAppBar(
-                    expandedHeight: 200,
-                    floating: false,
-                    pinned: true,
-                    backgroundColor: Colors.white,
-                    elevation: 0,
-                    flexibleSpace: FlexibleSpaceBar(
-                      background: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              AppTheme.primaryColor,
-                              AppTheme.primaryColor.withOpacity(0.8),
-                              const Color(0xFF1E40AF),
-                            ],
+        return Scaffold(
+          backgroundColor: const Color(0xFFF8FAFC),
+          body: NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) => [
+              // Modern App Bar - Responsive
+              SliverAppBar(
+                expandedHeight: isSmallScreen ? 160 : 200,
+                floating: false,
+                pinned: true,
+                backgroundColor: Colors.white,
+                elevation: 0,
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppTheme.primaryColor,
+                          AppTheme.primaryColor.withOpacity(0.8),
+                          const Color(0xFF1E40AF),
+                        ],
+                      ),
+                    ),
+                    child: Stack(
+                      children: [
+                        // Dekoratif elementler - Responsive
+                        Positioned(
+                          top: -20,
+                          right: -20,
+                          child: Container(
+                            width: isSmallScreen ? 100 : 150,
+                            height: isSmallScreen ? 100 : 150,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
                           ),
                         ),
-                        child: Stack(
-                          children: [
-                            // Dekoratif elementler
-                            Positioned(
-                              top: -20,
-                              right: -20,
-                              child: Container(
-                                width: 150,
-                                height: 150,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
+                        Positioned(
+                          bottom: -40,
+                          left: -40,
+                          child: Container(
+                            width: isSmallScreen ? 120 : 200,
+                            height: isSmallScreen ? 120 : 200,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.05),
+                              shape: BoxShape.circle,
                             ),
-                            Positioned(
-                              bottom: -40,
-                              left: -40,
-                              child: Container(
-                                width: 200,
-                                height: 200,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.05),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ),
-                            // İçerik
-                            SafeArea(
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                          ),
+                        ),
+                        // İçerik - Responsive
+                        SafeArea(
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(
+                                isSmallScreen ? 16 : 24,
+                                isSmallScreen ? 12 : 16,
+                                isSmallScreen ? 16 : 24,
+                                isSmallScreen ? 16 : 24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                Colors.white.withOpacity(0.2),
-                                            borderRadius:
-                                                BorderRadius.circular(16),
-                                          ),
-                                          child: const Icon(
-                                            Icons.storefront_rounded,
-                                            color: Colors.white,
-                                            size: 24,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        const Expanded(
-                                          child: Text(
-                                            'İş Ortaklarım',
-                                            style: TextStyle(
-                                              fontSize: 24,
-                                              fontWeight: FontWeight.w800,
-                                              color: Colors.white,
-                                              letterSpacing: -0.5,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const Spacer(),
                                     Container(
-                                      padding: const EdgeInsets.all(16),
+                                      padding: EdgeInsets.all(
+                                          isSmallScreen ? 8 : 12),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: Colors.white.withOpacity(0.2),
-                                          width: 1,
-                                        ),
+                                        color: Colors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(
+                                            isSmallScreen ? 12 : 16),
                                       ),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  '${totalPartneredCompanies} Aktif İş Ortağı',
-                                                  style: const TextStyle(
-                                                    fontSize: 20,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  'Güvenilir iş ortaklarınızla çalışın',
-                                                  style: TextStyle(
-                                                    fontSize: 13,
-                                                    color: Colors.white
-                                                        .withOpacity(0.8),
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  Colors.white.withOpacity(0.2),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: const Icon(
-                                              Icons.handshake_rounded,
-                                              color: Colors.white,
-                                              size: 24,
-                                            ),
-                                          ),
-                                        ],
+                                      child: Icon(
+                                        Icons.storefront_rounded,
+                                        color: Colors.white,
+                                        size: isSmallScreen ? 20 : 24,
+                                      ),
+                                    ),
+                                    SizedBox(width: isSmallScreen ? 12 : 16),
+                                    Expanded(
+                                      child: Text(
+                                        'İş Ortaklarım',
+                                        style: TextStyle(
+                                          fontSize: isSmallScreen ? 20 : 24,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
+                                          letterSpacing: -0.5,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-                body: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // İş Ortaklarım Bölümü
-                      if (totalPartneredCompanies > 0) ...[
-                        Container(
-                          color: Colors.white,
-                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  Icons.handshake_rounded,
-                                  color: Colors.green,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              const Text(
-                                'Aktif İş Ortaklarım',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1F2937),
-                                ),
-                              ),
-                              const Spacer(),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  '$totalPartneredCompanies',
-                                  style: const TextStyle(
-                                    color: Colors.green,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          color: Colors.white,
-                          height: 200,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            itemCount: totalPartneredCompanies,
-                            itemBuilder: (context, index) {
-                              final company =
-                                  partneredFirestoreCompanies[index];
-                              return _buildPartnerCompanyCard(company, index);
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-
-                      // Arama Bölümü
-                      Container(
-                        color: Colors.white,
-                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
+                                const Spacer(),
                                 Container(
-                                  padding: const EdgeInsets.all(8),
+                                  padding:
+                                      EdgeInsets.all(isSmallScreen ? 12 : 16),
                                   decoration: BoxDecoration(
-                                    color:
-                                        AppTheme.primaryColor.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
+                                    color: Colors.white.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(
+                                        isSmallScreen ? 16 : 20),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.2),
+                                      width: 1,
+                                    ),
                                   ),
-                                  child: Icon(
-                                    Icons.search_rounded,
-                                    color: AppTheme.primaryColor,
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                const Text(
-                                  'Yeni İş Ortakları Keşfedin',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF1F2937),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '${totalPartneredCompanies} Aktif İş Ortağı',
+                                              style: TextStyle(
+                                                fontSize:
+                                                    isSmallScreen ? 16 : 20,
+                                                fontWeight: FontWeight.w700,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                            SizedBox(
+                                                height: isSmallScreen ? 2 : 4),
+                                            Text(
+                                              'Güvenilir iş ortaklarınızla çalışın',
+                                              style: TextStyle(
+                                                fontSize:
+                                                    isSmallScreen ? 11 : 13,
+                                                color: Colors.white
+                                                    .withOpacity(0.8),
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: EdgeInsets.all(
+                                            isSmallScreen ? 8 : 12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.2),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.handshake_rounded,
+                                          color: Colors.white,
+                                          size: isSmallScreen ? 20 : 24,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
-                            Container(
-                              height: 56,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.03),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: TextFormField(
-                                initialValue: _searchQuery,
-                                onChanged: (value) {
-                                  if (mounted) {
-                                    setState(() {
-                                      _searchQuery = value.toLowerCase();
-                                    });
-                                  }
-                                },
-                                decoration: InputDecoration(
-                                  hintText: 'Firma veya ürün ara...',
-                                  hintStyle: TextStyle(
-                                    color: Colors.grey[500],
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.search_rounded,
-                                    color:
-                                        AppTheme.primaryColor.withOpacity(0.5),
-                                    size: 24,
-                                  ),
-                                  suffixIcon: _searchQuery.isNotEmpty
-                                      ? IconButton(
-                                          onPressed: () {
-                                            if (mounted) {
-                                              setState(() {
-                                                _searchQuery = '';
-                                              });
-                                            }
-                                          },
-                                          icon: Icon(
-                                            Icons.clear_rounded,
-                                            color: Colors.grey[400],
-                                            size: 20,
-                                          ),
-                                        )
-                                      : null,
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-
-                      // Tüm Firmalar Grid
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(24),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.85,
-                          mainAxisSpacing: 20,
-                          crossAxisSpacing: 20,
-                        ),
-                        itemCount: filteredOtherFirestoreCompanies.length,
-                        itemBuilder: (context, index) {
-                          final company =
-                              filteredOtherFirestoreCompanies[index];
-                          return _buildCompanyCard(company, index);
-                        },
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildPartnerCompanyCard(Company company, int index) {
-    return Container(
-      width: 160,
-      margin: const EdgeInsets.only(right: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.green.withOpacity(0.2),
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.green.withOpacity(0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        child: InkWell(
-          onTap: () => _navigateToPartnerCompanyDetail(company),
-          borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Partner Badge + Logo
-                Row(
-                  children: [
+            ],
+            body: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // İş Ortaklarım Bölümü - Horizontal List
+                  if (totalPartneredCompanies > 0) ...[
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      color: Colors.white,
+                      padding: EdgeInsets.fromLTRB(
+                          isSmallScreen ? 16 : 24,
+                          isSmallScreen ? 16 : 24,
+                          isSmallScreen ? 16 : 24,
+                          isSmallScreen ? 12 : 16),
                       child: Row(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.verified_rounded,
-                            color: Colors.green,
-                            size: 12,
-                          ),
-                          const SizedBox(width: 4),
-                          const Text(
-                            'Partner',
-                            style: TextStyle(
+                          Container(
+                            padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius:
+                                  BorderRadius.circular(isSmallScreen ? 8 : 12),
+                            ),
+                            child: Icon(
+                              Icons.handshake_rounded,
                               color: Colors.green,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
+                              size: isSmallScreen ? 16 : 20,
+                            ),
+                          ),
+                          SizedBox(width: isSmallScreen ? 8 : 12),
+                          Text(
+                            'Aktif İş Ortaklarım',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 16 : 18,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1F2937),
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isSmallScreen ? 8 : 12,
+                              vertical: isSmallScreen ? 4 : 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(
+                                  isSmallScreen ? 16 : 20),
+                            ),
+                            child: Text(
+                              '$totalPartneredCompanies',
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontSize: isSmallScreen ? 12 : 14,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const Spacer(),
+
+                    // Partner Firmalar - Horizontal Row Cards
                     Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.green,
-                            Colors.green.withOpacity(0.8),
+                      color: Colors.white,
+                      padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 16 : 24),
+                      child: Column(
+                        children: List.generate(
+                          totalPartneredCompanies,
+                          (index) {
+                            final company = partneredFirestoreCompanies[index];
+                            return Padding(
+                              padding: EdgeInsets.only(
+                                  bottom: isSmallScreen ? 12 : 16),
+                              child:
+                                  _buildHorizontalPartnerCard(company, index),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: isSmallScreen ? 16 : 24),
+                  ],
+
+                  // Modern Arama Barı
+                  Container(
+                    margin: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 16 : 24),
+                    padding:
+                        EdgeInsets.symmetric(vertical: isSmallScreen ? 16 : 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Arama başlığı
+                        Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    AppTheme.primaryColor,
+                                    AppTheme.primaryColor.withOpacity(0.8),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(
+                                    isSmallScreen ? 12 : 14),
+                              ),
+                              child: Icon(
+                                Icons.search_rounded,
+                                color: Colors.white,
+                                size: isSmallScreen ? 18 : 20,
+                              ),
+                            ),
+                            SizedBox(width: isSmallScreen ? 12 : 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Yeni Firmalar Keşfedin',
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 16 : 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF1F2937),
+                                    ),
+                                  ),
+                                  SizedBox(height: isSmallScreen ? 2 : 4),
+                                  Text(
+                                    'İş ortaklığı kurmak istediğiniz firmaları arayın',
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 12 : 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Text(
-                          company.name.substring(0, 2).toUpperCase(),
-                          style: const TextStyle(
+
+                        SizedBox(height: isSmallScreen ? 16 : 20),
+
+                        // Gelişmiş arama kutusu
+                        Container(
+                          decoration: BoxDecoration(
                             color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
+                            borderRadius:
+                                BorderRadius.circular(isSmallScreen ? 16 : 20),
+                            border: Border.all(
+                              color: _searchQuery.isNotEmpty
+                                  ? AppTheme.primaryColor.withOpacity(0.3)
+                                  : Colors.grey.withOpacity(0.2),
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _searchQuery.isNotEmpty
+                                    ? AppTheme.primaryColor.withOpacity(0.1)
+                                    : Colors.black.withOpacity(0.05),
+                                blurRadius: isSmallScreen ? 12 : 20,
+                                offset: Offset(0, isSmallScreen ? 4 : 8),
+                              ),
+                            ],
                           ),
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: _onSearchChanged,
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 14 : 16,
+                              color: const Color(0xFF1F2937),
+                              fontWeight: FontWeight.w500,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Firma adı, hizmet türü veya konum...',
+                              hintStyle: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: isSmallScreen ? 14 : 16,
+                                fontWeight: FontWeight.w400,
+                              ),
+                              prefixIcon: Container(
+                                padding:
+                                    EdgeInsets.all(isSmallScreen ? 12 : 14),
+                                child: Icon(
+                                  Icons.search_rounded,
+                                  color: _searchQuery.isNotEmpty
+                                      ? AppTheme.primaryColor
+                                      : Colors.grey[400],
+                                  size: isSmallScreen ? 20 : 22,
+                                ),
+                              ),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? Container(
+                                      margin: EdgeInsets.all(
+                                          isSmallScreen ? 8 : 10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[100],
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: IconButton(
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          _onSearchChanged('');
+                                        },
+                                        icon: Icon(
+                                          Icons.close_rounded,
+                                          color: Colors.grey[600],
+                                          size: isSmallScreen ? 18 : 20,
+                                        ),
+                                      ),
+                                    )
+                                  : null,
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: isSmallScreen ? 16 : 20,
+                                vertical: isSmallScreen ? 16 : 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Tüm Firmalar Grid - Sadece arama yapıldığında göster
+                  if (_searchQuery.isNotEmpty)
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 8 : 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Arama Sonuçları Başlığı
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isSmallScreen ? 8 : 12,
+                              vertical: isSmallScreen ? 8 : 12,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.search_rounded,
+                                  color: Colors.grey[600],
+                                  size: isSmallScreen ? 18 : 20,
+                                ),
+                                SizedBox(width: isSmallScreen ? 6 : 8),
+                                Text(
+                                  'Arama Sonuçları',
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 14 : 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                                SizedBox(width: isSmallScreen ? 6 : 8),
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: isSmallScreen ? 6 : 8,
+                                    vertical: isSmallScreen ? 2 : 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        AppTheme.primaryColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(
+                                        isSmallScreen ? 10 : 12),
+                                  ),
+                                  child: Text(
+                                    '${filteredOtherFirestoreCompanies.length}',
+                                    style: TextStyle(
+                                      color: AppTheme.primaryColor,
+                                      fontSize: isSmallScreen ? 11 : 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Arama Sonuçları Grid
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: filteredOtherFirestoreCompanies.length,
+                            itemBuilder: (context, index) {
+                              final company =
+                                  filteredOtherFirestoreCompanies[index];
+                              return Padding(
+                                padding: EdgeInsets.only(
+                                    bottom: isSmallScreen ? 12 : 16),
+                                child:
+                                    _buildHorizontalCompanyCard(company, index),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Arama yapılmadığında gösterilecek boş alan mesajı
+                  if (_searchQuery.isEmpty)
+                    Center(
+                      child: Container(
+                        padding: EdgeInsets.all(isSmallScreen ? 32 : 48),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.search_rounded,
+                                size: isSmallScreen ? 32 : 40,
+                                color: Colors.grey[400],
+                              ),
+                            ),
+                            SizedBox(height: isSmallScreen ? 16 : 20),
+                            Text(
+                              'Firma Ara',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 18 : 22,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.grey[700],
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            SizedBox(height: isSmallScreen ? 8 : 12),
+                            Text(
+                              'Yukarıdaki arama kutusunu kullanarak\nyeni firmalar keşfedin',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 13 : 15,
+                                color: Colors.grey[500],
+                                height: 1.4,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ],
-                ),
 
-                const SizedBox(height: 12),
-
-                // Company Name
-                Text(
-                  company.name,
-                  style: TextStyle(
-                    fontSize: MediaQuery.of(context).size.width < 600 ? 12 : 14,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1F2937),
-                    height: 1.2,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-
-                const SizedBox(height: 8),
-
-                // Service Type
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    company.services.first,
-                    style: const TextStyle(
-                      color: Colors.green,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-
-                const Spacer(),
-
-                // Rating
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.star_rounded,
-                      color: Color(0xFFFACC15),
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      company.rating.toString(),
-                      style: const TextStyle(
-                        color: Color(0xFFFACC15),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.arrow_forward_rounded,
-                        color: Colors.green,
-                        size: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                  SizedBox(height: isSmallScreen ? 24 : 32),
+                ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildCompanyCard(Company company, int index) {
+  Widget _buildHorizontalPartnerCard(Company company, int index) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
+        border: Border.all(
+          color: Colors.green,
+          width: 2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: _getCompanyColor(index).withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: isSmallScreen ? 8 : 12,
+            offset: Offset(0, isSmallScreen ? 2 : 4),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
         child: InkWell(
-          onTap: () => _navigateToCompanyDetail(company),
-          borderRadius: BorderRadius.circular(24),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          onTap: () => _navigateToPartnerCompanyDetail(company),
+          borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
+          child: Padding(
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            child: Row(
               children: [
-                // Logo Container
-                Container(
-                  width: double.infinity,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        _getCompanyColor(index),
-                        _getCompanyColor(index).withOpacity(0.8),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        top: -20,
-                        right: -20,
-                        child: Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
+                // Sol: Logo ve Partner Badge
+                Column(
+                  children: [
+                    // Partner Badge
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 4 : 6,
+                        vertical: isSmallScreen ? 1 : 2,
                       ),
-                      Center(
-                        child: Text(
-                          company.name.substring(0, 2).toUpperCase(),
-                          style: const TextStyle(
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius:
+                            BorderRadius.circular(isSmallScreen ? 6 : 8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.verified_rounded,
                             color: Colors.white,
-                            fontSize: 32,
+                            size: isSmallScreen ? 8 : 10,
+                          ),
+                          SizedBox(width: isSmallScreen ? 2 : 3),
+                          Text(
+                            'Partner',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: isSmallScreen ? 7 : 8,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: isSmallScreen ? 6 : 8),
+
+                    // Logo
+                    Container(
+                      width: isSmallScreen ? 35 : 40,
+                      height: isSmallScreen ? 35 : 40,
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius:
+                            BorderRadius.circular(isSmallScreen ? 8 : 10),
+                      ),
+                      child: Center(
+                        child: Text(
+                          company.name.length >= 2
+                              ? company.name.substring(0, 2).toUpperCase()
+                              : company.name.substring(0, 1).toUpperCase(),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isSmallScreen ? 12 : 14,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(width: isSmallScreen ? 12 : 16),
+
+                // Orta: Firma Bilgileri
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Firma Adı
+                      Text(
+                        company.name,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 14 : 16,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1F2937),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+
+                      SizedBox(height: isSmallScreen ? 3 : 4),
+
+                      // Hizmet Kategorisi
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 6 : 8,
+                          vertical: isSmallScreen ? 2 : 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius:
+                              BorderRadius.circular(isSmallScreen ? 6 : 8),
+                        ),
+                        child: Text(
+                          company.services.first,
+                          style: TextStyle(
+                            color: Colors.green.shade700,
+                            fontSize: isSmallScreen ? 9 : 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(height: isSmallScreen ? 4 : 6),
+
+                      // Açıklama
+                      Text(
+                        company.description,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 11 : 12,
+                          color: Colors.grey[600],
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                SizedBox(width: isSmallScreen ? 8 : 12),
 
-                // Company Info
-                Text(
-                  company.name,
-                  style: TextStyle(
-                    fontSize: MediaQuery.of(context).size.width < 600 ? 12 : 14,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1F2937),
-                    height: 1.2,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-
-                const SizedBox(height: 8),
-
-                // Service Type
+                // Sağ: Action Button
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
+                  width: isSmallScreen ? 32 : 36,
+                  height: isSmallScreen ? 32 : 36,
                   decoration: BoxDecoration(
-                    color: _getCompanyColor(index).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
                   ),
-                  child: Text(
-                    company.services.first,
-                    style: TextStyle(
-                      color: _getCompanyColor(index),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Colors.white,
+                    size: isSmallScreen ? 16 : 18,
                   ),
-                ),
-
-                const Spacer(),
-
-                // Stats Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildStatChip(
-                      Icons.star_rounded,
-                      company.rating.toString(),
-                      const Color(0xFFFACC15),
-                    ),
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: _getCompanyColor(index).withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.arrow_forward_rounded,
-                        color: _getCompanyColor(index),
-                        size: 18,
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -789,34 +965,144 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
     );
   }
 
-  Widget _buildStatChip(IconData icon, String text, Color color) {
+  Widget _buildHorizontalCompanyCard(Company company, int index) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 8,
-      ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: color,
-            size: 16,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              color: color,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
+        border: Border.all(
+          color: _getCompanyColor(index),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: isSmallScreen ? 8 : 12,
+            offset: Offset(0, isSmallScreen ? 2 : 4),
           ),
         ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
+        child: InkWell(
+          onTap: () => _navigateToCompanyDetail(company),
+          borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
+          child: Padding(
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            child: Row(
+              children: [
+                // Sol: Logo ve Kategori Badge
+                Column(
+                  children: [
+                    // Kategori Badge
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 4 : 6,
+                        vertical: isSmallScreen ? 1 : 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getCompanyColor(index),
+                        borderRadius:
+                            BorderRadius.circular(isSmallScreen ? 6 : 8),
+                      ),
+                      child: Text(
+                        company.services.first,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: isSmallScreen ? 7 : 8,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+
+                    SizedBox(height: isSmallScreen ? 6 : 8),
+
+                    // Logo
+                    Container(
+                      width: isSmallScreen ? 35 : 40,
+                      height: isSmallScreen ? 35 : 40,
+                      decoration: BoxDecoration(
+                        color: _getCompanyColor(index),
+                        borderRadius:
+                            BorderRadius.circular(isSmallScreen ? 8 : 10),
+                      ),
+                      child: Center(
+                        child: Text(
+                          company.name.length >= 2
+                              ? company.name.substring(0, 2).toUpperCase()
+                              : company.name.substring(0, 1).toUpperCase(),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isSmallScreen ? 12 : 14,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(width: isSmallScreen ? 12 : 16),
+
+                // Orta: Firma Bilgileri
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Firma Adı
+                      Text(
+                        company.name,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 14 : 16,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1F2937),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+
+                      SizedBox(height: isSmallScreen ? 4 : 6),
+
+                      // Açıklama
+                      Text(
+                        company.description,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 11 : 12,
+                          color: Colors.grey[600],
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(width: isSmallScreen ? 8 : 12),
+
+                // Sağ: Action Button
+                Container(
+                  width: isSmallScreen ? 32 : 36,
+                  height: isSmallScreen ? 32 : 36,
+                  decoration: BoxDecoration(
+                    color: _getCompanyColor(index),
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+                  ),
+                  child: Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Colors.white,
+                    size: isSmallScreen ? 16 : 18,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1450,5 +1736,43 @@ class _CustomerCompaniesTabState extends State<CustomerCompaniesTab> {
         transitionDuration: const Duration(milliseconds: 300),
       ),
     );
+  }
+
+  Future<void> _testFirestoreConnection() async {
+    try {
+      print('DEBUG: Direkt Firestore companies sorgusu yapılıyor...');
+      final firestore = FirebaseFirestore.instance;
+
+      // Tüm companies koleksiyonunu kontrol et
+      final snapshot = await firestore.collection('companies').get();
+      print(
+          'DEBUG: Firestore\'da toplam ${snapshot.docs.length} firma belgesi var');
+
+      // Aktif firmaları say
+      int activeCompanies = 0;
+      int producerCompanies = 0;
+      int customerCompanies = 0;
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final isActive = data['isActive'] ?? true;
+        final type = data['type'] ?? 'unknown';
+
+        if (isActive) {
+          activeCompanies++;
+          if (type == 'producer') producerCompanies++;
+          if (type == 'customer') customerCompanies++;
+        }
+
+        print(
+            'DEBUG: Firma - ID: ${doc.id}, Name: ${data['name']}, Type: $type, Active: $isActive');
+      }
+
+      print('DEBUG: Firestore - Toplam aktif firma: $activeCompanies');
+      print('DEBUG: Firestore - Producer firma: $producerCompanies');
+      print('DEBUG: Firestore - Customer firma: $customerCompanies');
+    } catch (e) {
+      print('DEBUG: Firestore bağlantı testi hatası: $e');
+    }
   }
 }

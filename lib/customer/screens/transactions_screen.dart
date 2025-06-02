@@ -197,7 +197,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
             // Gerçek Firebase siparişleri
             ...customerOrders.map((order) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildRealOrderCard(order),
+                  child: _buildOrderCard(order),
                 )),
 
             // Eğer hiç sipariş yoksa boş durum mesajı
@@ -237,158 +237,125 @@ class _TransactionsScreenState extends State<TransactionsScreen>
     );
   }
 
-  // Gerçek Firebase siparişi için kart
-  Widget _buildRealOrderCard(Order order) {
+  Widget _buildOrderCard(Order order) {
+    final formatter = DateFormat('d MMM', 'tr_TR');
+    final remainingAmount = order.totalAmount - (order.paidAmount ?? 0.0);
+    final isPaid = remainingAmount <= 0;
+    final companyName = order.customer.name.replaceFirst('Müşteri → ', '');
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
-    final formatter = DateFormat('d MMMM yyyy', 'tr_TR');
-    final statusText = _getStatusText(order.status);
-    final statusColor = _getStatusColor(order.status);
-    final paymentStatusText = _getPaymentStatusText(order.paymentStatus);
-    final paymentColor = _getPaymentStatusColor(order.paymentStatus);
+    final companyInitials = companyName.length >= 2
+        ? companyName.substring(0, 2).toUpperCase()
+        : companyName.toUpperCase();
 
-    // ✅ Üretici firma adını çıkar
-    String companyName = 'Bilinmeyen Firma';
+    // Durum rengini belirle
+    Color statusColor = isPaid ? Colors.green : Colors.orange;
+    if (order.status == OrderStatus.waiting) statusColor = Colors.blue;
+    if (order.status == OrderStatus.processing) statusColor = Colors.purple;
+    if (order.status == OrderStatus.cancelled) statusColor = Colors.red;
 
-    // Önce yeni producerCompanyName alanını kontrol et
-    if (order.producerCompanyName != null &&
-        order.producerCompanyName!.isNotEmpty) {
-      companyName = order.producerCompanyName!;
-    } else if (order.note != null &&
-        order.note!.contains('🏭 Üretici Firma:')) {
-      // Note'tan üretici firma adını çıkarmaya çalış
-      final noteLines = order.note!.split('\n');
-      for (final line in noteLines) {
-        if (line.contains('🏭 Üretici Firma:')) {
-          companyName = line.split('🏭 Üretici Firma:').last.trim();
-          break;
-        }
-      }
-    } else {
-      // Fallback: Müşteri adından "Müşteri → " kısmını çıkar
-      companyName = order.customer.name.replaceFirst('Müşteri → ', '');
-    }
-
-    // Debug: Firma adı çıkarma işlemini kontrol et
-    print('🔍 TransactionsScreen Debug:');
-    print('   Üretici firma adı: ${order.producerCompanyName}');
-    print('   Çıkarılan firma: $companyName');
-    print('   Not: ${order.note}');
-
-    // Ürün listesi oluştur
-    final items = order.items
-        .map((item) => '${item.product.name} x${item.quantity}')
-        .toList();
-
-    return InkWell(
-      onTap: () => _showRealOrderDetails(order),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: isSmallScreen ? 6 : 8,
-              offset: Offset(0, isSmallScreen ? 2 : 3),
-            ),
-          ],
-          border: Border.all(
-            color: Colors.grey[100]!,
-            width: 1,
+    return Container(
+      margin: EdgeInsets.only(bottom: isSmallScreen ? 6 : 12),
+      padding: EdgeInsets.all(isSmallScreen ? 8 : 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: isSmallScreen ? 4 : 10,
+            offset: Offset(0, isSmallScreen ? 1 : 4),
           ),
+        ],
+        border: Border.all(
+          color: statusColor,
+          width: 2,
         ),
-        child: Padding(
-          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showRealOrderDetails(order),
+          borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 16),
           child: Column(
             children: [
-              // Üst Kısım - Firma ve Sipariş Bilgileri
+              // Üst kısım - Şirket bilgileri ve tutar
               Row(
                 children: [
-                  // Firma Avatar
+                  // Avatar - Daha kompakt
                   Container(
-                    width: isSmallScreen ? 36 : 44,
-                    height: isSmallScreen ? 36 : 44,
+                    width: isSmallScreen ? 24 : 32,
+                    height: isSmallScreen ? 24 : 32,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          AppTheme.primaryColor.withOpacity(0.1),
-                          AppTheme.primaryColor.withOpacity(0.05),
+                          AppTheme.primaryColor,
+                          AppTheme.primaryColor.withOpacity(0.8),
                         ],
                       ),
                       borderRadius:
-                          BorderRadius.circular(isSmallScreen ? 10 : 12),
+                          BorderRadius.circular(isSmallScreen ? 6 : 8),
                     ),
                     child: Center(
                       child: Text(
-                        companyName.length >= 2
-                            ? companyName.substring(0, 2).toUpperCase()
-                            : companyName.toUpperCase(),
+                        companyInitials,
                         style: TextStyle(
-                          color: AppTheme.primaryColor,
-                          fontSize: isSmallScreen ? 14 : 16,
+                          color: Colors.white,
+                          fontSize: isSmallScreen ? 8 : 12,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
                   ),
-                  SizedBox(width: isSmallScreen ? 8 : 12),
-                  // Sipariş Bilgileri
+                  SizedBox(width: isSmallScreen ? 6 : 8),
+
+                  // Şirket ve sipariş bilgileri - Kompakt
                   Expanded(
+                    flex: 3,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Firma ismini büyük ve öne çıkan şekilde göster
                         Text(
                           companyName,
                           style: TextStyle(
-                            fontSize: isSmallScreen ? 14 : 18,
-                            fontWeight: FontWeight.w800,
+                            fontSize: isSmallScreen ? 10 : 12,
+                            fontWeight: FontWeight.w700,
                             color: const Color(0xFF1F2937),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        SizedBox(height: isSmallScreen ? 4 : 6),
+                        SizedBox(height: isSmallScreen ? 1 : 2),
                         Row(
                           children: [
+                            Text(
+                              formatter.format(order.orderDate),
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 8 : 10,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            SizedBox(width: isSmallScreen ? 2 : 4),
                             Container(
                               padding: EdgeInsets.symmetric(
-                                horizontal: isSmallScreen ? 6 : 8,
-                                vertical: isSmallScreen ? 2 : 3,
+                                horizontal: isSmallScreen ? 2 : 4,
+                                vertical: isSmallScreen ? 0 : 1,
                               ),
                               decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.1),
+                                color: isPaid
+                                    ? Colors.green.withOpacity(0.1)
+                                    : Colors.orange.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(
-                                    isSmallScreen ? 6 : 8),
+                                    isSmallScreen ? 4 : 6),
                               ),
                               child: Text(
-                                statusText,
+                                isPaid ? 'Ödendi' : 'Bekliyor',
                                 style: TextStyle(
-                                  color: statusColor,
-                                  fontSize: isSmallScreen ? 10 : 12,
+                                  fontSize: isSmallScreen ? 7 : 8,
+                                  color: isPaid ? Colors.green : Colors.orange,
                                   fontWeight: FontWeight.w600,
                                 ),
-                              ),
-                            ),
-                            SizedBox(width: isSmallScreen ? 8 : 12),
-                            Icon(
-                              Icons.calendar_today,
-                              size: isSmallScreen ? 12 : 14,
-                              color: Colors.grey[500],
-                            ),
-                            SizedBox(width: isSmallScreen ? 3 : 4),
-                            Expanded(
-                              child: Text(
-                                formatter.format(order.orderDate),
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 11 : 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.grey[600],
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -396,144 +363,144 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                       ],
                     ),
                   ),
-                  // Fiyat ve Ödeme Durumu
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        order.totalAmount >= 1000
-                            ? '₺${(order.totalAmount / 1000).toStringAsFixed(order.totalAmount % 1000 == 0 ? 0 : 1)}K'
-                            : '₺${order.totalAmount.toStringAsFixed(0)}',
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 14 : 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                      SizedBox(height: isSmallScreen ? 1 : 2),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isSmallScreen ? 4 : 6,
-                          vertical: isSmallScreen ? 1 : 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: paymentColor.withOpacity(0.1),
-                          borderRadius:
-                              BorderRadius.circular(isSmallScreen ? 4 : 6),
-                        ),
-                        child: Text(
-                          paymentStatusText,
+
+                  // Tutar kısmı - Kompakt
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          order.totalAmount >= 1000
+                              ? '₺${(order.totalAmount / 1000).toStringAsFixed(order.totalAmount % 1000 == 0 ? 0 : 1)}K'
+                              : '₺${order.totalAmount.toStringAsFixed(0)}',
                           style: TextStyle(
-                            color: paymentColor,
-                            fontSize: isSmallScreen ? 8 : 10,
-                            fontWeight: FontWeight.w600,
+                            fontSize: isSmallScreen ? 10 : 12,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.primaryColor,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                        if (!isPaid) ...[
+                          SizedBox(height: isSmallScreen ? 1 : 2),
+                          Text(
+                            'Kalan: ${remainingAmount >= 1000 ? '₺${(remainingAmount / 1000).toStringAsFixed(remainingAmount % 1000 == 0 ? 0 : 1)}K' : '₺${remainingAmount.toStringAsFixed(0)}'}',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 7 : 9,
+                              color: Colors.orange[700],
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ],
               ),
-              SizedBox(height: isSmallScreen ? 8 : 12),
-              // Ürün Listesi - Kompakt
+
+              SizedBox(height: isSmallScreen ? 4 : 6),
+
+              // Ürünler - Çok kompakt gösterim
               Container(
-                padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+                width: double.infinity,
+                padding: EdgeInsets.all(isSmallScreen ? 4 : 6),
                 decoration: BoxDecoration(
                   color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 4 : 6),
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // İlk 2 ürünü göster (telefonda 1 ürün)
-                    ...items.take(isSmallScreen ? 1 : 2).map(
-                          (item) => Padding(
-                            padding:
-                                EdgeInsets.only(bottom: isSmallScreen ? 4 : 6),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    color:
-                                        AppTheme.primaryColor.withOpacity(0.6),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    item,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF1F2937),
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                    // Eğer daha fazla ürün varsa göster
-                    if (items.length > (isSmallScreen ? 1 : 2))
-                      Row(
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[400],
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '+${items.length - (isSmallScreen ? 1 : 2)} ürün daha',
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 10 : 12,
-                              color: Colors.grey[600],
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
+                    Text(
+                      'Ürünler:',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 7 : 9,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[700],
                       ),
+                    ),
+                    SizedBox(height: isSmallScreen ? 1 : 2),
+                    Wrap(
+                      spacing: isSmallScreen ? 2 : 4,
+                      runSpacing: isSmallScreen ? 1 : 2,
+                      children: [
+                        // Telefonda sadece 1 ürün göster
+                        ...order.items.take(isSmallScreen ? 1 : 2).map(
+                              (item) => Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isSmallScreen ? 2 : 4,
+                                  vertical: isSmallScreen ? 0 : 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(
+                                      isSmallScreen ? 4 : 6),
+                                ),
+                                child: Text(
+                                  '${item.product.name} x${item.quantity}',
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 7 : 8,
+                                    color: AppTheme.primaryColor,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        // Eğer daha fazla ürün varsa göster
+                        if (order.items.length > (isSmallScreen ? 1 : 2))
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isSmallScreen ? 2 : 4,
+                              vertical: isSmallScreen ? 0 : 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius:
+                                  BorderRadius.circular(isSmallScreen ? 4 : 6),
+                            ),
+                            child: Text(
+                              '+${order.items.length - (isSmallScreen ? 1 : 2)}',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 7 : 8,
+                                color: Colors.grey[700],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 12 : 16),
-              // Alt Kısım - Ödeme Özeti
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildPaymentSummaryItem(
-                      'Ödenen',
-                      order.paidAmount ?? 0.0,
-                      Colors.green,
-                      Icons.check_circle_outline,
+
+              // Ödeme özeti - Daha kompakt
+              if (!isPaid) ...[
+                SizedBox(height: isSmallScreen ? 4 : 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildPaymentSummaryItem(
+                        'Ödenen',
+                        order.paidAmount ?? 0.0,
+                        Colors.green,
+                        Icons.check_circle_rounded,
+                      ),
                     ),
-                  ),
-                  Container(
-                    width: 1,
-                    height: 24,
-                    color: Colors.grey[200],
-                    margin: const EdgeInsets.symmetric(horizontal: 12),
-                  ),
-                  Expanded(
-                    child: _buildPaymentSummaryItem(
-                      'Kalan',
-                      order.totalAmount - (order.paidAmount ?? 0.0),
-                      (order.totalAmount - (order.paidAmount ?? 0.0)) > 0
-                          ? Colors.orange
-                          : Colors.green,
-                      (order.totalAmount - (order.paidAmount ?? 0.0)) > 0
-                          ? Icons.pending_outlined
-                          : Icons.check_circle_outline,
+                    SizedBox(width: isSmallScreen ? 4 : 8),
+                    Expanded(
+                      child: _buildPaymentSummaryItem(
+                        'Kalan',
+                        remainingAmount,
+                        Colors.orange,
+                        Icons.pending_rounded,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -637,32 +604,38 @@ class _TransactionsScreenState extends State<TransactionsScreen>
       children: [
         Icon(
           icon,
-          size: isSmallScreen ? 14 : 16,
+          size: isSmallScreen ? 12 : 16,
           color: color,
         ),
-        SizedBox(width: isSmallScreen ? 4 : 6),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: isSmallScreen ? 9 : 11,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
+        SizedBox(width: isSmallScreen ? 3 : 6),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 8 : 11,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            Text(
-              amount >= 1000
-                  ? '₺${(amount / 1000).toStringAsFixed(amount % 1000 == 0 ? 0 : 1)}K'
-                  : '₺${amount.toStringAsFixed(0)}',
-              style: TextStyle(
-                fontSize: isSmallScreen ? 12 : 13,
-                fontWeight: FontWeight.w700,
-                color: color,
+              Text(
+                amount >= 1000
+                    ? '₺${(amount / 1000).toStringAsFixed(amount % 1000 == 0 ? 0 : 1)}K'
+                    : '₺${amount.toStringAsFixed(0)}',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 10 : 13,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -1100,7 +1073,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
             // Gerçek firma borç kartları
             ...companyDebts.values.map((companyInfo) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildRealCompanyDebtCard(companyInfo),
+                  child: _buildDebtCard(companyInfo),
                 )),
 
             // Eğer hiç firma borcu yoksa boş durum mesajı
@@ -1142,195 +1115,218 @@ class _TransactionsScreenState extends State<TransactionsScreen>
   }
 
   // Gerçek firma borç kartı
-  Widget _buildRealCompanyDebtCard(CompanyDebtInfo companyInfo) {
+  Widget _buildDebtCard(CompanyDebtInfo companyInfo) {
+    final formatter = DateFormat('d MMM', 'tr_TR');
     final remainingDebt = companyInfo.totalDebt - companyInfo.paidAmount;
     final isPaid = remainingDebt <= 0;
-    final formatter = DateFormat('d MMMM yyyy', 'tr_TR');
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
-    return InkWell(
-      onTap: () => _showRealCompanyDebtDetails(companyInfo),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-          border: Border.all(
-            color: isPaid ? Colors.green[100]! : Colors.orange[100]!,
-            width: 1,
+    // Durum rengini belirle
+    Color statusColor = isPaid ? Colors.green : Colors.orange;
+    if (remainingDebt > 0) statusColor = Colors.orange[700]!;
+    if (remainingDebt < 0) statusColor = Colors.green[700]!;
+
+    return Container(
+      margin: EdgeInsets.only(bottom: isSmallScreen ? 6 : 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: isSmallScreen ? 4 : 10,
+            offset: Offset(0, isSmallScreen ? 1 : 4),
           ),
+        ],
+        border: Border.all(
+          color: statusColor,
+          width: 2,
         ),
-        child: Column(
-          children: [
-            // Üst Kısım
-            Container(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      // Firma Avatar
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              isPaid ? Colors.green[100]! : Colors.orange[100]!,
-                              isPaid ? Colors.green[50]! : Colors.orange[50]!,
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(14),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showRealCompanyDebtDetails(companyInfo),
+          borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 16),
+          child: Column(
+            children: [
+              // Ana içerik - Daha kompakt
+              Container(
+                padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+                child: Row(
+                  children: [
+                    // Avatar - Daha kompakt
+                    Container(
+                      width: isSmallScreen ? 24 : 32,
+                      height: isSmallScreen ? 24 : 32,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppTheme.primaryColor,
+                            AppTheme.primaryColor.withOpacity(0.8),
+                          ],
                         ),
-                        child: Center(
-                          child: Text(
-                            companyInfo.companyName.length >= 2
-                                ? companyInfo.companyName
-                                    .substring(0, 2)
-                                    .toUpperCase()
-                                : companyInfo.companyName.toUpperCase(),
-                            style: TextStyle(
-                              color: isPaid
-                                  ? Colors.green[700]
-                                  : Colors.orange[700],
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                            ),
+                        borderRadius:
+                            BorderRadius.circular(isSmallScreen ? 6 : 8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          companyInfo.companyName.length >= 2
+                              ? companyInfo.companyName
+                                  .substring(0, 2)
+                                  .toUpperCase()
+                              : companyInfo.companyName.toUpperCase(),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isSmallScreen ? 8 : 12,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      // Firma Bilgileri
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              companyInfo.companyName,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF1F2937),
-                              ),
+                    ),
+                    SizedBox(width: isSmallScreen ? 6 : 8),
+
+                    // Firma bilgileri - Kompakt
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            companyInfo.companyName,
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 10 : 12,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1F2937),
                             ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isPaid
-                                        ? Colors.green.withOpacity(0.1)
-                                        : Colors.orange.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        isPaid
-                                            ? Icons.check_circle_rounded
-                                            : Icons.pending_rounded,
-                                        color: isPaid
-                                            ? Colors.green
-                                            : Colors.orange,
-                                        size: 12,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        isPaid ? 'Ödendi' : 'Bekliyor',
-                                        style: TextStyle(
-                                          color: isPaid
-                                              ? Colors.green
-                                              : Colors.orange,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Son Ödeme: ${formatter.format(companyInfo.lastPaymentDate)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: isSmallScreen ? 1 : 2),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  '${companyInfo.orderCount} sipariş',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: isSmallScreen ? 8 : 10,
                                     color: Colors.grey[600],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Toplam Borç
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '₺${companyInfo.totalDebt.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: AppTheme.primaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${companyInfo.orderCount} sipariş',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
+                              ),
+                              SizedBox(width: isSmallScreen ? 2 : 4),
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isSmallScreen ? 2 : 4,
+                                  vertical: isSmallScreen ? 0 : 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isPaid
+                                      ? Colors.green.withOpacity(0.1)
+                                      : Colors.orange.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(
+                                      isSmallScreen ? 4 : 6),
+                                ),
+                                child: Text(
+                                  isPaid ? 'Ödendi' : 'Bekliyor',
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 7 : 8,
+                                    color:
+                                        isPaid ? Colors.green : Colors.orange,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            // Alt Kısım - Ödeme Detayları
-            if (!isPaid) ...[
-              Container(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildDebtStat(
-                          'Toplam',
-                          '₺${companyInfo.totalDebt.toStringAsFixed(2)}',
-                          Icons.account_balance_wallet_rounded,
-                        ),
-                        _buildDebtStat(
-                          'Ödenen',
-                          '₺${companyInfo.paidAmount.toStringAsFixed(2)}',
-                          Icons.check_circle_rounded,
-                        ),
-                        _buildDebtStat(
-                          'Kalan',
-                          '₺${remainingDebt.toStringAsFixed(2)}',
-                          Icons.pending_rounded,
-                        ),
-                      ],
+                    ),
+
+                    // Borç tutarı - Kompakt
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            remainingDebt >= 1000
+                                ? '₺${(remainingDebt / 1000).toStringAsFixed(remainingDebt % 1000 == 0 ? 0 : 1)}K'
+                                : '₺${remainingDebt.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 10 : 14,
+                              fontWeight: FontWeight.w800,
+                              color: remainingDebt > 0
+                                  ? Colors.orange[700]
+                                  : Colors.green[700],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: isSmallScreen ? 1 : 2),
+                          Text(
+                            'Kalan Borç',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 7 : 9,
+                              color: Colors.grey[600],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
+
+              // Alt Kısım - Ödeme Detayları (sadece ödenmemişler için)
+              if (!isPaid) ...[
+                Container(
+                  padding: EdgeInsets.fromLTRB(isSmallScreen ? 8 : 12, 0,
+                      isSmallScreen ? 8 : 12, isSmallScreen ? 8 : 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildDebtStat(
+                          'Toplam',
+                          companyInfo.totalDebt >= 1000
+                              ? '₺${(companyInfo.totalDebt / 1000).toStringAsFixed(companyInfo.totalDebt % 1000 == 0 ? 0 : 1)}K'
+                              : '₺${companyInfo.totalDebt.toStringAsFixed(0)}',
+                          Icons.account_balance_wallet_rounded,
+                          isSmallScreen,
+                        ),
+                      ),
+                      SizedBox(width: isSmallScreen ? 4 : 8),
+                      Expanded(
+                        child: _buildDebtStat(
+                          'Ödenen',
+                          companyInfo.paidAmount >= 1000
+                              ? '₺${(companyInfo.paidAmount / 1000).toStringAsFixed(companyInfo.paidAmount % 1000 == 0 ? 0 : 1)}K'
+                              : '₺${companyInfo.paidAmount.toStringAsFixed(0)}',
+                          Icons.check_circle_rounded,
+                          isSmallScreen,
+                        ),
+                      ),
+                      SizedBox(width: isSmallScreen ? 4 : 8),
+                      Expanded(
+                        child: _buildDebtStat(
+                          'Kalan',
+                          remainingDebt >= 1000
+                              ? '₺${(remainingDebt / 1000).toStringAsFixed(remainingDebt % 1000 == 0 ? 0 : 1)}K'
+                              : '₺${remainingDebt.toStringAsFixed(0)}',
+                          Icons.pending_rounded,
+                          isSmallScreen,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -1753,35 +1749,43 @@ class _TransactionsScreenState extends State<TransactionsScreen>
   // Ödeme detay item'ı
   Widget _buildPaymentDetailItem(
       String label, double amount, Color color, IconData icon) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
       ),
       child: Column(
         children: [
           Icon(
             icon,
             color: color,
-            size: 16,
+            size: isSmallScreen ? 12 : 16,
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: isSmallScreen ? 2 : 4),
           Text(
-            '₺${amount.toStringAsFixed(2)}',
+            amount >= 1000
+                ? '₺${(amount / 1000).toStringAsFixed(amount % 1000 == 0 ? 0 : 1)}K'
+                : '₺${amount.toStringAsFixed(0)}',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: isSmallScreen ? 9 : 12,
               fontWeight: FontWeight.w700,
               color: color,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           Text(
             label,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: isSmallScreen ? 7 : 10,
               color: color.withOpacity(0.8),
               fontWeight: FontWeight.w500,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -1790,30 +1794,37 @@ class _TransactionsScreenState extends State<TransactionsScreen>
 
   Widget _buildCompactPaymentStat(
       String label, String value, IconData icon, bool isSmallScreen) {
-    return Column(
-      children: [
-        Icon(
-          icon,
-          color: Colors.white.withOpacity(0.9),
-          size: isSmallScreen ? 14 : 16,
-        ),
-        SizedBox(height: isSmallScreen ? 2 : 4),
-        Text(
-          value,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: isSmallScreen ? 11 : 13,
-            fontWeight: FontWeight.w700,
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            color: Colors.white.withOpacity(0.9),
+            size: isSmallScreen ? 12 : 16,
           ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.7),
-            fontSize: isSmallScreen ? 8 : 10,
+          SizedBox(height: isSmallScreen ? 1 : 4),
+          Text(
+            value,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: isSmallScreen ? 9 : 13,
+              fontWeight: FontWeight.w700,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-        ),
-      ],
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.7),
+              fontSize: isSmallScreen ? 7 : 10,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 
@@ -1952,39 +1963,50 @@ class _TransactionsScreenState extends State<TransactionsScreen>
   }
 
   // Borç istatistik widget'ı
-  Widget _buildDebtStat(String label, String value, IconData icon) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
+  Widget _buildDebtStat(
+      String label, String value, IconData icon, bool isSmallScreen) {
+    final color = label == 'Toplam'
+        ? Colors.blue
+        : label == 'Ödenen'
+            ? Colors.green
+            : Colors.orange;
+
+    return Container(
+      padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
+      ),
+      child: Column(
+        children: [
+          Icon(
             icon,
-            color: AppTheme.primaryColor,
-            size: 20,
+            color: color,
+            size: isSmallScreen ? 12 : 16,
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1F2937),
+          SizedBox(height: isSmallScreen ? 2 : 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: isSmallScreen ? 9 : 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: isSmallScreen ? 7 : 9,
+              color: color.withOpacity(0.8),
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

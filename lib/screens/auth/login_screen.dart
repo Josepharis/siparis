@@ -135,16 +135,19 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildRoleSelector() {
+    // Responsive boyutlar
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            blurRadius: isSmallScreen ? 6 : 10,
+            offset: Offset(0, isSmallScreen ? 2 : 4),
           ),
         ],
       ),
@@ -152,18 +155,19 @@ class _LoginScreenState extends State<LoginScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: EdgeInsets.all(isSmallScreen ? 12.0 : 16.0),
             child: Row(
               children: [
                 Icon(
                   Icons.business,
                   color: AppTheme.primaryColor,
+                  size: isSmallScreen ? 18 : 20,
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: isSmallScreen ? 8 : 12),
                 Text(
                   'Giriş Türü',
                   style: GoogleFonts.poppins(
-                    fontSize: 16,
+                    fontSize: isSmallScreen ? 14 : 16,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF1A1A1A),
                   ),
@@ -172,14 +176,16 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            padding:
+                EdgeInsets.symmetric(horizontal: isSmallScreen ? 4.0 : 8.0),
             child: Row(
               children: [
                 Expanded(
                   child: Container(
-                    margin: const EdgeInsets.all(8),
+                    margin: EdgeInsets.all(isSmallScreen ? 4 : 8),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius:
+                          BorderRadius.circular(isSmallScreen ? 8 : 12),
                       border: Border.all(
                         color: _selectedRole == UserRole.producer
                             ? AppTheme.primaryColor
@@ -208,17 +214,19 @@ class _LoginScreenState extends State<LoginScreen> {
                                 color: _selectedRole == UserRole.producer
                                     ? AppTheme.primaryColor
                                     : Colors.grey,
-                                size: 20,
+                                size: isSmallScreen ? 16 : 20,
                               ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Üretici',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: _selectedRole == UserRole.producer
-                                      ? AppTheme.primaryColor
-                                      : const Color(0xFF1A1A1A),
+                              SizedBox(width: isSmallScreen ? 4 : 8),
+                              Flexible(
+                                child: Text(
+                                  'Üretici',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: isSmallScreen ? 12 : 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: _selectedRole == UserRole.producer
+                                        ? AppTheme.primaryColor
+                                        : const Color(0xFF1A1A1A),
+                                  ),
                                 ),
                               ),
                             ],
@@ -226,15 +234,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                       activeColor: AppTheme.primaryColor,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                      contentPadding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 4 : 8),
+                      dense: isSmallScreen,
                     ),
                   ),
                 ),
                 Expanded(
                   child: Container(
-                    margin: const EdgeInsets.all(8),
+                    margin: EdgeInsets.all(isSmallScreen ? 4 : 8),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius:
+                          BorderRadius.circular(isSmallScreen ? 8 : 12),
                       border: Border.all(
                         color: _selectedRole == UserRole.customer
                             ? AppTheme.primaryColor
@@ -263,17 +274,19 @@ class _LoginScreenState extends State<LoginScreen> {
                                 color: _selectedRole == UserRole.customer
                                     ? AppTheme.primaryColor
                                     : Colors.grey,
-                                size: 20,
+                                size: isSmallScreen ? 16 : 20,
                               ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Müşteri',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: _selectedRole == UserRole.customer
-                                      ? AppTheme.primaryColor
-                                      : const Color(0xFF1A1A1A),
+                              SizedBox(width: isSmallScreen ? 4 : 8),
+                              Flexible(
+                                child: Text(
+                                  'Müşteri',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: isSmallScreen ? 12 : 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: _selectedRole == UserRole.customer
+                                        ? AppTheme.primaryColor
+                                        : const Color(0xFF1A1A1A),
+                                  ),
                                 ),
                               ),
                             ],
@@ -281,14 +294,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                       activeColor: AppTheme.primaryColor,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                      contentPadding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 4 : 8),
+                      dense: isSmallScreen,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isSmallScreen ? 6 : 8),
         ],
       ),
     );
@@ -299,9 +314,10 @@ class _LoginScreenState extends State<LoginScreen> {
     final screenSize = MediaQuery.of(context).size;
     final screenWidth = screenSize.width;
     final screenHeight = screenSize.height;
-    final isSmallScreen = screenHeight < 700;
+    final isSmallScreen = screenWidth < 600;
+    final isVerySmallScreen = screenHeight < 700;
     final isTablet = screenWidth > 600;
-    final padding = isTablet ? 48.0 : 24.0;
+    final padding = isSmallScreen ? 16.0 : (isTablet ? 48.0 : 24.0);
 
     return Scaffold(
       body: Container(
@@ -329,7 +345,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(height: isSmallScreen ? 20 : 40),
+                    SizedBox(
+                        height:
+                            isVerySmallScreen ? 10 : (isSmallScreen ? 20 : 40)),
 
                     // Logo ve başlık
                     Center(
@@ -337,13 +355,20 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           Image.asset(
                             'assets/images/logo.png',
-                            height: isSmallScreen ? 80 : 100,
+                            height: isVerySmallScreen
+                                ? 60
+                                : (isSmallScreen ? 70 : 100),
                           ),
-                          SizedBox(height: isSmallScreen ? 16 : 24),
+                          SizedBox(
+                              height: isVerySmallScreen
+                                  ? 12
+                                  : (isSmallScreen ? 16 : 24)),
                           Text(
                             'Hoş Geldiniz',
                             style: GoogleFonts.poppins(
-                              fontSize: isSmallScreen ? 24 : 32,
+                              fontSize: isVerySmallScreen
+                                  ? 20
+                                  : (isSmallScreen ? 24 : 32),
                               fontWeight: FontWeight.bold,
                               foreground: Paint()
                                 ..shader = LinearGradient(
@@ -356,11 +381,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                             ),
                           ),
-                          SizedBox(height: isSmallScreen ? 8 : 12),
+                          SizedBox(
+                              height: isVerySmallScreen
+                                  ? 4
+                                  : (isSmallScreen ? 8 : 12)),
                           Text(
                             'Hesabınıza giriş yapın',
                             style: GoogleFonts.poppins(
-                              fontSize: isSmallScreen ? 14 : 16,
+                              fontSize: isVerySmallScreen
+                                  ? 12
+                                  : (isSmallScreen ? 14 : 16),
                               color: const Color(0xFF666666),
                             ),
                           ),
@@ -368,12 +398,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
 
-                    SizedBox(height: isSmallScreen ? 32 : 48),
+                    SizedBox(
+                        height:
+                            isVerySmallScreen ? 20 : (isSmallScreen ? 32 : 48)),
 
                     // Rol seçimi
                     _buildRoleSelector(),
 
-                    const SizedBox(height: 24),
+                    SizedBox(height: isSmallScreen ? 16 : 24),
 
                     // Giriş formu
                     Form(
@@ -383,13 +415,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           // E-posta alanı
                           Container(
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(
+                                  isSmallScreen ? 12 : 16),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.05),
                                   spreadRadius: 1,
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
+                                  blurRadius: isSmallScreen ? 6 : 10,
+                                  offset: Offset(0, isSmallScreen ? 2 : 4),
                                 ),
                               ],
                             ),
@@ -405,7 +438,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 prefixIcon: Icon(
                                   Icons.email_outlined,
                                   color: AppTheme.primaryColor,
-                                  size: isSmallScreen ? 20 : 24,
+                                  size: isSmallScreen ? 18 : 24,
                                 ),
                                 contentPadding: EdgeInsets.symmetric(
                                   horizontal: isSmallScreen ? 12 : 16,
@@ -414,15 +447,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                 filled: true,
                                 fillColor: Colors.white,
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(
+                                      isSmallScreen ? 12 : 16),
                                   borderSide: BorderSide.none,
                                 ),
                                 enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(
+                                      isSmallScreen ? 12 : 16),
                                   borderSide: BorderSide.none,
                                 ),
                                 focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(
+                                      isSmallScreen ? 12 : 16),
                                   borderSide: BorderSide(
                                     color: AppTheme.primaryColor,
                                     width: 2,
@@ -430,6 +466,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 labelStyle: GoogleFonts.poppins(
                                   color: const Color(0xFF666666),
+                                  fontSize: isSmallScreen ? 12 : 14,
+                                ),
+                                hintStyle: GoogleFonts.poppins(
+                                  fontSize: isSmallScreen ? 12 : 14,
                                 ),
                               ),
                               validator: (value) {
@@ -444,18 +484,19 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
 
-                          const SizedBox(height: 20),
+                          SizedBox(height: isSmallScreen ? 16 : 20),
 
                           // Şifre alanı
                           Container(
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(
+                                  isSmallScreen ? 12 : 16),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.05),
                                   spreadRadius: 1,
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
+                                  blurRadius: isSmallScreen ? 6 : 10,
+                                  offset: Offset(0, isSmallScreen ? 2 : 4),
                                 ),
                               ],
                             ),
@@ -471,7 +512,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 prefixIcon: Icon(
                                   Icons.lock_outline,
                                   color: AppTheme.primaryColor,
-                                  size: isSmallScreen ? 20 : 24,
+                                  size: isSmallScreen ? 18 : 24,
                                 ),
                                 contentPadding: EdgeInsets.symmetric(
                                   horizontal: isSmallScreen ? 12 : 16,
@@ -483,7 +524,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ? Icons.visibility_outlined
                                         : Icons.visibility_off_outlined,
                                     color: AppTheme.primaryColor,
-                                    size: isSmallScreen ? 20 : 24,
+                                    size: isSmallScreen ? 18 : 24,
                                   ),
                                   onPressed: () {
                                     setState(() {
@@ -494,15 +535,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                 filled: true,
                                 fillColor: Colors.white,
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(
+                                      isSmallScreen ? 12 : 16),
                                   borderSide: BorderSide.none,
                                 ),
                                 enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(
+                                      isSmallScreen ? 12 : 16),
                                   borderSide: BorderSide.none,
                                 ),
                                 focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(
+                                      isSmallScreen ? 12 : 16),
                                   borderSide: BorderSide(
                                     color: AppTheme.primaryColor,
                                     width: 2,
@@ -510,6 +554,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 labelStyle: GoogleFonts.poppins(
                                   color: const Color(0xFF666666),
+                                  fontSize: isSmallScreen ? 12 : 14,
+                                ),
+                                hintStyle: GoogleFonts.poppins(
+                                  fontSize: isSmallScreen ? 12 : 14,
                                 ),
                               ),
                               validator: (value) {
@@ -524,7 +572,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
 
-                          const SizedBox(height: 16),
+                          SizedBox(height: isSmallScreen ? 12 : 16),
 
                           // Şifremi unuttum
                           Align(
@@ -534,7 +582,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: Text(
                                 'Şifremi Unuttum',
                                 style: GoogleFonts.poppins(
-                                  fontSize: isSmallScreen ? 12 : 14,
+                                  fontSize: isSmallScreen ? 11 : 14,
                                   color: AppTheme.primaryColor,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -542,14 +590,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
 
-                          const SizedBox(height: 24),
+                          SizedBox(height: isSmallScreen ? 16 : 24),
 
                           // Giriş butonu
                           Consumer<AuthProvider>(
                             builder: (context, authProvider, child) {
                               return Container(
                                 width: double.infinity,
-                                height: isSmallScreen ? 48 : 56,
+                                height: isSmallScreen ? 44 : 56,
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
                                     begin: Alignment.topLeft,
@@ -559,14 +607,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                       const Color(0xFF0D47A1),
                                     ],
                                   ),
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(
+                                      isSmallScreen ? 12 : 16),
                                   boxShadow: [
                                     BoxShadow(
                                       color: AppTheme.primaryColor
                                           .withOpacity(0.3),
                                       spreadRadius: 1,
-                                      blurRadius: 15,
-                                      offset: const Offset(0, 8),
+                                      blurRadius: isSmallScreen ? 8 : 15,
+                                      offset: Offset(0, isSmallScreen ? 4 : 8),
                                     ),
                                   ],
                                 ),
@@ -578,15 +627,17 @@ class _LoginScreenState extends State<LoginScreen> {
                                     foregroundColor: Colors.white,
                                     shadowColor: Colors.transparent,
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
+                                      borderRadius: BorderRadius.circular(
+                                          isSmallScreen ? 12 : 16),
                                     ),
                                     elevation: 0,
                                   ),
                                   child: authProvider.isLoading
-                                      ? const SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: CircularProgressIndicator(
+                                      ? SizedBox(
+                                          width: isSmallScreen ? 20 : 24,
+                                          height: isSmallScreen ? 20 : 24,
+                                          child:
+                                              const CircularProgressIndicator(
                                             color: Colors.white,
                                             strokeWidth: 2,
                                           ),
@@ -594,7 +645,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       : Text(
                                           'Giriş Yap',
                                           style: GoogleFonts.poppins(
-                                            fontSize: 16,
+                                            fontSize: isSmallScreen ? 14 : 16,
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
@@ -603,91 +654,96 @@ class _LoginScreenState extends State<LoginScreen> {
                             },
                           ),
 
-                          const SizedBox(height: 32),
+                          SizedBox(height: isSmallScreen ? 20 : 32),
 
-                          // Ayırıcı
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Divider(
-                                  color: Colors.grey.withOpacity(0.3),
-                                ),
-                              ),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                child: Text(
-                                  'veya',
-                                  style: GoogleFonts.poppins(
-                                    color: const Color(0xFF666666),
+                          // Ayırıcı - Telefonda daha kompakt
+                          if (!isVerySmallScreen) ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Divider(
+                                    color: Colors.grey.withOpacity(0.3),
                                   ),
                                 ),
-                              ),
-                              Expanded(
-                                child: Divider(
-                                  color: Colors.grey.withOpacity(0.3),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: isSmallScreen ? 12 : 16),
+                                  child: Text(
+                                    'veya',
+                                    style: GoogleFonts.poppins(
+                                      color: const Color(0xFF666666),
+                                      fontSize: isSmallScreen ? 12 : 14,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 32),
-
-                          // Google ile giriş
-                          Container(
-                            width: double.infinity,
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Colors.grey.withOpacity(0.2),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  spreadRadius: 1,
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
+                                Expanded(
+                                  child: Divider(
+                                    color: Colors.grey.withOpacity(0.3),
+                                  ),
                                 ),
                               ],
                             ),
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                // Google ile giriş işlemi
-                              },
-                              icon: Container(
-                                width: 24,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  color: Colors.red[600],
-                                  borderRadius: BorderRadius.circular(4),
+
+                            SizedBox(height: isSmallScreen ? 20 : 32),
+
+                            // Google ile giriş - Telefonda daha kompakt
+                            Container(
+                              width: double.infinity,
+                              height: isSmallScreen ? 44 : 56,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(
+                                    isSmallScreen ? 12 : 16),
+                                border: Border.all(
+                                  color: Colors.grey.withOpacity(0.2),
                                 ),
-                                child: const Icon(
-                                  Icons.g_mobiledata,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    spreadRadius: 1,
+                                    blurRadius: isSmallScreen ? 6 : 10,
+                                    offset: Offset(0, isSmallScreen ? 2 : 4),
+                                  ),
+                                ],
                               ),
-                              label: Text(
-                                'Google ile Giriş Yap',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: const Color(0xFF1A1A1A),
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  // Google ile giriş işlemi
+                                },
+                                icon: Container(
+                                  width: isSmallScreen ? 20 : 24,
+                                  height: isSmallScreen ? 20 : 24,
+                                  decoration: BoxDecoration(
+                                    color: Colors.red[600],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Icon(
+                                    Icons.g_mobiledata,
+                                    color: Colors.white,
+                                    size: isSmallScreen ? 16 : 20,
+                                  ),
                                 ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                label: Text(
+                                  'Google ile Giriş Yap',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: isSmallScreen ? 13 : 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF1A1A1A),
+                                  ),
                                 ),
-                                side: BorderSide.none,
+                                style: OutlinedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                        isSmallScreen ? 12 : 16),
+                                  ),
+                                  side: BorderSide.none,
+                                ),
                               ),
                             ),
-                          ),
 
-                          const SizedBox(height: 32),
+                            SizedBox(height: isSmallScreen ? 20 : 32),
+                          ],
 
                           // Kayıt ol linki
                           Row(
@@ -728,6 +784,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ],
                           ),
+                          SizedBox(height: isSmallScreen ? 16 : 24),
                         ],
                       ),
                     ),

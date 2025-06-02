@@ -4,6 +4,7 @@ import 'package:siparis/config/theme.dart';
 import 'package:siparis/models/order.dart';
 import 'package:siparis/providers/order_provider.dart';
 import 'package:siparis/providers/auth_provider.dart';
+import 'package:siparis/providers/subscription_provider.dart';
 import 'package:siparis/providers/work_request_provider.dart';
 import 'package:siparis/screens/home/tabs/dashboard_tab.dart';
 import 'package:siparis/screens/home/tabs/finance_tab.dart';
@@ -12,6 +13,8 @@ import 'package:siparis/screens/home/tabs/products_tab.dart';
 import 'package:siparis/screens/budget_screen.dart';
 import 'package:siparis/screens/stock_screen.dart';
 import 'package:siparis/screens/selection_screen.dart';
+import 'package:siparis/screens/admin/subscription_management_screen.dart';
+import 'package:siparis/middleware/subscription_guard.dart';
 // import 'package:siparis/screens/home/tabs/settings_tab.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -45,11 +48,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     print('DEBUG: _isLoading: $_isLoading, skipLoading: ${widget.skipLoading}');
 
     _tabs.addAll([
-      const DashboardTab(),
-      const OrdersTab(),
+      SubscriptionGuard(child: const DashboardTab()),
+      SubscriptionGuard(child: const OrdersTab()),
       Container(), // FAB için boş tab
-      const ProductsTab(),
-      const BudgetScreen(),
+      SubscriptionGuard(child: const ProductsTab()),
+      SubscriptionGuard(child: const BudgetScreen()),
     ]);
 
     // Çalışan ise geçersiz tab kontrolü yap
@@ -135,13 +138,42 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       backgroundColor: Colors.transparent,
       elevation: 0,
       automaticallyImplyLeading: false,
-      title: const Text(
-        'Sipariş Takip',
-        style: TextStyle(
-          color: AppTheme.primaryColor,
-          fontWeight: FontWeight.w600,
-          fontSize: 20,
-        ),
+      title: Row(
+        children: [
+          const Text(
+            'Sipariş Takip',
+            style: TextStyle(
+              color: AppTheme.primaryColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+            ),
+          ),
+          // Abonelik durumu göstergesi
+          Consumer<SubscriptionProvider>(
+            builder: (context, subscriptionProvider, child) {
+              if (subscriptionProvider.hasActiveSubscription) {
+                return Container(
+                  margin: const EdgeInsets.only(left: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.green[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'PRO',
+                    style: TextStyle(
+                      color: Colors.green[700],
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
+              }
+              return Container();
+            },
+          ),
+        ],
       ),
       actions: [
         IconButton(
