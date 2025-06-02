@@ -681,64 +681,85 @@ class _PartnerCompanyDetailScreenState
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  // Arama
-                  TextField(
-                    onChanged: (value) => setState(() => _searchQuery = value),
-                    decoration: InputDecoration(
-                      hintText: 'Ürün ara...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Kategori filtreleri
-                  SizedBox(
-                    height: 40,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _categories.length,
-                      itemBuilder: (context, index) {
-                        final category = _categories[index];
-                        final isSelected = category == _selectedCategory;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: FilterChip(
-                            label: Text(category),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              setState(() {
-                                _selectedCategory = category;
-                              });
-                            },
-                            backgroundColor: Colors.grey[100],
-                            selectedColor:
-                                AppTheme.primaryColor.withOpacity(0.2),
-                            labelStyle: GoogleFonts.poppins(
-                              color: isSelected
-                                  ? AppTheme.primaryColor
-                                  : Colors.grey[700],
-                              fontWeight: isSelected
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
+                  // Arama ve kategori dropdown'ı yan yana
+                  Row(
+                    children: [
+                      // Arama kutusu
+                      Expanded(
+                        flex: 2,
+                        child: TextField(
+                          onChanged: (value) =>
+                              setState(() => _searchQuery = value),
+                          decoration: InputDecoration(
+                            hintText: 'Ürün ara...',
+                            prefixIcon: const Icon(Icons.search, size: 20),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
                             ),
-                            side: BorderSide(
-                              color: isSelected
-                                  ? AppTheme.primaryColor
-                                  : Colors.grey[300]!,
+                            filled: true,
+                            fillColor: Colors.grey[100],
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
                             ),
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Kategori Dropdown
+                      Expanded(
+                        flex: 1,
+                        child: Container(
+                          height: 48,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedCategory,
+                              isExpanded: true,
+                              icon: Icon(
+                                Icons.keyboard_arrow_down,
+                                color: Colors.grey[600],
+                                size: 20,
+                              ),
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                fontSize: 13,
+                              ),
+                              items: _categories.map((String category) {
+                                return DropdownMenuItem<String>(
+                                  value: category,
+                                  child: Text(
+                                    category,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      fontWeight: category == _selectedCategory
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                      color: category == _selectedCategory
+                                          ? AppTheme.primaryColor
+                                          : Colors.grey[700],
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (String? newValue) {
+                                if (newValue != null) {
+                                  setState(() {
+                                    _selectedCategory = newValue;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -749,11 +770,11 @@ class _PartnerCompanyDetailScreenState
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: _getCrossAxisCount(context),
                 mainAxisSpacing: 16,
                 crossAxisSpacing: 16,
-                childAspectRatio: 0.75,
+                childAspectRatio: _getChildAspectRatio(context),
               ),
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
@@ -1075,5 +1096,29 @@ class _PartnerCompanyDetailScreenState
         ),
       ),
     );
+  }
+
+  int _getCrossAxisCount(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 400) {
+      return 1; // Çok küçük ekranlar için 1 sütun
+    } else if (screenWidth < 600) {
+      return 2; // Telefon için 2 sütun
+    } else if (screenWidth < 900) {
+      return 3; // Tablet için 3 sütun
+    } else {
+      return 4; // Büyük ekranlar için 4 sütun
+    }
+  }
+
+  double _getChildAspectRatio(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 400) {
+      return 1.2; // Tek sütun için daha geniş kartlar
+    } else if (screenWidth < 600) {
+      return 0.75; // Telefon için
+    } else {
+      return 0.8; // Tablet ve büyük ekranlar için
+    }
   }
 }

@@ -78,8 +78,34 @@ class _CustomerProductsTabState extends State<CustomerProductsTab> {
     return filtered;
   }
 
+  // Responsive boyutları hesapla
+  int _getCrossAxisCount(double screenWidth) {
+    if (screenWidth < 400) {
+      return 1; // Çok küçük ekranlar için 1 sütun
+    } else if (screenWidth < 600) {
+      return 2; // Telefon için 2 sütun
+    } else if (screenWidth < 900) {
+      return 3; // Tablet için 3 sütun
+    } else {
+      return 4; // Büyük ekranlar için 4 sütun
+    }
+  }
+
+  double _getChildAspectRatio(double screenWidth) {
+    if (screenWidth < 400) {
+      return 1.2; // Tek sütun için daha geniş kartlar
+    } else if (screenWidth < 600) {
+      return 0.75; // Telefon için
+    } else {
+      return 0.8; // Tablet ve büyük ekranlar için
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 600;
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
@@ -88,29 +114,29 @@ class _CustomerProductsTabState extends State<CustomerProductsTab> {
             // App Bar
             Container(
               color: Colors.white,
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
               child: Column(
                 children: [
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.restaurant_menu_rounded,
                           color: Colors.white,
-                          size: 18,
+                          size: isSmallScreen ? 16 : 18,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: isSmallScreen ? 8 : 12),
                       Expanded(
                         child: Text(
                           'Ürünler',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: isSmallScreen ? 14 : 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.grey[800],
                           ),
@@ -118,80 +144,97 @@ class _CustomerProductsTabState extends State<CustomerProductsTab> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  // Arama kutusu
-                  Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: TextField(
-                      onChanged: (value) {
-                        setState(() {
-                          _searchQuery = value;
-                        });
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Ürün ara...',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                        prefixIcon: Icon(
-                          Icons.search,
-                          color: Colors.grey[500],
-                          size: 20,
-                        ),
-                        hintStyle: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 13,
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+                  // Arama kutusu ve kategori dropdown'ı yan yana
+                  Row(
+                    children: [
+                      // Arama kutusu
+                      Expanded(
+                        flex: 2,
+                        child: Container(
+                          height: isSmallScreen ? 44 : 48,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: TextField(
+                            onChanged: (value) {
+                              setState(() {
+                                _searchQuery = value;
+                              });
+                            },
+                            decoration: InputDecoration(
+                              hintText: 'Ürün ara...',
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.zero,
+                              prefixIcon: Icon(
+                                Icons.search,
+                                color: Colors.grey[500],
+                                size: isSmallScreen ? 18 : 20,
+                              ),
+                              hintStyle: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: isSmallScreen ? 12 : 13,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      SizedBox(width: isSmallScreen ? 8 : 12),
+                      // Kategori Dropdown
+                      Expanded(
+                        flex: 1,
+                        child: Container(
+                          height: isSmallScreen ? 44 : 48,
+                          padding: EdgeInsets.symmetric(
+                              horizontal: isSmallScreen ? 8 : 12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedCategory,
+                              isExpanded: true,
+                              icon: Icon(
+                                Icons.keyboard_arrow_down,
+                                color: Colors.grey[600],
+                                size: isSmallScreen ? 18 : 20,
+                              ),
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                fontSize: isSmallScreen ? 12 : 13,
+                              ),
+                              items: _categories.map((String category) {
+                                return DropdownMenuItem<String>(
+                                  value: category,
+                                  child: Text(
+                                    category,
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 12 : 13,
+                                      fontWeight: category == _selectedCategory
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (String? newValue) {
+                                if (newValue != null) {
+                                  setState(() {
+                                    _selectedCategory = newValue;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
-              ),
-            ),
-
-            // Kategori filtreleri
-            Container(
-              color: Colors.white,
-              height: 50,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _categories.length,
-                itemBuilder: (context, index) {
-                  final category = _categories[index];
-                  final isSelected = category == _selectedCategory;
-
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      label: Text(category),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() {
-                          _selectedCategory = category;
-                        });
-                      },
-                      backgroundColor: Colors.grey[100],
-                      selectedColor: AppTheme.primaryColor.withOpacity(0.2),
-                      labelStyle: TextStyle(
-                        color: isSelected
-                            ? AppTheme.primaryColor
-                            : Colors.grey[700],
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.normal,
-                      ),
-                      side: BorderSide(
-                        color: isSelected
-                            ? AppTheme.primaryColor
-                            : Colors.grey[300]!,
-                      ),
-                    ),
-                  );
-                },
               ),
             ),
 
@@ -200,18 +243,17 @@ class _CustomerProductsTabState extends State<CustomerProductsTab> {
               child: _filteredProducts.isEmpty
                   ? _buildEmptyState()
                   : GridView.builder(
-                      padding: const EdgeInsets.all(16),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 0.75,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
+                      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: _getCrossAxisCount(screenWidth),
+                        childAspectRatio: _getChildAspectRatio(screenWidth),
+                        crossAxisSpacing: isSmallScreen ? 8 : 12,
+                        mainAxisSpacing: isSmallScreen ? 8 : 12,
                       ),
                       itemCount: _filteredProducts.length,
                       itemBuilder: (context, index) {
                         final product = _filteredProducts[index];
-                        return _buildProductCard(product);
+                        return _buildProductCard(product, isSmallScreen);
                       },
                     ),
             ),
@@ -221,15 +263,15 @@ class _CustomerProductsTabState extends State<CustomerProductsTab> {
     );
   }
 
-  Widget _buildProductCard(Product product) {
+  Widget _buildProductCard(Product product, bool isSmallScreen) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
+            blurRadius: isSmallScreen ? 6 : 8,
             offset: const Offset(0, 2),
           ),
         ],
@@ -244,26 +286,26 @@ class _CustomerProductsTabState extends State<CustomerProductsTab> {
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.grey[100],
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(isSmallScreen ? 8 : 12),
+                  topRight: Radius.circular(isSmallScreen ? 8 : 12),
                 ),
               ),
               child: product.imageUrl != null
                   ? ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(12),
-                        topRight: Radius.circular(12),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(isSmallScreen ? 8 : 12),
+                        topRight: Radius.circular(isSmallScreen ? 8 : 12),
                       ),
                       child: Image.network(
                         product.imageUrl!,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
-                          return _buildPlaceholderImage();
+                          return _buildPlaceholderImage(isSmallScreen);
                         },
                       ),
                     )
-                  : _buildPlaceholderImage(),
+                  : _buildPlaceholderImage(isSmallScreen),
             ),
           ),
 
@@ -271,24 +313,24 @@ class _CustomerProductsTabState extends State<CustomerProductsTab> {
           Expanded(
             flex: 2,
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     product.name,
-                    style: const TextStyle(
-                      fontSize: 14,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 12 : 14,
                       fontWeight: FontWeight.w600,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: isSmallScreen ? 2 : 4),
                   Text(
                     product.category,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: isSmallScreen ? 10 : 12,
                       color: Colors.grey[600],
                     ),
                   ),
@@ -296,26 +338,28 @@ class _CustomerProductsTabState extends State<CustomerProductsTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        '₺${product.price.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryColor,
+                      Expanded(
+                        child: Text(
+                          '₺${product.price.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 14 : 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryColor,
+                          ),
                         ),
                       ),
                       GestureDetector(
                         onTap: () => _showOrderDialog(product),
                         child: Container(
-                          padding: const EdgeInsets.all(6),
+                          padding: EdgeInsets.all(isSmallScreen ? 5 : 6),
                           decoration: BoxDecoration(
                             color: AppTheme.primaryColor,
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.add,
                             color: Colors.white,
-                            size: 16,
+                            size: isSmallScreen ? 14 : 16,
                           ),
                         ),
                       ),
@@ -330,20 +374,20 @@ class _CustomerProductsTabState extends State<CustomerProductsTab> {
     );
   }
 
-  Widget _buildPlaceholderImage() {
+  Widget _buildPlaceholderImage(bool isSmallScreen) {
     return Container(
       width: double.infinity,
       height: double.infinity,
       decoration: BoxDecoration(
         color: Colors.grey[100],
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(isSmallScreen ? 8 : 12),
+          topRight: Radius.circular(isSmallScreen ? 8 : 12),
         ),
       ),
       child: Icon(
         Icons.restaurant_menu_rounded,
-        size: 40,
+        size: isSmallScreen ? 30 : 40,
         color: Colors.grey[400],
       ),
     );
