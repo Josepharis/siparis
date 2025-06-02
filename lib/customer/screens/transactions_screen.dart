@@ -31,12 +31,16 @@ class TransactionsScreen extends StatefulWidget {
 }
 
 class _TransactionsScreenState extends State<TransactionsScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+
+    // Lifecycle observer'ı ekle
+    WidgetsBinding.instance.addObserver(this);
+
     _tabController = TabController(length: 2, vsync: this);
 
     // Firebase verilerini yükle
@@ -48,8 +52,51 @@ class _TransactionsScreenState extends State<TransactionsScreen>
 
   @override
   void dispose() {
+    // Lifecycle observer'ı temizle
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // Uygulama ön plana geldiğinde UI'ı yenile
+    if (state == AppLifecycleState.resumed) {
+      print(
+          '🔄 Transactions Screen - Uygulama ön plana geldi - UI yenileniyor');
+      _refreshUI();
+    }
+  }
+
+  void _refreshUI() {
+    if (!mounted) return;
+
+    try {
+      // Provider'ları yenile
+      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      // State'i yenile
+      setState(() {
+        // UI'ı yeniden render et
+      });
+
+      // Verileri yenile
+      orderProvider.startListeningToOrders();
+
+      // Text rendering problemlerini düzelt
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          setState(() {
+            // İkinci kez render ederek text problemlerini düzelt
+          });
+        }
+      });
+    } catch (e) {
+      print('❌ Transactions UI yenileme hatası: $e');
+    }
   }
 
   @override
@@ -371,9 +418,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          order.totalAmount >= 1000
-                              ? '₺${(order.totalAmount / 1000).toStringAsFixed(order.totalAmount % 1000 == 0 ? 0 : 1)}K'
-                              : '₺${order.totalAmount.toStringAsFixed(0)}',
+                          '₺${order.totalAmount.toStringAsFixed(0)}',
                           style: TextStyle(
                             fontSize: isSmallScreen ? 10 : 12,
                             fontWeight: FontWeight.w800,
@@ -385,7 +430,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                         if (!isPaid) ...[
                           SizedBox(height: isSmallScreen ? 1 : 2),
                           Text(
-                            'Kalan: ${remainingAmount >= 1000 ? '₺${(remainingAmount / 1000).toStringAsFixed(remainingAmount % 1000 == 0 ? 0 : 1)}K' : '₺${remainingAmount.toStringAsFixed(0)}'}',
+                            'Kalan: ₺${remainingAmount.toStringAsFixed(0)}',
                             style: TextStyle(
                               fontSize: isSmallScreen ? 7 : 9,
                               color: Colors.orange[700],
@@ -623,9 +668,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                 overflow: TextOverflow.ellipsis,
               ),
               Text(
-                amount >= 1000
-                    ? '₺${(amount / 1000).toStringAsFixed(amount % 1000 == 0 ? 0 : 1)}K'
-                    : '₺${amount.toStringAsFixed(0)}',
+                '₺${amount.toStringAsFixed(0)}',
                 style: TextStyle(
                   fontSize: isSmallScreen ? 10 : 13,
                   fontWeight: FontWeight.w700,
@@ -1043,9 +1086,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                         ),
                         _buildCompactPaymentStat(
                           'Ödenen',
-                          totalPaidAmount >= 1000
-                              ? '₺${(totalPaidAmount / 1000).toStringAsFixed(totalPaidAmount % 1000 == 0 ? 0 : 1)}K'
-                              : '₺${totalPaidAmount.toStringAsFixed(0)}',
+                          '₺${totalPaidAmount.toStringAsFixed(0)}',
                           Icons.check_circle_rounded,
                           isSmallScreen,
                         ),
@@ -1056,9 +1097,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                         ),
                         _buildCompactPaymentStat(
                           'Kalan',
-                          totalRemainingDebt >= 1000
-                              ? '₺${(totalRemainingDebt / 1000).toStringAsFixed(totalRemainingDebt % 1000 == 0 ? 0 : 1)}K'
-                              : '₺${totalRemainingDebt.toStringAsFixed(0)}',
+                          '₺${totalRemainingDebt.toStringAsFixed(0)}',
                           Icons.pending_rounded,
                           isSmallScreen,
                         ),
@@ -1252,9 +1291,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            remainingDebt >= 1000
-                                ? '₺${(remainingDebt / 1000).toStringAsFixed(remainingDebt % 1000 == 0 ? 0 : 1)}K'
-                                : '₺${remainingDebt.toStringAsFixed(0)}',
+                            '₺${remainingDebt.toStringAsFixed(0)}',
                             style: TextStyle(
                               fontSize: isSmallScreen ? 10 : 14,
                               fontWeight: FontWeight.w800,
@@ -1292,9 +1329,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                       Expanded(
                         child: _buildDebtStat(
                           'Toplam',
-                          companyInfo.totalDebt >= 1000
-                              ? '₺${(companyInfo.totalDebt / 1000).toStringAsFixed(companyInfo.totalDebt % 1000 == 0 ? 0 : 1)}K'
-                              : '₺${companyInfo.totalDebt.toStringAsFixed(0)}',
+                          '₺${companyInfo.totalDebt.toStringAsFixed(0)}',
                           Icons.account_balance_wallet_rounded,
                           isSmallScreen,
                         ),
@@ -1303,9 +1338,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                       Expanded(
                         child: _buildDebtStat(
                           'Ödenen',
-                          companyInfo.paidAmount >= 1000
-                              ? '₺${(companyInfo.paidAmount / 1000).toStringAsFixed(companyInfo.paidAmount % 1000 == 0 ? 0 : 1)}K'
-                              : '₺${companyInfo.paidAmount.toStringAsFixed(0)}',
+                          '₺${companyInfo.paidAmount.toStringAsFixed(0)}',
                           Icons.check_circle_rounded,
                           isSmallScreen,
                         ),
@@ -1314,9 +1347,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                       Expanded(
                         child: _buildDebtStat(
                           'Kalan',
-                          remainingDebt >= 1000
-                              ? '₺${(remainingDebt / 1000).toStringAsFixed(remainingDebt % 1000 == 0 ? 0 : 1)}K'
-                              : '₺${remainingDebt.toStringAsFixed(0)}',
+                          '₺${remainingDebt.toStringAsFixed(0)}',
                           Icons.pending_rounded,
                           isSmallScreen,
                         ),
@@ -1615,7 +1646,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '₺${order.totalAmount.toStringAsFixed(2)}',
+                    '₺${order.totalAmount.toStringAsFixed(0)}',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -1766,11 +1797,9 @@ class _TransactionsScreenState extends State<TransactionsScreen>
           ),
           SizedBox(height: isSmallScreen ? 2 : 4),
           Text(
-            amount >= 1000
-                ? '₺${(amount / 1000).toStringAsFixed(amount % 1000 == 0 ? 0 : 1)}K'
-                : '₺${amount.toStringAsFixed(0)}',
+            '₺${amount.toStringAsFixed(0)}',
             style: TextStyle(
-              fontSize: isSmallScreen ? 9 : 12,
+              fontSize: isSmallScreen ? 10 : 13,
               fontWeight: FontWeight.w700,
               color: color,
             ),

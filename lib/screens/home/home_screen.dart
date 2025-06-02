@@ -31,7 +31,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late int _selectedIndex;
   final List<Widget> _tabs = [];
   late bool _isLoading;
@@ -42,6 +43,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void initState() {
     print('DEBUG: HomeScreen initState çağrıldı');
     super.initState();
+
+    // Lifecycle observer'ı ekle
+    WidgetsBinding.instance.addObserver(this);
+
     _selectedIndex = widget.initialIndex;
     _isLoading = !widget.skipLoading;
 
@@ -103,8 +108,62 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    // Lifecycle observer'ı temizle
+    WidgetsBinding.instance.removeObserver(this);
     _fabAnimationController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // Uygulama ön plana geldiğinde UI'ı yenile
+    if (state == AppLifecycleState.resumed) {
+      print('🔄 Uygulama ön plana geldi - UI yenileniyor');
+      _refreshUI();
+    }
+  }
+
+  void _refreshUI() {
+    if (!mounted) return;
+
+    try {
+      // Provider'ları yenile
+      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final subscriptionProvider =
+          Provider.of<SubscriptionProvider>(context, listen: false);
+
+      // State'i yenile
+      setState(() {
+        // UI'ı yeniden render et
+      });
+
+      // Verileri yenile
+      orderProvider.startListeningToOrders();
+
+      // Abonelik durumunu kontrol et
+      if (authProvider.currentUser != null) {
+        subscriptionProvider
+            .loadUserSubscription(authProvider.currentUser!.uid);
+      } else if (authProvider.currentEmployee != null &&
+          authProvider.currentEmployee!.companyId.isNotEmpty) {
+        subscriptionProvider
+            .loadCompanySubscription(authProvider.currentEmployee!.companyId);
+      }
+
+      // Text rendering problemlerini düzelt
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          setState(() {
+            // İkinci kez render ederek text problemlerini düzelt
+          });
+        }
+      });
+    } catch (e) {
+      print('❌ UI yenileme hatası: $e');
+    }
   }
 
   Future<void> _loadData() async {

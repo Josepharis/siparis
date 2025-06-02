@@ -80,11 +80,11 @@ class _CustomerProductsTabState extends State<CustomerProductsTab> {
 
   // Responsive boyutları hesapla
   int _getCrossAxisCount(double screenWidth) {
-    if (screenWidth < 400) {
+    if (screenWidth < 350) {
       return 1; // Çok küçük ekranlar için 1 sütun
-    } else if (screenWidth < 600) {
-      return 2; // Telefon için 2 sütun
-    } else if (screenWidth < 900) {
+    } else if (screenWidth < 800) {
+      return 2; // Telefon ve küçük tabletler için 2 sütun
+    } else if (screenWidth < 1200) {
       return 3; // Tablet için 3 sütun
     } else {
       return 4; // Büyük ekranlar için 4 sütun
@@ -92,12 +92,12 @@ class _CustomerProductsTabState extends State<CustomerProductsTab> {
   }
 
   double _getChildAspectRatio(double screenWidth) {
-    if (screenWidth < 400) {
-      return 1.2; // Tek sütun için daha geniş kartlar
-    } else if (screenWidth < 600) {
-      return 0.75; // Telefon için
+    if (screenWidth < 350) {
+      return 0.85; // Tek sütun için kompakt kartlar
+    } else if (screenWidth < 800) {
+      return 0.7; // Telefon için kompakt kartlar
     } else {
-      return 0.8; // Tablet ve büyük ekranlar için
+      return 0.75; // Tablet ve büyük ekranlar için
     }
   }
 
@@ -281,7 +281,7 @@ class _CustomerProductsTabState extends State<CustomerProductsTab> {
         children: [
           // Ürün resmi
           Expanded(
-            flex: 3,
+            flex: isSmallScreen ? 2 : 3,
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
@@ -311,47 +311,81 @@ class _CustomerProductsTabState extends State<CustomerProductsTab> {
 
           // Ürün bilgileri
           Expanded(
-            flex: 2,
+            flex: isSmallScreen ? 3 : 2,
             child: Padding(
               padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    product.name,
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 12 : 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(height: isSmallScreen ? 2 : 4),
-                  Text(
-                    product.category,
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 10 : 12,
-                      color: Colors.grey[600],
+                  // Ürün adı - Sabit yükseklik container ile
+                  SizedBox(
+                    height: isSmallScreen ? 32 : 36,
+                    child: Text(
+                      product.name,
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 12 : 14,
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  SizedBox(height: isSmallScreen ? 4 : 6),
+
+                  // Kategori
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isSmallScreen ? 6 : 8,
+                      vertical: isSmallScreen ? 2 : 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      product.category,
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 9 : 11,
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+
                   const Spacer(),
+
+                  // Fiyat ve sepete ekle butonu
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
-                        child: Text(
-                          '₺${product.price.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 14 : 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryColor,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '₺${product.price.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 14 : 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryColor,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ],
                         ),
                       ),
+                      SizedBox(width: isSmallScreen ? 4 : 8),
                       GestureDetector(
                         onTap: () => _showOrderDialog(product),
                         child: Container(
-                          padding: EdgeInsets.all(isSmallScreen ? 5 : 6),
+                          padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
                           decoration: BoxDecoration(
                             color: AppTheme.primaryColor,
                             borderRadius: BorderRadius.circular(6),
@@ -450,14 +484,15 @@ class _CustomerProductsTabState extends State<CustomerProductsTab> {
   }
 
   void _showOrderDialog(Product product) {
-    int quantity = 1;
+    int quantity = 1; // Her dialog için lokal quantity
     String note = '';
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return StatefulBuilder(
-          builder: (context, setState) {
+          builder: (context, dialogSetState) {
+            // Rename to avoid confusion
             return AlertDialog(
               title: Text('Sipariş Ver: ${product.name}'),
               content: Column(
@@ -472,7 +507,7 @@ class _CustomerProductsTabState extends State<CustomerProductsTab> {
                           IconButton(
                             onPressed: quantity > 1
                                 ? () {
-                                    setState(() {
+                                    dialogSetState(() {
                                       quantity--;
                                     });
                                   }
@@ -488,7 +523,7 @@ class _CustomerProductsTabState extends State<CustomerProductsTab> {
                           ),
                           IconButton(
                             onPressed: () {
-                              setState(() {
+                              dialogSetState(() {
                                 quantity++;
                               });
                             },

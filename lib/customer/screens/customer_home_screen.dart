@@ -31,7 +31,7 @@ class CustomerHomeScreen extends StatefulWidget {
 }
 
 class _CustomerHomeScreenState extends State<CustomerHomeScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late int _selectedIndex;
   final List<Widget> _tabs = [
     SubscriptionGuard(child: const CustomerDashboardTab()),
@@ -57,6 +57,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
     print('🔥🔥🔥 CUSTOMER HOME SCREEN BAŞLADI 🔥🔥🔥');
     print('DEBUG: CustomerHomeScreen initState çağrıldı');
     super.initState();
+
+    // Lifecycle observer'ı ekle
+    WidgetsBinding.instance.addObserver(this);
+
     _selectedIndex = widget.initialIndex;
     _isLoading = !widget.skipLoading;
 
@@ -104,9 +108,68 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
 
   @override
   void dispose() {
+    // Lifecycle observer'ı temizle
+    WidgetsBinding.instance.removeObserver(this);
     _fabAnimationController.dispose();
     _hidePartnerDropdown(); // Overlay temizle
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // Uygulama ön plana geldiğinde UI'ı yenile
+    if (state == AppLifecycleState.resumed) {
+      print('🔄 Customer Home - Uygulama ön plana geldi - UI yenileniyor');
+      _refreshUI();
+    }
+  }
+
+  void _refreshUI() {
+    if (!mounted) return;
+
+    try {
+      // Provider'ları yenile
+      final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final companyProvider =
+          Provider.of<CompanyProvider>(context, listen: false);
+
+      // State'i yenile
+      setState(() {
+        // UI'ı yeniden render et
+      });
+
+      // Verileri yenile
+      orderProvider.startListeningToOrders();
+
+      // Şirket verilerini yenile
+      companyProvider.loadCompanies();
+
+      // Dropdown açıksa kapat
+      if (_isDropdownOpen) {
+        _hidePartnerDropdown();
+      }
+
+      // Text rendering problemlerini düzelt
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          setState(() {
+            // İkinci kez render ederek text problemlerini düzelt
+          });
+        }
+      });
+
+      // Animasyonları yenile
+      if (_fabAnimationController.isCompleted) {
+        _fabAnimationController.reset();
+        _fabAnimationController.forward();
+      }
+    } catch (e) {
+      print('❌ Customer UI yenileme hatası: $e');
+    }
   }
 
   Future<void> _loadData() async {

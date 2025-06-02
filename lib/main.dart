@@ -44,11 +44,87 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
+  // Text rendering optimizasyonları
+  assert(() {
+    // Debug modda text rendering sorunlarını minimize et
+    return true;
+  }());
+
   runApp(const MainApp());
 }
 
-class MainApp extends StatelessWidget {
+class MainApp extends StatefulWidget {
   const MainApp({super.key});
+
+  @override
+  State<MainApp> createState() => _MainAppState();
+}
+
+class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    // Global lifecycle observer'ı ekle
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    // Global lifecycle observer'ı temizle
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        print('🌟 Global - Uygulama ön plana geldi');
+        _handleAppResume();
+        break;
+      case AppLifecycleState.paused:
+        print('⏸️ Global - Uygulama arka plana gitti');
+        _handleAppPause();
+        break;
+      case AppLifecycleState.detached:
+        print('🚪 Global - Uygulama kapatıldı');
+        break;
+      case AppLifecycleState.inactive:
+        print('💤 Global - Uygulama inactive durumda');
+        break;
+      case AppLifecycleState.hidden:
+        print('🫥 Global - Uygulama gizlendi');
+        break;
+    }
+  }
+
+  void _handleAppResume() {
+    // Uygulamanın ön plana gelmesi durumunda
+    try {
+      // Text rendering problemlerini çözmek için sistem UI'ını yenile
+      SystemChrome.setSystemUIOverlayStyle(
+        const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+        ),
+      );
+
+      // Ekran yönlendirmesini yeniden ayarla
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+    } catch (e) {
+      print('❌ Global UI yenileme hatası: $e');
+    }
+  }
+
+  void _handleAppPause() {
+    // Uygulamanın arka plana gitmesi durumunda
+    // Gerekirse memory cleanup yapılabilir
+  }
 
   @override
   Widget build(BuildContext context) {

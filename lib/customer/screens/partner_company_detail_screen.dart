@@ -22,7 +22,7 @@ class _PartnerCompanyDetailScreenState
   String _searchQuery = '';
   String _selectedCategory = 'Tümü';
   List<String> _categories = ['Tümü'];
-  int _selectedQuantity = 1;
+  Map<String, int> _selectedQuantities = {}; // Her ürün için adet takibi
 
   @override
   void initState() {
@@ -37,6 +37,8 @@ class _PartnerCompanyDetailScreenState
       print('DEBUG: Firma ürünleri:');
       for (var product in widget.company.products) {
         print('DEBUG: - ${product.name} (${product.id}) - ${product.price}₺');
+        // Her ürün için başlangıç adedi 1
+        _selectedQuantities[product.id] = 1;
       }
     }
     _loadCategories();
@@ -467,19 +469,20 @@ class _PartnerCompanyDetailScreenState
                                 // Azalt butonu
                                 Material(
                                   color: Colors.transparent,
-                                  borderRadius: const BorderRadius.horizontal(
-                                    left: Radius.circular(16),
-                                  ),
                                   child: InkWell(
                                     onTap: () {
-                                      setState(() {
-                                        if (_selectedQuantity > 1) {
-                                          _selectedQuantity--;
-                                        }
-                                      });
+                                      final currentQty =
+                                          _getQuantityForProduct(product.id);
+                                      if (currentQty > 1) {
+                                        setState(() {
+                                          _setQuantityForProduct(
+                                              product.id, currentQty - 1);
+                                        });
+                                      }
                                     },
-                                    borderRadius: const BorderRadius.horizontal(
-                                      left: Radius.circular(16),
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(8),
+                                      bottomLeft: Radius.circular(8),
                                     ),
                                     child: Container(
                                       width: 48,
@@ -498,7 +501,8 @@ class _PartnerCompanyDetailScreenState
                                   width: 48,
                                   alignment: Alignment.center,
                                   child: Text(
-                                    _selectedQuantity.toString(),
+                                    _getQuantityForProduct(product.id)
+                                        .toString(),
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
@@ -508,13 +512,13 @@ class _PartnerCompanyDetailScreenState
                                 // Artır butonu
                                 Material(
                                   color: Colors.transparent,
-                                  borderRadius: const BorderRadius.horizontal(
-                                    right: Radius.circular(16),
-                                  ),
                                   child: InkWell(
                                     onTap: () {
                                       setState(() {
-                                        _selectedQuantity++;
+                                        final currentQty =
+                                            _getQuantityForProduct(product.id);
+                                        _setQuantityForProduct(
+                                            product.id, currentQty + 1);
                                       });
                                     },
                                     borderRadius: const BorderRadius.horizontal(
@@ -542,7 +546,9 @@ class _PartnerCompanyDetailScreenState
                               height: 48,
                               child: ElevatedButton(
                                 onPressed: () {
-                                  for (var i = 0; i < _selectedQuantity; i++) {
+                                  final qty =
+                                      _getQuantityForProduct(product.id);
+                                  for (var i = 0; i < qty; i++) {
                                     cartProvider.addToCart(product);
                                   }
                                   Navigator.pop(context);
@@ -557,7 +563,7 @@ class _PartnerCompanyDetailScreenState
                                 ),
                                 child: Text(
                                   quantity > 0
-                                      ? 'Sepete Ekle (${quantity + _selectedQuantity})'
+                                      ? 'Sepete Ekle (${quantity + _getQuantityForProduct(product.id)})'
                                       : 'Sepete Ekle',
                                   style: const TextStyle(
                                     fontSize: 16,
@@ -822,6 +828,9 @@ class _PartnerCompanyDetailScreenState
   }
 
   Widget _buildProductCard(Product product) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 600;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -845,7 +854,7 @@ class _PartnerCompanyDetailScreenState
             children: [
               // Ürün resmi
               Expanded(
-                flex: 3,
+                flex: isSmallScreen ? 2 : 3,
                 child: Stack(
                   children: [
                     Container(
@@ -866,9 +875,9 @@ class _PartnerCompanyDetailScreenState
                       top: 12,
                       right: 12,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 8 : 12,
+                          vertical: isSmallScreen ? 4 : 6,
                         ),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor,
@@ -883,9 +892,9 @@ class _PartnerCompanyDetailScreenState
                         ),
                         child: Text(
                           '₺${product.price.toStringAsFixed(2)}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 14,
+                            fontSize: isSmallScreen ? 12 : 14,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -897,30 +906,35 @@ class _PartnerCompanyDetailScreenState
 
               // Ürün bilgileri
               Expanded(
-                flex: 2,
+                flex: isSmallScreen ? 3 : 2,
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Ürün adı
-                      Text(
-                        product.name,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF1F2937),
+                      // Ürün adı - Sabit yükseklik ile
+                      SizedBox(
+                        height: isSmallScreen ? 32 : 36,
+                        child: Text(
+                          product.name,
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 13 : 15,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF1F2937),
+                            height: 1.2,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: isSmallScreen ? 4 : 6),
 
                       // Kategori
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 6 : 8,
+                          vertical: isSmallScreen ? 3 : 4,
                         ),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor.withOpacity(0.1),
@@ -929,10 +943,12 @@ class _PartnerCompanyDetailScreenState
                         child: Text(
                           product.category,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: isSmallScreen ? 10 : 12,
                             color: AppTheme.primaryColor,
                             fontWeight: FontWeight.w500,
                           ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
 
@@ -946,20 +962,24 @@ class _PartnerCompanyDetailScreenState
                             // Ürün zaten sepette
                             return Row(
                               children: [
-                                Text(
-                                  'Sepette: $quantity',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.green,
-                                    fontWeight: FontWeight.w600,
+                                Expanded(
+                                  child: Text(
+                                    'Sepette: $quantity',
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 11 : 13,
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
                                   ),
                                 ),
-                                const Spacer(),
                                 IconButton(
                                   onPressed: () =>
                                       cartProvider.removeFromCart(product.id),
-                                  icon: const Icon(Icons.delete_outline,
-                                      color: Colors.red, size: 20),
+                                  icon: Icon(Icons.delete_outline,
+                                      color: Colors.red,
+                                      size: isSmallScreen ? 18 : 20),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(),
                                 ),
@@ -969,11 +989,11 @@ class _PartnerCompanyDetailScreenState
                           // Ürün sepette değil
                           return StatefulBuilder(
                             builder: (context, setState) {
-                              return Row(
+                              return Column(
                                 children: [
                                   // Adet seçici
                                   Container(
-                                    height: 36,
+                                    height: isSmallScreen ? 32 : 36,
                                     decoration: BoxDecoration(
                                       color: Colors.grey[100],
                                       borderRadius: BorderRadius.circular(8),
@@ -986,9 +1006,14 @@ class _PartnerCompanyDetailScreenState
                                           color: Colors.transparent,
                                           child: InkWell(
                                             onTap: () {
-                                              if (_selectedQuantity > 1) {
+                                              final currentQty =
+                                                  _getQuantityForProduct(
+                                                      product.id);
+                                              if (currentQty > 1) {
                                                 setState(() {
-                                                  _selectedQuantity--;
+                                                  _setQuantityForProduct(
+                                                      product.id,
+                                                      currentQty - 1);
                                                 });
                                               }
                                             },
@@ -998,24 +1023,25 @@ class _PartnerCompanyDetailScreenState
                                               bottomLeft: Radius.circular(8),
                                             ),
                                             child: Container(
-                                              width: 32,
-                                              height: 36,
+                                              width: isSmallScreen ? 28 : 32,
+                                              height: isSmallScreen ? 32 : 36,
                                               alignment: Alignment.center,
-                                              child: const Icon(Icons.remove,
-                                                  size: 16,
+                                              child: Icon(Icons.remove,
+                                                  size: isSmallScreen ? 14 : 16,
                                                   color: Colors.black54),
                                             ),
                                           ),
                                         ),
                                         // Adet
                                         Container(
-                                          width: 32,
+                                          width: isSmallScreen ? 28 : 32,
                                           alignment: Alignment.center,
                                           color: Colors.white,
                                           child: Text(
-                                            _selectedQuantity.toString(),
-                                            style: const TextStyle(
-                                              fontSize: 14,
+                                            _getQuantityForProduct(product.id)
+                                                .toString(),
+                                            style: TextStyle(
+                                              fontSize: isSmallScreen ? 12 : 14,
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
@@ -1026,7 +1052,11 @@ class _PartnerCompanyDetailScreenState
                                           child: InkWell(
                                             onTap: () {
                                               setState(() {
-                                                _selectedQuantity++;
+                                                final currentQty =
+                                                    _getQuantityForProduct(
+                                                        product.id);
+                                                _setQuantityForProduct(
+                                                    product.id, currentQty + 1);
                                               });
                                             },
                                             borderRadius:
@@ -1035,11 +1065,11 @@ class _PartnerCompanyDetailScreenState
                                               bottomRight: Radius.circular(8),
                                             ),
                                             child: Container(
-                                              width: 32,
-                                              height: 36,
+                                              width: isSmallScreen ? 28 : 32,
+                                              height: isSmallScreen ? 32 : 36,
                                               alignment: Alignment.center,
-                                              child: const Icon(Icons.add,
-                                                  size: 16,
+                                              child: Icon(Icons.add,
+                                                  size: isSmallScreen ? 14 : 16,
                                                   color: Colors.black54),
                                             ),
                                           ),
@@ -1047,36 +1077,36 @@ class _PartnerCompanyDetailScreenState
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  SizedBox(height: isSmallScreen ? 4 : 6),
                                   // Sepete ekle butonu
-                                  Expanded(
-                                    child: SizedBox(
-                                      height: 36,
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                          for (var i = 0;
-                                              i < _selectedQuantity;
-                                              i++) {
-                                            cartProvider.addToCart(product);
-                                          }
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor:
-                                              AppTheme.primaryColor,
-                                          foregroundColor: Colors.white,
-                                          elevation: 0,
-                                          padding: EdgeInsets.zero,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: isSmallScreen ? 32 : 36,
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        for (var i = 0;
+                                            i <
+                                                _getQuantityForProduct(
+                                                    product.id);
+                                            i++) {
+                                          cartProvider.addToCart(product);
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primaryColor,
+                                        foregroundColor: Colors.white,
+                                        elevation: 0,
+                                        padding: EdgeInsets.zero,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
-                                        child: const Text(
-                                          'Sepete Ekle',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                      ),
+                                      child: Text(
+                                        'Sepete Ekle',
+                                        style: TextStyle(
+                                          fontSize: isSmallScreen ? 11 : 13,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ),
@@ -1100,11 +1130,11 @@ class _PartnerCompanyDetailScreenState
 
   int _getCrossAxisCount(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth < 400) {
+    if (screenWidth < 350) {
       return 1; // Çok küçük ekranlar için 1 sütun
-    } else if (screenWidth < 600) {
-      return 2; // Telefon için 2 sütun
-    } else if (screenWidth < 900) {
+    } else if (screenWidth < 800) {
+      return 2; // Telefon ve küçük tabletler için 2 sütun
+    } else if (screenWidth < 1200) {
       return 3; // Tablet için 3 sütun
     } else {
       return 4; // Büyük ekranlar için 4 sütun
@@ -1113,12 +1143,22 @@ class _PartnerCompanyDetailScreenState
 
   double _getChildAspectRatio(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth < 400) {
-      return 1.2; // Tek sütun için daha geniş kartlar
-    } else if (screenWidth < 600) {
-      return 0.75; // Telefon için
+    if (screenWidth < 350) {
+      return 0.85; // Tek sütun için kompakt kartlar
+    } else if (screenWidth < 800) {
+      return 0.7; // Telefon için kompakt kartlar
     } else {
-      return 0.8; // Tablet ve büyük ekranlar için
+      return 0.75; // Tablet ve büyük ekranlar için
     }
+  }
+
+  // Helper method to get quantity for a product
+  int _getQuantityForProduct(String productId) {
+    return _selectedQuantities[productId] ?? 1;
+  }
+
+  // Helper method to set quantity for a product
+  void _setQuantityForProduct(String productId, int quantity) {
+    _selectedQuantities[productId] = quantity;
   }
 }

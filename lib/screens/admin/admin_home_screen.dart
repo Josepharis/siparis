@@ -14,7 +14,55 @@ class AdminHomeScreen extends StatefulWidget {
   State<AdminHomeScreen> createState() => _AdminHomeScreenState();
 }
 
-class _AdminHomeScreenState extends State<AdminHomeScreen> {
+class _AdminHomeScreenState extends State<AdminHomeScreen>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    // Lifecycle observer'ı ekle
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    // Lifecycle observer'ı temizle
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // Uygulama ön plana geldiğinde UI'ı yenile
+    if (state == AppLifecycleState.resumed) {
+      print('🔄 Admin Home - Uygulama ön plana geldi - UI yenileniyor');
+      _refreshUI();
+    }
+  }
+
+  void _refreshUI() {
+    if (!mounted) return;
+
+    try {
+      // State'i yenile
+      setState(() {
+        // UI'ı yeniden render et
+      });
+
+      // Text rendering problemlerini düzelt
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          setState(() {
+            // İkinci kez render ederek text problemlerini düzelt
+          });
+        }
+      });
+    } catch (e) {
+      print('❌ Admin UI yenileme hatası: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
