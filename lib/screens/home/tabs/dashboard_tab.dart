@@ -231,7 +231,7 @@ class _DashboardTabState extends State<DashboardTab> {
             // Günlük Üretilecekler Listesi
             SliverToBoxAdapter(
               child: SizedBox(
-                height: 150,
+                height: 170,
                 child: dailyProducts.isEmpty
                     ? _buildEmptyState(
                         icon: Icons.bakery_dining_rounded,
@@ -262,8 +262,8 @@ class _DashboardTabState extends State<DashboardTab> {
                               width: 120,
                               margin: const EdgeInsets.only(
                                 right: 10,
-                                bottom: 6,
-                                top: 6,
+                                bottom: 4,
+                                top: 4,
                               ),
                               child: Stack(
                                 children: [

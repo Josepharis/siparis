@@ -5,6 +5,7 @@ import '../../providers/subscription_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/subscription.dart';
 import '../../models/user_model.dart';
+import '../auth/login_screen.dart';
 
 class SubscriptionManagementScreen extends StatefulWidget {
   const SubscriptionManagementScreen({Key? key}) : super(key: key);
@@ -20,11 +21,45 @@ class _SubscriptionManagementScreenState
   bool _isLoading = true;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  String _selectedFilter = 'Tümü';
 
   @override
   void initState() {
     super.initState();
     _loadAllUsers();
+    
+    // Admin kontrolü yap
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAdminAccess();
+    });
+  }
+
+  // Admin erişim kontrolü
+  void _checkAdminAccess() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    if (authProvider.currentUser == null || !authProvider.currentUser!.isAdmin) {
+      print('❌ Admin olmayan kullanıcı subscription management\'e erişmeye çalışıyor');
+      
+      authProvider.signOut().then((_) {
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const LoginScreen(),
+            ),
+            (route) => false,
+          );
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Bu alana erişim yetkiniz bulunmamaktadır'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      });
+      return;
+    }
   }
 
   Future<void> _loadAllUsers() async {

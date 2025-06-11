@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../auth/login_screen.dart';
 
 class AdminSettingsScreen extends StatefulWidget {
   const AdminSettingsScreen({Key? key}) : super(key: key);
@@ -10,6 +11,45 @@ class AdminSettingsScreen extends StatefulWidget {
 }
 
 class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
+  
+  @override
+  void initState() {
+    super.initState();
+    
+    // Admin kontrolü yap
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAdminAccess();
+    });
+  }
+
+  // Admin erişim kontrolü
+  void _checkAdminAccess() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    if (authProvider.currentUser == null || !authProvider.currentUser!.isAdmin) {
+      print('❌ Admin olmayan kullanıcı admin settings\'e erişmeye çalışıyor');
+      
+      authProvider.signOut().then((_) {
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const LoginScreen(),
+            ),
+            (route) => false,
+          );
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Bu alana erişim yetkiniz bulunmamaktadır'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      });
+      return;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

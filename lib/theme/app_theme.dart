@@ -157,7 +157,7 @@ class AppTheme {
             _textTheme.headlineSmall?.copyWith(color: textOnPrimary),
         iconTheme: const IconThemeData(color: textOnPrimary, size: iconSize),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0, // Gölgeler BoxDecoration ile eklenecek
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
@@ -219,7 +219,7 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(
             horizontal: spacingMedium, vertical: spacingMedium),
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),

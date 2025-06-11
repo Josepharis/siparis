@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/user_model.dart';
 import '../../models/subscription.dart';
+import '../../providers/auth_provider.dart';
+import '../auth/login_screen.dart';
 
 class SystemStatisticsScreen extends StatefulWidget {
   const SystemStatisticsScreen({Key? key}) : super(key: key);
@@ -17,7 +20,41 @@ class _SystemStatisticsScreenState extends State<SystemStatisticsScreen> {
   @override
   void initState() {
     super.initState();
+    
+    // Admin kontrolü yap
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAdminAccess();
+    });
+    
     _loadStatistics();
+  }
+
+  // Admin erişim kontrolü
+  void _checkAdminAccess() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    if (authProvider.currentUser == null || !authProvider.currentUser!.isAdmin) {
+      print('❌ Admin olmayan kullanıcı system statistics\'e erişmeye çalışıyor');
+      
+      authProvider.signOut().then((_) {
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const LoginScreen(),
+            ),
+            (route) => false,
+          );
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Bu alana erişim yetkiniz bulunmamaktadır'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      });
+      return;
+    }
   }
 
   // Güvenli tarih dönüştürme helper metodu
@@ -172,9 +209,21 @@ class _SystemStatisticsScreenState extends State<SystemStatisticsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Responsive değerler
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTablet = screenWidth > 768;
+    final isMobile = screenWidth < 600;
+    final crossAxisCount = isTablet ? 4 : (isMobile ? 1 : 2);
+    final childAspectRatio = isMobile ? 2.5 : (isTablet ? 1.2 : 1.0);
+    final padding = isMobile ? 12.0 : 16.0;
+    final fontSize = isMobile ? 18.0 : 20.0;
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sistem İstatistikleri'),
+        title: Text(
+          'Sistem İstatistikleri',
+          style: TextStyle(fontSize: isMobile ? 16 : 18),
+        ),
         backgroundColor: Colors.purple[600],
         foregroundColor: Colors.white,
         actions: [
@@ -189,103 +238,138 @@ class _SystemStatisticsScreenState extends State<SystemStatisticsScreen> {
           : RefreshIndicator(
               onRefresh: _loadStatistics,
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(padding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Genel istatistikler
-                    const Text(
+                    Text(
                       'Genel İstatistikler',
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: fontSize,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      children: [
-                        _buildStatCard(
-                          'Toplam Kullanıcı',
-                          _statistics['totalUsers']?.toString() ?? '0',
-                          Colors.blue,
-                          Icons.people,
-                        ),
-                        _buildStatCard(
-                          'Aktif Abonelik',
-                          _statistics['activeSubscriptions']?.toString() ?? '0',
-                          Colors.green,
-                          Icons.check_circle,
-                        ),
-                        _buildStatCard(
-                          'Üretici',
-                          _statistics['producers']?.toString() ?? '0',
-                          Colors.teal,
-                          Icons.business,
-                        ),
-                        _buildStatCard(
-                          'Müşteri',
-                          _statistics['customers']?.toString() ?? '0',
-                          Colors.orange,
-                          Icons.shopping_cart,
-                        ),
-                      ],
+                    SizedBox(height: isMobile ? 12 : 16),
+                    
+                    // Responsive Grid
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        return GridView.count(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisCount: crossAxisCount,
+                          mainAxisSpacing: isMobile ? 12 : 16,
+                          crossAxisSpacing: isMobile ? 12 : 16,
+                          childAspectRatio: childAspectRatio,
+                          children: [
+                            _buildStatCard(
+                              'Toplam Kullanıcı',
+                              _statistics['totalUsers']?.toString() ?? '0',
+                              Colors.blue,
+                              Icons.people,
+                              isMobile,
+                            ),
+                            _buildStatCard(
+                              'Aktif Abonelik',
+                              _statistics['activeSubscriptions']?.toString() ?? '0',
+                              Colors.green,
+                              Icons.check_circle,
+                              isMobile,
+                            ),
+                            _buildStatCard(
+                              'Üretici',
+                              _statistics['producers']?.toString() ?? '0',
+                              Colors.teal,
+                              Icons.business,
+                              isMobile,
+                            ),
+                            _buildStatCard(
+                              'Müşteri',
+                              _statistics['customers']?.toString() ?? '0',
+                              Colors.orange,
+                              Icons.shopping_cart,
+                              isMobile,
+                            ),
+                          ],
+                        );
+                      },
                     ),
 
-                    const SizedBox(height: 32),
+                    SizedBox(height: isMobile ? 24 : 32),
 
                     // Bu ay istatistikleri
-                    const Text(
+                    Text(
                       'Bu Ay',
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: fontSize,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildStatCard(
-                            'Yeni Kullanıcı',
-                            _statistics['thisMonthUsers']?.toString() ?? '0',
-                            Colors.indigo,
-                            Icons.person_add,
+                    SizedBox(height: isMobile ? 12 : 16),
+                    
+                    // Responsive Row/Column
+                    isMobile
+                        ? Column(
+                            children: [
+                              _buildStatCard(
+                                'Yeni Kullanıcı',
+                                _statistics['thisMonthUsers']?.toString() ?? '0',
+                                Colors.indigo,
+                                Icons.person_add,
+                                isMobile,
+                              ),
+                              SizedBox(height: 12),
+                              _buildStatCard(
+                                'Yeni Abonelik',
+                                _statistics['thisMonthSubscriptions']?.toString() ?? '0',
+                                Colors.purple,
+                                Icons.add_circle,
+                                isMobile,
+                              ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Expanded(
+                                child: _buildStatCard(
+                                  'Yeni Kullanıcı',
+                                  _statistics['thisMonthUsers']?.toString() ?? '0',
+                                  Colors.indigo,
+                                  Icons.person_add,
+                                  isMobile,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildStatCard(
+                                  'Yeni Abonelik',
+                                  _statistics['thisMonthSubscriptions']?.toString() ?? '0',
+                                  Colors.purple,
+                                  Icons.add_circle,
+                                  isMobile,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildStatCard(
-                            'Yeni Abonelik',
-                            _statistics['thisMonthSubscriptions']?.toString() ??
-                                '0',
-                            Colors.purple,
-                            Icons.add_circle,
-                          ),
-                        ),
-                      ],
-                    ),
 
-                    const SizedBox(height: 32),
+                    SizedBox(height: isMobile ? 24 : 32),
 
                     // Abonelik durumu grafiği
-                    const Text(
+                    Text(
                       'Abonelik Durumu',
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: fontSize,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: isMobile ? 12 : 16),
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      width: double.infinity,
+                      padding: EdgeInsets.all(isMobile ? 16 : 20),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
@@ -299,26 +383,46 @@ class _SystemStatisticsScreenState extends State<SystemStatisticsScreen> {
                       ),
                       child: Column(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _buildPieSection(
-                                'Aktif',
-                                _statistics['activeSubscriptions'] ?? 0,
-                                Colors.green,
-                              ),
-                              _buildPieSection(
-                                'Pasif',
-                                _statistics['inactiveSubscriptions'] ?? 0,
-                                Colors.red,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
+                          isMobile
+                              ? Column(
+                                  children: [
+                                    _buildPieSection(
+                                      'Aktif',
+                                      _statistics['activeSubscriptions'] ?? 0,
+                                      Colors.green,
+                                      isMobile,
+                                    ),
+                                    SizedBox(height: 16),
+                                    _buildPieSection(
+                                      'Pasif',
+                                      _statistics['inactiveSubscriptions'] ?? 0,
+                                      Colors.red,
+                                      isMobile,
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                  children: [
+                                    _buildPieSection(
+                                      'Aktif',
+                                      _statistics['activeSubscriptions'] ?? 0,
+                                      Colors.green,
+                                      isMobile,
+                                    ),
+                                    _buildPieSection(
+                                      'Pasif',
+                                      _statistics['inactiveSubscriptions'] ?? 0,
+                                      Colors.red,
+                                      isMobile,
+                                    ),
+                                  ],
+                                ),
+                          SizedBox(height: isMobile ? 16 : 20),
                           Text(
                             'Toplam ${_statistics['totalSubscriptions'] ?? 0} Abonelik',
-                            style: const TextStyle(
-                              fontSize: 16,
+                            style: TextStyle(
+                              fontSize: isMobile ? 14 : 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.grey,
                             ),
@@ -327,20 +431,21 @@ class _SystemStatisticsScreenState extends State<SystemStatisticsScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 32),
+                    SizedBox(height: isMobile ? 24 : 32),
 
                     // Son 7 gün trendi
-                    const Text(
+                    Text(
                       'Son 7 Gün Trendi',
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: fontSize,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: isMobile ? 12 : 16),
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      width: double.infinity,
+                      padding: EdgeInsets.all(isMobile ? 16 : 20),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
@@ -362,43 +467,71 @@ class _SystemStatisticsScreenState extends State<SystemStatisticsScreen> {
                                   dayStat['subscriptions'] as int;
 
                               return Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
-                                child: Row(
-                                  children: [
-                                    SizedBox(
-                                      width: 60,
-                                      child: Text(
-                                        '${date.day}/${date.month}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Row(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: isMobile ? 6 : 8,
+                                ),
+                                child: isMobile
+                                    ? Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Icon(Icons.person_add,
-                                              color: Colors.blue, size: 16),
-                                          const SizedBox(width: 4),
-                                          Text('$users'),
-                                          const SizedBox(width: 16),
-                                          Icon(Icons.payment,
-                                              color: Colors.green, size: 16),
-                                          const SizedBox(width: 4),
-                                          Text('$subscriptions'),
+                                          Text(
+                                            '${date.day}/${date.month}',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              Icon(Icons.person_add,
+                                                  color: Colors.blue, size: 16),
+                                              SizedBox(width: 4),
+                                              Text('$users kullanıcı'),
+                                              SizedBox(width: 16),
+                                              Icon(Icons.payment,
+                                                  color: Colors.green, size: 16),
+                                              SizedBox(width: 4),
+                                              Text('$subscriptions abonelik'),
+                                            ],
+                                          ),
+                                        ],
+                                      )
+                                    : Row(
+                                        children: [
+                                          SizedBox(
+                                            width: 60,
+                                            child: Text(
+                                              '${date.day}/${date.month}',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.person_add,
+                                                    color: Colors.blue, size: 16),
+                                                const SizedBox(width: 4),
+                                                Text('$users'),
+                                                const SizedBox(width: 16),
+                                                Icon(Icons.payment,
+                                                    color: Colors.green, size: 16),
+                                                const SizedBox(width: 4),
+                                                Text('$subscriptions'),
+                                              ],
+                                            ),
+                                          ),
                                         ],
                                       ),
-                                    ),
-                                  ],
-                                ),
                               );
                             }).toList(),
                         ],
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    SizedBox(height: isMobile ? 16 : 20),
                   ],
                 ),
               ),
@@ -407,9 +540,16 @@ class _SystemStatisticsScreenState extends State<SystemStatisticsScreen> {
   }
 
   Widget _buildStatCard(
-      String title, String value, Color color, IconData icon) {
+      String title, String value, Color color, IconData icon, bool isMobile) {
+    final cardPadding = isMobile ? 16.0 : 20.0;
+    final iconSize = isMobile ? 24.0 : 28.0;
+    final valueSize = isMobile ? 20.0 : 24.0;
+    final titleSize = isMobile ? 11.0 : 12.0;
+    final iconPadding = isMobile ? 10.0 : 12.0;
+    final spacing = isMobile ? 8.0 : 12.0;
+    
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(cardPadding),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -425,67 +565,79 @@ class _SystemStatisticsScreenState extends State<SystemStatisticsScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(iconPadding),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               icon,
-              size: 28,
+              size: iconSize,
               color: color,
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
+          SizedBox(height: spacing),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: valueSize,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
           ),
           const SizedBox(height: 4),
           Text(
             title,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: titleSize,
               color: Colors.grey[600],
             ),
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPieSection(String label, int value, Color color) {
+  Widget _buildPieSection(String label, int value, Color color, bool isMobile) {
+    final circleSize = isMobile ? 50.0 : 60.0;
+    final valueSize = isMobile ? 16.0 : 18.0;
+    final labelSize = isMobile ? 12.0 : 14.0;
+    
     return Column(
       children: [
         Container(
-          width: 60,
-          height: 60,
+          width: circleSize,
+          height: circleSize,
           decoration: BoxDecoration(
             color: color.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(circleSize / 2),
             border: Border.all(color: color, width: 3),
           ),
           child: Center(
-            child: Text(
-              value.toString(),
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: color,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value.toString(),
+                style: TextStyle(
+                  fontSize: valueSize,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
               ),
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: isMobile ? 6 : 8),
         Text(
           label,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: labelSize,
             fontWeight: FontWeight.bold,
             color: color,
           ),

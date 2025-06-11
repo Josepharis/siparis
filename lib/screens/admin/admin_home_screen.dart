@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../screens/auth/login_screen.dart';
 import 'subscription_management_screen.dart';
 import 'user_management_screen.dart';
 import 'system_statistics_screen.dart';
@@ -21,6 +22,11 @@ class _AdminHomeScreenState extends State<AdminHomeScreen>
     super.initState();
     // Lifecycle observer'ı ekle
     WidgetsBinding.instance.addObserver(this);
+    
+    // Admin kontrolü yap
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAdminAccess();
+    });
   }
 
   @override
@@ -61,6 +67,38 @@ class _AdminHomeScreenState extends State<AdminHomeScreen>
     } catch (e) {
       print('❌ Admin UI yenileme hatası: $e');
     }
+  }
+
+  // Admin erişim kontrolü
+  void _checkAdminAccess() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    // Admin kontrolü - sadece admin rolüne sahip kullanıcılar girebilir
+    if (authProvider.currentUser == null || !authProvider.currentUser!.isAdmin) {
+      print('❌ Admin olmayan kullanıcı admin paneline erişmeye çalışıyor');
+      
+      // Admin değilse çıkış yapıp login'e yönlendir
+      authProvider.signOut().then((_) {
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const LoginScreen(),
+            ),
+            (route) => false,
+          );
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Bu alana erişim yetkiniz bulunmamaktadır'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      });
+      return;
+    }
+    
+    print('✅ Admin erişimi onaylandı: ${authProvider.currentUser!.name}');
   }
 
   @override
@@ -139,153 +177,212 @@ class _AdminHomeScreenState extends State<AdminHomeScreen>
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Hoş geldin mesajı
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.indigo[600]!, Colors.indigo[700]!],
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Responsive değerler
+          final screenWidth = constraints.maxWidth;
+          final isTablet = screenWidth > 768;
+          final isMobile = screenWidth < 600;
+          final padding = isMobile ? 16.0 : 24.0;
+          final crossAxisCount = isTablet ? 4 : (isMobile ? 1 : 2);
+          final childAspectRatio = isMobile ? 2.0 : (isTablet ? 0.9 : 1.0);
+          
+          return SingleChildScrollView(
+            padding: EdgeInsets.all(padding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Hoş geldin mesajı
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(isMobile ? 20 : 24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.indigo[600]!, Colors.indigo[700]!],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.indigo.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: isMobile
+                      ? Column(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(isMobile ? 10 : 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.admin_panel_settings,
+                                color: Colors.white,
+                                size: isMobile ? 28 : 32,
+                              ),
+                            ),
+                            SizedBox(height: 12),
+                            Column(
+                              children: [
+                                Text(
+                                  'Hoş Geldiniz!',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: isMobile ? 20 : 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Admin yönetim paneline erişiminiz var',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: isMobile ? 12 : 14,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.admin_panel_settings,
+                                color: Colors.white,
+                                size: 32,
+                              ),
+                            ),
+                            SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Hoş Geldiniz!',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'Admin yönetim paneline erişiminiz var',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.indigo.withOpacity(0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
+
+                SizedBox(height: isMobile ? 24 : 32),
+
+                // Yönetim kartları başlığı
+                Text(
+                  'Yönetim Paneli',
+                  style: TextStyle(
+                    fontSize: isMobile ? 18 : 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.admin_panel_settings,
-                      color: Colors.white,
-                      size: 32,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Hoş Geldiniz!',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+                ),
+
+                SizedBox(height: isMobile ? 12 : 16),
+
+                // Yönetim kartları
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: crossAxisCount,
+                  mainAxisSpacing: isMobile ? 12 : 16,
+                  crossAxisSpacing: isMobile ? 12 : 16,
+                  childAspectRatio: childAspectRatio,
+                  children: [
+                    _buildAdminCard(
+                      title: 'Abonelik Yönetimi',
+                      subtitle: 'Kullanıcı aboneliklerini yönet',
+                      icon: Icons.payment,
+                      color: Colors.green,
+                      isMobile: isMobile,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const SubscriptionManagementScreen(),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Admin yönetim paneline erişiminiz var',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
+                        );
+                      },
                     ),
-                  ),
-                ],
-              ),
+                    _buildAdminCard(
+                      title: 'Kullanıcı Yönetimi',
+                      subtitle: 'Kullanıcıları görüntüle ve yönet',
+                      icon: Icons.people,
+                      color: Colors.blue,
+                      isMobile: isMobile,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const UserManagementScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildAdminCard(
+                      title: 'Sistem İstatistikleri',
+                      subtitle: 'Uygulama kullanım verileri',
+                      icon: Icons.analytics,
+                      color: Colors.purple,
+                      isMobile: isMobile,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SystemStatisticsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildAdminCard(
+                      title: 'Ayarlar',
+                      subtitle: 'Sistem ayarları ve konfigürasyon',
+                      icon: Icons.settings,
+                      color: Colors.orange,
+                      isMobile: isMobile,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AdminSettingsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                
+                SizedBox(height: isMobile ? 16 : 24),
+              ],
             ),
-
-            const SizedBox(height: 32),
-
-            // Yönetim kartları başlığı
-            const Text(
-              'Yönetim Paneli',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Yönetim kartları
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                children: [
-                  _buildAdminCard(
-                    title: 'Abonelik Yönetimi',
-                    subtitle: 'Kullanıcı aboneliklerini yönet',
-                    icon: Icons.payment,
-                    color: Colors.green,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              const SubscriptionManagementScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildAdminCard(
-                    title: 'Kullanıcı Yönetimi',
-                    subtitle: 'Kullanıcıları görüntüle ve yönet',
-                    icon: Icons.people,
-                    color: Colors.blue,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const UserManagementScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildAdminCard(
-                    title: 'Sistem İstatistikleri',
-                    subtitle: 'Uygulama kullanım verileri',
-                    icon: Icons.analytics,
-                    color: Colors.purple,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SystemStatisticsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildAdminCard(
-                    title: 'Ayarlar',
-                    subtitle: 'Sistem ayarları ve konfigürasyon',
-                    icon: Icons.settings,
-                    color: Colors.orange,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AdminSettingsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -295,8 +392,16 @@ class _AdminHomeScreenState extends State<AdminHomeScreen>
     required String subtitle,
     required IconData icon,
     required Color color,
+    required bool isMobile,
     required VoidCallback onTap,
   }) {
+    final cardPadding = isMobile ? 16.0 : 20.0;
+    final iconPadding = isMobile ? 12.0 : 16.0;
+    final iconSize = isMobile ? 28.0 : 32.0;
+    final titleSize = isMobile ? 14.0 : 16.0;
+    final subtitleSize = isMobile ? 11.0 : 12.0;
+    final spacing = isMobile ? 12.0 : 16.0;
+    
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -312,40 +417,46 @@ class _AdminHomeScreenState extends State<AdminHomeScreen>
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(cardPadding),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(iconPadding),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   icon,
-                  size: 32,
+                  size: iconSize,
                   color: color,
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: color,
+              SizedBox(height: spacing),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: titleSize,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
                 ),
-                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: isMobile ? 6 : 8),
               Text(
                 subtitle,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: subtitleSize,
                   color: Colors.grey[600],
                 ),
                 textAlign: TextAlign.center,
+                maxLines: isMobile ? 3 : 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

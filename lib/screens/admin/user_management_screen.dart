@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../providers/auth_provider.dart';
+import '../../config/theme.dart';
 import '../../models/user_model.dart';
+import '../../providers/auth_provider.dart';
+import '../auth/login_screen.dart';
 import '../../models/subscription.dart';
 
 class UserManagementScreen extends StatefulWidget {
@@ -22,7 +24,41 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   @override
   void initState() {
     super.initState();
+    
+    // Admin kontrolü yap
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAdminAccess();
+    });
+    
     _loadAllUsers();
+  }
+
+  // Admin erişim kontrolü
+  void _checkAdminAccess() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    if (authProvider.currentUser == null || !authProvider.currentUser!.isAdmin) {
+      print('❌ Admin olmayan kullanıcı user management\'e erişmeye çalışıyor');
+      
+      authProvider.signOut().then((_) {
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const LoginScreen(),
+            ),
+            (route) => false,
+          );
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Bu alana erişim yetkiniz bulunmamaktadır'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      });
+      return;
+    }
   }
 
   // Güvenli tarih dönüştürme helper metodu
@@ -132,9 +168,19 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Responsive değerler
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+    final isTablet = screenWidth > 768;
+    final padding = isMobile ? 12.0 : 16.0;
+    final fontSize = isMobile ? 18.0 : 20.0;
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kullanıcı Yönetimi'),
+        title: Text(
+          'Kullanıcı Yönetimi',
+          style: TextStyle(fontSize: isMobile ? 16 : 18),
+        ),
         backgroundColor: Colors.blue[600],
         foregroundColor: Colors.white,
         actions: [
@@ -146,24 +192,34 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       ),
       body: Column(
         children: [
-          // Filtreler ve Arama
+          // Arama ve filtre
           Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.grey[50],
+            padding: EdgeInsets.all(padding),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: Column(
               children: [
                 // Arama çubuğu
                 TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: 'Kullanıcı ara (isim, email)...',
+                    hintText: 'Kullanıcı ara...',
                     prefixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
                     ),
-                    filled: true,
-                    fillColor: Colors.white,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 12 : 16,
+                      vertical: isMobile ? 12 : 16,
+                    ),
                   ),
                   onChanged: (value) {
                     setState(() {
@@ -171,185 +227,105 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     });
                   },
                 ),
-                const SizedBox(height: 12),
-                // Rol filtresi
-                Row(
-                  children: [
-                    const Text('Rol: '),
-                    Expanded(
-                      child: DropdownButton<String>(
-                        value: _selectedRole,
-                        isExpanded: true,
-                        items: ['Tümü', 'Producer', 'Customer', 'Admin']
-                            .map((role) => DropdownMenuItem(
-                                  value: role,
-                                  child: Text(role),
-                                ))
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedRole = value!;
-                          });
-                        },
+                SizedBox(height: isMobile ? 12 : 16),
+                
+                // Filtre dropdown - responsive
+                isMobile
+                    ? SizedBox(
+                        width: double.infinity,
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedRole,
+                          decoration: InputDecoration(
+                            labelText: 'Rol Filtresi',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                          ),
+                          items: ['Tümü', 'Producer', 'Customer', 'Admin']
+                              .map((filter) => DropdownMenuItem(
+                                    value: filter,
+                                    child: Text(filter),
+                                  ))
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedRole = value!;
+                            });
+                          },
+                        ),
+                      )
+                    : Row(
+                        children: [
+                          Text(
+                            'Rol Filtresi:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: isMobile ? 14 : 16,
+                            ),
+                          ),
+                          SizedBox(width: 16),
+                          Expanded(
+                            child: DropdownButton<String>(
+                              value: _selectedRole,
+                              isExpanded: true,
+                              items: ['Tümü', 'Producer', 'Customer', 'Admin']
+                                  .map((filter) => DropdownMenuItem(
+                                        value: filter,
+                                        child: Text(filter),
+                                      ))
+                                  .toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedRole = value!;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
-
-          // İstatistik kartları
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    'Toplam Kullanıcı',
-                    _allUsers.length.toString(),
-                    Colors.blue,
-                    Icons.people,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard(
-                    'Üretici',
-                    _allUsers
-                        .where((item) =>
-                            (item['user'] as UserModel).role == 'producer')
-                        .length
-                        .toString(),
-                    Colors.green,
-                    Icons.business,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard(
-                    'Müşteri',
-                    _allUsers
-                        .where((item) =>
-                            (item['user'] as UserModel).role == 'customer')
-                        .length
-                        .toString(),
-                    Colors.orange,
-                    Icons.shopping_cart,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard(
-                    'Admin',
-                    _allUsers
-                        .where((item) =>
-                            (item['user'] as UserModel).role == 'admin')
-                        .length
-                        .toString(),
-                    Colors.purple,
-                    Icons.admin_panel_settings,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
+          
           // Kullanıcı listesi
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredUsers.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'Kullanıcı bulunamadı',
-                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.people_outline,
+                              size: isMobile ? 60 : 80,
+                              color: Colors.grey[400],
+                            ),
+                            SizedBox(height: isMobile ? 12 : 16),
+                            Text(
+                              'Kullanıcı bulunamadı',
+                              style: TextStyle(
+                                fontSize: isMobile ? 16 : 18,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
                         ),
                       )
-                    : RefreshIndicator(
-                        onRefresh: _loadAllUsers,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _filteredUsers.length,
-                          itemBuilder: (context, index) {
-                            final item = _filteredUsers[index];
-                            final user = item['user'] as UserModel;
-                            final subscription =
-                                item['subscription'] as Subscription?;
-
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: _getRoleColor(user.role),
-                                  child: Icon(
-                                    _getRoleIcon(user.role),
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                title: Text(
-                                  user.name,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(user.email),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: _getRoleColor(user.role),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          child: Text(
-                                            _getRoleName(user.role),
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 10,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        if (subscription != null)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 8, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: subscription.isValid
-                                                  ? Colors.green
-                                                  : Colors.red,
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            child: Text(
-                                              subscription.isValid
-                                                  ? 'Aktif'
-                                                  : 'Pasif',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 10,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                                trailing: IconButton(
-                                  onPressed: () =>
-                                      _showUserDetails(user, subscription),
-                                  icon: const Icon(Icons.more_vert),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                    : ListView.builder(
+                        padding: EdgeInsets.all(padding),
+                        itemCount: _filteredUsers.length,
+                        itemBuilder: (context, index) {
+                          final userItem = _filteredUsers[index];
+                          final user = userItem['user'] as UserModel;
+                          final subscription = userItem['subscription'] as Subscription?;
+                          
+                          return _buildUserCard(user, subscription, isMobile);
+                        },
                       ),
           ),
         ],
@@ -357,36 +333,66 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
-  Widget _buildStatCard(
-      String title, String value, Color color, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+  Widget _buildUserCard(UserModel user, Subscription? subscription, bool isMobile) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: _getRoleColor(user.role),
+          child: Icon(
+            _getRoleIcon(user.role),
+            color: Colors.white,
           ),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 10,
-              color: color,
+        ),
+        title: Text(
+          user.name,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(user.email),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _getRoleColor(user.role),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    _getRoleName(user.role),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (subscription != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: subscription.isValid ? Colors.green : Colors.red,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      subscription.isValid ? 'Aktif' : 'Pasif',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+          ],
+        ),
+        trailing: IconButton(
+          onPressed: () => _showUserDetails(user, subscription),
+          icon: const Icon(Icons.more_vert),
+        ),
       ),
     );
   }
