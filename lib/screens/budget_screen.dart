@@ -4,9 +4,7 @@ import 'package:siparis/config/theme.dart';
 import 'package:siparis/models/order.dart';
 import 'package:siparis/providers/order_provider.dart';
 import 'package:siparis/providers/auth_provider.dart';
-import 'package:siparis/screens/home/home_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'dart:math' as math;
 
 // Ödeme yöntemi
 enum PaymentMethod { card, cash }
@@ -21,17 +19,108 @@ class BudgetScreen extends StatefulWidget {
 class _BudgetScreenState extends State<BudgetScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  
+  // Tarih aralığı seçimi için state değişkenleri
+  DateTime? _startDate;
+  DateTime? _endDate;
+  Map<String, int> _filteredProductSummary = {};
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    
+    // Varsayılan tarih aralığı - son 30 gün
+    _endDate = DateTime.now();
+    _startDate = _endDate!.subtract(const Duration(days: 30));
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  // Tarih aralığına göre ürün analizi hesapla
+  void _calculateProductAnalysis(OrderProvider orderProvider) {
+    _filteredProductSummary.clear();
+    
+    final allOrders = [
+      ...orderProvider.waitingOrders,
+      ...orderProvider.processingOrders,
+      ...orderProvider.completedOrders,
+    ];
+    
+    for (final order in allOrders) {
+      // Tarih aralığı kontrolü
+      if (_startDate != null && _endDate != null) {
+        if (order.orderDate.isBefore(_startDate!) || 
+            order.orderDate.isAfter(_endDate!.add(const Duration(days: 1)))) {
+          continue;
+        }
+      }
+      
+      // Sipariş öğelerini analiz et
+      for (final item in order.items) {
+        _filteredProductSummary[item.product.name] = 
+            (_filteredProductSummary[item.product.name] ?? 0) + item.quantity;
+      }
+    }
+  }
+
+  // Detaylı ürün analizi hesapla - eski formatta  
+  List<Map<String, dynamic>> _calculateDetailedProductAnalysis(OrderProvider orderProvider) {
+    Map<String, Map<String, dynamic>> productAnalysis = {};
+    
+    final allOrders = [
+      ...orderProvider.waitingOrders,
+      ...orderProvider.processingOrders,
+      ...orderProvider.completedOrders,
+    ];
+    
+    for (final order in allOrders) {
+      // Tarih aralığı kontrolü
+      if (_startDate != null && _endDate != null) {
+        if (order.orderDate.isBefore(_startDate!) || 
+            order.orderDate.isAfter(_endDate!.add(const Duration(days: 1)))) {
+          continue;
+        }
+      }
+      
+      // Sipariş öğelerini analiz et
+      for (final item in order.items) {
+        final productName = item.product.name;
+        final companyName = order.customer.name;
+        
+        if (!productAnalysis.containsKey(productName)) {
+          productAnalysis[productName] = {
+            'productName': productName,
+            'category': item.product.category,
+            'totalQuantity': 0,
+            'firmaCounts': <String, int>{},
+            'firmaCount': 0,
+          };
+        }
+        
+        productAnalysis[productName]!['totalQuantity'] += item.quantity;
+        
+        if (productAnalysis[productName]!['firmaCounts'][companyName] == null) {
+          productAnalysis[productName]!['firmaCounts'][companyName] = 0;
+        }
+        productAnalysis[productName]!['firmaCounts'][companyName] += item.quantity;
+      }
+    }
+    
+    // Firma sayılarını hesapla
+    productAnalysis.forEach((key, value) {
+      value['firmaCount'] = value['firmaCounts'].length;
+    });
+    
+    // Listeye çevir ve sırala
+    final result = productAnalysis.values.toList();
+    result.sort((a, b) => b['totalQuantity'].compareTo(a['totalQuantity']));
+    
+    return result;
   }
 
   @override
@@ -50,44 +139,169 @@ class _BudgetScreenState extends State<BudgetScreen>
 
         return Scaffold(
           backgroundColor: AppTheme.backgroundColor,
-          body: Column(
-            children: [
-              // Başlık
-              Container(
-                padding: EdgeInsets.fromLTRB(
-                    isSmallScreen ? 12 : 16,
-                    isSmallScreen ? 12 : 16,
-                    isSmallScreen ? 12 : 16,
-                    isSmallScreen ? 6 : 8),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Bütçe Yönetimi',
-                    style: TextStyle(
-                      color: AppTheme.textPrimaryColor,
-                      fontSize: isSmallScreen ? 20 : 24,
-                      fontWeight: FontWeight.bold,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            centerTitle: false,
+            automaticallyImplyLeading: false, // Geri butonunu kaldır
+            title: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor,
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryColor.withOpacity(0.3),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.account_balance_wallet_rounded,
+                    color: Colors.white,
+                    size: isSmallScreen ? 16 : 18,
+                  ),
+                ),
+                SizedBox(width: isSmallScreen ? 8 : 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Bütçe Yönetimi',
+                        style: TextStyle(
+                          color: AppTheme.textPrimaryColor,
+                          fontSize: isSmallScreen ? 16 : 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (!isSmallScreen)
+                        Text(
+                          'Finansal durum ve analiz',
+                          style: TextStyle(
+                            color: AppTheme.textSecondaryColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              // Tarih aralığı seçici buton - sağ üstte kompakt
+              if (hasFullBudgetAccess)
+                Container(
+                  margin: EdgeInsets.only(right: isSmallScreen ? 8 : 12),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+                      onTap: () => _showDateRangeModal(context),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 8 : 12,
+                          vertical: isSmallScreen ? 6 : 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+                          border: Border.all(
+                            color: AppTheme.primaryColor.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.date_range_rounded,
+                              color: AppTheme.primaryColor,
+                              size: isSmallScreen ? 16 : 18,
+                            ),
+                            SizedBox(width: isSmallScreen ? 4 : 6),
+                            Text(
+                              isSmallScreen ? 'Tarih' : 'Tarih Aralığı',
+                              style: TextStyle(
+                                color: AppTheme.primaryColor,
+                                fontSize: isSmallScreen ? 11 : 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            if (_startDate != null && _endDate != null) ...[
+                              SizedBox(width: isSmallScreen ? 4 : 6),
+                              Container(
+                                width: isSmallScreen ? 6 : 8,
+                                height: isSmallScreen ? 6 : 8,
+                                decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
+              
+              // Refresh butonu
+              Container(
+                margin: EdgeInsets.only(right: isSmallScreen ? 8 : 12),
+                child: IconButton(
+                  icon: Container(
+                    padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+                    ),
+                    child: Icon(
+                      Icons.refresh_rounded,
+                      color: AppTheme.primaryColor,
+                      size: isSmallScreen ? 18 : 20,
+                    ),
+                  ),
+                  onPressed: () {
+                    // Refresh functionality
+                    context.read<OrderProvider>().loadOrders();
+                  },
+                ),
               ),
-
-              // Tab Bar (sadece tam yetki olanlar için)
+            ],
+          ),
+          body: Column(
+            children: [
+              // Tab Bar (sadece tam yetki olanlar için) - padding eklendi
               if (hasFullBudgetAccess)
                 Container(
-                  margin: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                  margin: EdgeInsets.fromLTRB(
+                    isSmallScreen ? 12 : 16,
+                    isSmallScreen ? 8 : 12,
+                    isSmallScreen ? 12 : 16,
+                    isSmallScreen ? 8 : 12,
+                  ),
                   height: isSmallScreen ? 40 : 45,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
-                    borderRadius:
-                        BorderRadius.circular(isSmallScreen ? 10 : 12),
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: TabBar(
                     controller: _tabController,
                     indicator: BoxDecoration(
                       color: AppTheme.primaryColor,
-                      borderRadius:
-                          BorderRadius.circular(isSmallScreen ? 10 : 12),
+                      borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
                       boxShadow: [
                         BoxShadow(
                           color: AppTheme.primaryColor.withOpacity(0.3),
@@ -99,10 +313,10 @@ class _BudgetScreenState extends State<BudgetScreen>
                     labelColor: Colors.white,
                     unselectedLabelColor: AppTheme.textSecondaryColor,
                     labelStyle: TextStyle(
-                        fontSize: isSmallScreen ? 10 : 12,
+                        fontSize: isSmallScreen ? 11 : 13,
                         fontWeight: FontWeight.w600),
                     unselectedLabelStyle:
-                        TextStyle(fontSize: isSmallScreen ? 10 : 12),
+                        TextStyle(fontSize: isSmallScreen ? 11 : 13),
                     tabs: [
                       Tab(
                           text: isSmallScreen
@@ -123,9 +337,13 @@ class _BudgetScreenState extends State<BudgetScreen>
                         children: [
                           _buildFinancialTab(
                               financialSummary, companySummaries),
-                          _buildProductSalesTab(orderProvider
-                              .dailyProductSummary.values
-                              .toList()),
+                          Builder(
+                            builder: (context) {
+                              // Analiz hesapla
+                              _calculateProductAnalysis(orderProvider);
+                              return _buildProductAnalysisTab(orderProvider);
+                            },
+                          ),
                         ],
                       )
                     : hasPartialBudgetAccess
@@ -869,39 +1087,37 @@ class _BudgetScreenState extends State<BudgetScreen>
                                       order.paymentStatus != PaymentStatus.paid)
                                   .length;
 
-                              return TextButton.icon(
-                                onPressed: () {
-                                  _showCompanyOrdersDialog(context, company);
-                                },
-                                icon: Icon(
-                                  Icons.receipt_long_rounded,
-                                  color: Colors.white.withOpacity(0.9),
-                                  size: isSmallScreen ? 14 : 18,
+                              return Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isSmallScreen ? 8 : 12,
+                                  vertical: isSmallScreen ? 4 : 6,
                                 ),
-                                label: Text(
-                                  isSmallScreen
-                                      ? 'Siparişler ($unpaidOrdersCount)'
-                                      : 'Siparişleri Görüntüle ($unpaidOrdersCount sipariş)',
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.9),
-                                    fontSize: isSmallScreen ? 11 : 13,
-                                    fontWeight: FontWeight.w600,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(
+                                      isSmallScreen ? 12 : 16),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.3),
                                   ),
                                 ),
-                                style: TextButton.styleFrom(
-                                  backgroundColor:
-                                      Colors.white.withOpacity(0.15),
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: isSmallScreen ? 12 : 16,
-                                    vertical: isSmallScreen ? 6 : 8,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                        isSmallScreen ? 16 : 20),
-                                    side: BorderSide(
-                                      color: Colors.white.withOpacity(0.3),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.receipt_long_rounded,
+                                      color: Colors.white.withOpacity(0.9),
+                                      size: isSmallScreen ? 12 : 14,
                                     ),
-                                  ),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      '${unpaidOrdersCount} sipariş',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.9),
+                                        fontSize: isSmallScreen ? 9 : 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               );
                             },
@@ -2005,14 +2221,50 @@ class _BudgetScreenState extends State<BudgetScreen>
     );
   }
 
-  // Ürün Satış Analizi Sekmesi
-  Widget _buildProductSalesTab(List<DailyProductSummary> products) {
+  // Yeni Ürün Analizi Sekmesi - Tarih aralığı ile
+  Widget _buildProductAnalysisTab(OrderProvider orderProvider) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    
+    // Detaylı analiz hesapla
+    final products = _calculateDetailedProductAnalysis(orderProvider);
+    
     if (products.isEmpty) {
-      return const Center(child: Text('Henüz ürün satış verisi bulunmuyor.'));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.analytics_outlined,
+              size: 64,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Seçilen tarih aralığında\nürün satış verisi bulunmuyor',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => _showDateRangeModal(context),
+              icon: const Icon(Icons.date_range_rounded),
+              label: const Text('Tarih Aralığı Seç'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
     }
-
-    // Ürünleri toplam adede göre sırala
-    products.sort((a, b) => b.totalQuantity.compareTo(a.totalQuantity));
 
     // En çok satan ilk 8 ürünü al (pasta grafik için ideal)
     final topProducts = products.take(8).toList();
@@ -2032,20 +2284,20 @@ class _BudgetScreenState extends State<BudgetScreen>
     // Toplam satış adedi (yüzde hesaplamak için)
     final totalQuantity = topProducts.fold(
       0,
-      (sum, product) => sum + product.totalQuantity,
+      (sum, product) => sum + product['totalQuantity'] as int,
     );
 
     // Pasta grafik için sektör verilerini hazırla
     final List<PieChartSectionData> pieChartSections = [];
     for (int i = 0; i < topProducts.length; i++) {
       final product = topProducts[i];
-      final double percentage = (product.totalQuantity / totalQuantity) * 100;
+      final double percentage = (product['totalQuantity'] / totalQuantity) * 100;
 
       // Her bir dilim için veri oluştur
       pieChartSections.add(
         PieChartSectionData(
           color: pieColors[i % pieColors.length],
-          value: product.totalQuantity.toDouble(),
+          value: (product['totalQuantity'] as int).toDouble(),
           title: '${percentage.toStringAsFixed(1)}%',
           radius: 80, // Vurgulanmış dilim daha büyük görünecek
           titleStyle: const TextStyle(
@@ -2061,8 +2313,8 @@ class _BudgetScreenState extends State<BudgetScreen>
             ],
           ),
           badgeWidget: _getBadge(
-            product.productName,
-            product.totalQuantity,
+            product['productName'],
+            product['totalQuantity'],
             pieColors[i % pieColors.length],
           ),
           badgePositionPercentageOffset:
@@ -2072,16 +2324,16 @@ class _BudgetScreenState extends State<BudgetScreen>
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        children: <Widget>[
           // Zenginleştirilmiş satış analizi grafiği
           Container(
-            margin: const EdgeInsets.only(bottom: 24),
+            margin: EdgeInsets.only(bottom: isSmallScreen ? 16 : 24),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.08),
@@ -2094,9 +2346,14 @@ class _BudgetScreenState extends State<BudgetScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Başlık bölümü
+                // Başlık bölümü - Modern tasarım
                 Container(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                  padding: EdgeInsets.fromLTRB(
+                    isSmallScreen ? 16 : 20, 
+                    isSmallScreen ? 16 : 20, 
+                    isSmallScreen ? 16 : 20, 
+                    isSmallScreen ? 8 : 10
+                  ),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
@@ -2106,65 +2363,65 @@ class _BudgetScreenState extends State<BudgetScreen>
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(isSmallScreen ? 16 : 20),
+                      topRight: Radius.circular(isSmallScreen ? 16 : 20),
                     ),
                   ),
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.bar_chart_rounded,
                           color: Colors.white,
-                          size: 26,
+                          size: isSmallScreen ? 20 : 26,
                         ),
                       ),
-                      const SizedBox(width: 14),
+                      SizedBox(width: isSmallScreen ? 10 : 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Ürün Satış Dağılımı',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 18,
+                                fontSize: isSmallScreen ? 16 : 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: 4),
                             Text(
                               'Toplam ${totalQuantity} adet ürün',
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.8),
-                                fontSize: 13,
+                                fontSize: isSmallScreen ? 11 : 13,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      // İstatistik göstergesi
+                      // İstatistik göstergesi - Modern
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 8 : 10,
+                          vertical: isSmallScreen ? 4 : 5,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              width: 8,
-                              height: 8,
+                              width: isSmallScreen ? 6 : 8,
+                              height: isSmallScreen ? 6 : 8,
                               decoration: BoxDecoration(
                                 color: Colors.green,
                                 shape: BoxShape.circle,
@@ -2177,12 +2434,12 @@ class _BudgetScreenState extends State<BudgetScreen>
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 6),
+                            SizedBox(width: isSmallScreen ? 4 : 6),
                             Text(
                               'Güncel',
                               style: TextStyle(
                                 color: Colors.grey.shade700,
-                                fontSize: 12,
+                                fontSize: isSmallScreen ? 10 : 12,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -2193,21 +2450,21 @@ class _BudgetScreenState extends State<BudgetScreen>
                   ),
                 ),
 
-                // İçerik - Grafik
+                // İçerik - Grafik - Modern tasarım
                 Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
                   child: Column(
-                    children: [
-                      // Grafiği yükseklik ver
+                    children: <Widget>[
+                      // Grafiği yükseklik ver - Modern boyutlandırma
                       SizedBox(
-                        height: 300,
+                        height: isSmallScreen ? 250 : 300,
                         child: Stack(
                           children: [
-                            // Pasta grafik
+                            // Pasta grafik - Modern animasyonlar
                             PieChart(
                               PieChartData(
                                 sections: pieChartSections,
-                                centerSpaceRadius: 50,
+                                centerSpaceRadius: isSmallScreen ? 40 : 50,
                                 sectionsSpace: 2,
                                 startDegreeOffset: -90,
                                 pieTouchData: PieTouchData(
@@ -2215,7 +2472,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                                     FlTouchEvent event,
                                     PieTouchResponse? response,
                                   ) {
-                                    // Dokunma etkileşimi eklenebilir
+                                    // Modern dokunma etkileşimi
                                   },
                                   enabled: true,
                                 ),
@@ -2227,7 +2484,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                               swapAnimationCurve: Curves.easeInOutQuint,
                             ),
 
-                            // Merkez içerik
+                            // Merkez içerik - Modern tasarım
                             Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -2236,17 +2493,17 @@ class _BudgetScreenState extends State<BudgetScreen>
                                     totalQuantity.toString(),
                                     style: TextStyle(
                                       color: AppTheme.textPrimaryColor,
-                                      fontSize: 26,
+                                      fontSize: isSmallScreen ? 20 : 26,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
+                                  SizedBox(height: isSmallScreen ? 2 : 4),
                                   Text(
                                     'Toplam\nSatış',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       color: AppTheme.textSecondaryColor,
-                                      fontSize: 12,
+                                      fontSize: isSmallScreen ? 10 : 12,
                                     ),
                                   ),
                                 ],
@@ -2256,10 +2513,10 @@ class _BudgetScreenState extends State<BudgetScreen>
                         ),
                       ),
 
-                      const SizedBox(height: 20),
-
-                      // Ürün bilgilendirme satırları
-                      ..._buildLegendItems(topProducts, pieColors),
+                      SizedBox(height: isSmallScreen ? 16 : 20),
+                      
+                      // Ürün bilgilendirme satırları - Modern tasarım
+                      ..._buildLegendItems(topProducts, pieColors, isSmallScreen),
                     ],
                   ),
                 ),
@@ -2267,699 +2524,33 @@ class _BudgetScreenState extends State<BudgetScreen>
             ),
           ),
 
-          // Ürün satış detayları başlık
+          // Ürün satış detayları başlık - Modern
           Padding(
-            padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
+            padding: EdgeInsets.fromLTRB(0, isSmallScreen ? 6 : 8, 0, isSmallScreen ? 12 : 16),
             child: Text(
               'Ürün Satış Detayları',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: isSmallScreen ? 14 : 16,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.textPrimaryColor,
               ),
             ),
           ),
 
-          // Ürün kartları
+          // Ürün kartları - Modern tasarım
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: products.length,
             itemBuilder: (context, index) {
-              final product = products[index];
               return _buildProductSalesCard(
-                product,
+                products[index],
                 pieColors[index % pieColors.length],
+                isSmallScreen,
               );
             },
           ),
         ],
-      ),
-    );
-  }
-
-  // Grafik için maksimum Y değerini hesapla
-  double _calculateMaxY(List<DailyProductSummary> products) {
-    if (products.isEmpty) return 100;
-
-    final maxQuantity = products.fold(
-      0,
-      (max, product) => math.max(max, product.totalQuantity),
-    );
-
-    // Yukarıda biraz boşluk bırakmak için %20 ekle
-    return (maxQuantity * 1.2).ceilToDouble();
-  }
-
-  // Ürün bilgi rozeti
-  Widget _getBadge(String productName, int quantity, Color color) {
-    // Kısa ürün adı
-    String shortName = productName.length > 6
-        ? productName.substring(0, 6) + '...'
-        : productName;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.3),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            shortName,
-            style: TextStyle(
-              color: AppTheme.textPrimaryColor,
-              fontSize: 9,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Ürün açıklama satırları
-  List<Widget> _buildLegendItems(
-    List<DailyProductSummary> products,
-    List<Color> colors,
-  ) {
-    return List.generate(
-      math.min(products.length, 5), // İlk 5 ürünü göster
-      (index) {
-        final product = products[index];
-        final color = colors[index % colors.length];
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8.0),
-          child: Row(
-            children: [
-              // Renk göstergesi
-              Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 8),
-
-              // Ürün adı
-              Expanded(
-                child: Text(
-                  product.productName,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-
-              // Adet bilgisi
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${product.totalQuantity} adet',
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 2),
-                    Icon(Icons.arrow_forward_ios, color: color, size: 10),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // Ürün satış kartı
-  Widget _buildProductSalesCard(DailyProductSummary product, Color cardColor) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            // Ürün kategorisi ikonu
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: cardColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(
-                child: Icon(
-                  _getCategoryIcon(product.category),
-                  color: cardColor,
-                  size: 24,
-                ),
-              ),
-            ),
-
-            const SizedBox(width: 12),
-
-            // Ürün bilgileri
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          product.productName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: cardColor,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '${product.totalQuantity} adet',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 4),
-
-                  Text(
-                    product.category,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Firma bilgileri
-                  Text(
-                    '${product.firmaCount} farklı firma tarafından sipariş edildi',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.textSecondaryColor,
-                    ),
-                  ),
-
-                  if (product.firmaCounts != null &&
-                      product.firmaCounts!.isNotEmpty)
-                    const SizedBox(height: 8),
-
-                  if (product.firmaCounts != null &&
-                      product.firmaCounts!.isNotEmpty)
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: product.firmaCounts!.entries
-                          .take(3)
-                          .map(
-                            (entry) => _buildFirmaChip(
-                              entry.key,
-                              entry.value,
-                              cardColor,
-                            ),
-                          )
-                          .toList(),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Firma etiketi (chip)
-  Widget _buildFirmaChip(String firmaName, int adet, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            firmaName,
-            style: TextStyle(fontSize: 10, color: color.withOpacity(0.8)),
-          ),
-          const SizedBox(width: 4),
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(2),
-            ),
-            child: Text(
-              '$adet adet',
-              style: TextStyle(
-                fontSize: 8,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Kategori ikonunu belirle
-  IconData _getCategoryIcon(String category) {
-    switch (category.toLowerCase()) {
-      case 'tatlılar':
-        return Icons.cake;
-      case 'hamur işleri':
-        return Icons.bakery_dining;
-      case 'pastalar':
-        return Icons.cake_outlined;
-      case 'kurabiyeler':
-        return Icons.cookie_outlined;
-      case 'şerbetli tatlılar':
-        return Icons.local_drink_outlined;
-      default:
-        return Icons.restaurant;
-    }
-  }
-
-  // Firma siparişlerini gösterme dialog'u - Sadece Ödenmemiş
-  void _showCompanyOrdersDialog(BuildContext context, CompanySummary company) {
-    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-    final isSmallScreen = MediaQuery.of(context).size.width < 600;
-
-    // Firmanın ödenmemiş siparişlerini al - Firma adına göre filtrele
-    final unpaidOrders = orderProvider.orders
-        .where((order) =>
-            order.customer.name == company.company.name &&
-            order.status == OrderStatus.completed &&
-            order.paymentStatus != PaymentStatus.paid)
-        .toList();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-        child: Container(
-          width: double.infinity,
-          height: MediaQuery.of(context).size.height *
-              (isSmallScreen ? 0.85 : 0.75),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: isSmallScreen ? 15 : 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Başlık
-              Container(
-                padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.orange.shade600,
-                      Colors.orange.shade500,
-                    ],
-                  ),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(isSmallScreen ? 16 : 20),
-                    topRight: Radius.circular(isSmallScreen ? 16 : 20),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.pending_actions_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Ödenmemiş Siparişler',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${company.company.name} • ${unpaidOrders.length} sipariş',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 14,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      icon: const Icon(
-                        Icons.close_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Toplam Bilgi Kartı
-              Container(
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.orange.shade50,
-                      Colors.orange.shade100,
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline_rounded,
-                      color: Colors.orange.shade700,
-                      size: 24,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Toplam Ödenmemiş Tutar',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.orange.shade700,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '₺${company.pendingAmount.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.orange.shade800,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Sipariş Listesi
-              Expanded(
-                child: _buildUnpaidOrdersList(unpaidOrders),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Ödenmemiş sipariş listesi
-  Widget _buildUnpaidOrdersList(List<Order> unpaidOrders) {
-    final isSmallScreen = MediaQuery.of(context).size.width < 600;
-
-    if (unpaidOrders.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.check_circle_outline_rounded,
-              size: isSmallScreen ? 48 : 64,
-              color: Colors.green.shade400,
-            ),
-            SizedBox(height: isSmallScreen ? 12 : 16),
-            Text(
-              'Tüm siparişler ödendi!',
-              style: TextStyle(
-                fontSize: isSmallScreen ? 14 : 16,
-                color: Colors.green.shade600,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            SizedBox(height: isSmallScreen ? 6 : 8),
-            Text(
-              'Bu firma için ödenmemiş sipariş bulunmuyor.',
-              style: TextStyle(
-                fontSize: isSmallScreen ? 12 : 14,
-                color: Colors.grey.shade600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: EdgeInsets.fromLTRB(isSmallScreen ? 12 : 16, 0,
-          isSmallScreen ? 12 : 16, isSmallScreen ? 12 : 16),
-      itemCount: unpaidOrders.length,
-      itemBuilder: (context, index) {
-        final order = unpaidOrders[index];
-        return _buildUnpaidOrderCard(order);
-      },
-    );
-  }
-
-  // Ödenmemiş sipariş kartı - Basitleştirilmiş
-  Widget _buildUnpaidOrderCard(Order order) {
-    final remainingAmount = order.totalAmount - (order.paidAmount ?? 0);
-    final hasPartialPayment = order.paidAmount != null && order.paidAmount! > 0;
-    final isSmallScreen = MediaQuery.of(context).size.width < 600;
-
-    return Container(
-      margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-        border: Border.all(
-          color: Colors.orange.shade200,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: isSmallScreen ? 6 : 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Sipariş başlığı ve tutar
-            Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: isSmallScreen ? 6 : 8,
-                      vertical: isSmallScreen ? 3 : 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(isSmallScreen ? 5 : 6),
-                  ),
-                  child: Text(
-                    '#${order.id.substring(0, 6).toUpperCase()}',
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 10 : 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      order.totalAmount >= 1000
-                          ? '₺${(order.totalAmount / 1000).toStringAsFixed(order.totalAmount % 1000 == 0 ? 0 : 1)}K'
-                          : '₺${order.totalAmount.toStringAsFixed(0)}',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 13 : 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (hasPartialPayment)
-                      Text(
-                        remainingAmount >= 1000
-                            ? '₺${(remainingAmount / 1000).toStringAsFixed(remainingAmount % 1000 == 0 ? 0 : 1)}K kalan'
-                            : '₺${remainingAmount.toStringAsFixed(0)} kalan',
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 9 : 12,
-                          color: Colors.orange.shade700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-
-            SizedBox(height: isSmallScreen ? 6 : 8),
-
-            // Teslimat tarihi
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_today_rounded,
-                  size: isSmallScreen ? 12 : 16,
-                  color: Colors.grey.shade600,
-                ),
-                SizedBox(width: isSmallScreen ? 4 : 6),
-                Text(
-                  'Teslimat: ${order.deliveryDate.day}/${order.deliveryDate.month}/${order.deliveryDate.year}',
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 11 : 13,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-
-            SizedBox(height: isSmallScreen ? 6 : 8),
-
-            // Ürünler - Kompakt görünüm
-            Text(
-              'Ürünler: ${order.items.map((item) => '${item.product.name} (${item.quantity})').join(', ')}',
-              style: TextStyle(
-                fontSize: isSmallScreen ? 11 : 13,
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: isSmallScreen ? 1 : 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-
-            // Kısmi ödeme varsa progress göster
-            if (hasPartialPayment) ...[
-              SizedBox(height: isSmallScreen ? 8 : 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: LinearProgressIndicator(
-                      value: order.paidAmount! / order.totalAmount,
-                      backgroundColor: Colors.grey.shade200,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.orange.shade600,
-                      ),
-                      minHeight: isSmallScreen ? 4 : 6,
-                      borderRadius:
-                          BorderRadius.circular(isSmallScreen ? 2 : 3),
-                    ),
-                  ),
-                  SizedBox(width: isSmallScreen ? 8 : 12),
-                  Text(
-                    order.paidAmount! >= 1000
-                        ? '₺${(order.paidAmount! / 1000).toStringAsFixed(order.paidAmount! % 1000 == 0 ? 0 : 1)}K ödendi'
-                        : '₺${order.paidAmount!.toStringAsFixed(0)} ödendi',
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 10 : 12,
-                      color: Colors.green.shade700,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ],
-        ),
       ),
     );
   }
@@ -3031,5 +2622,687 @@ class _BudgetScreenState extends State<BudgetScreen>
         ],
       ),
     );
+  }
+
+  // Tarih aralığı seçici modalı
+  void _showDateRangeModal(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+          child: Container(
+            width: double.infinity,
+            constraints: BoxConstraints(
+              maxWidth: isSmallScreen ? double.infinity : 400,
+              maxHeight: isSmallScreen ? 500 : 450,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Başlık
+                Container(
+                  padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppTheme.primaryColor,
+                        AppTheme.primaryColor.withOpacity(0.8),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(isSmallScreen ? 16 : 20),
+                      topRight: Radius.circular(isSmallScreen ? 16 : 20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+                        ),
+                        child: Icon(
+                          Icons.date_range_rounded,
+                          color: Colors.white,
+                          size: isSmallScreen ? 20 : 24,
+                        ),
+                      ),
+                      SizedBox(width: isSmallScreen ? 12 : 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Analiz Dönemi',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: isSmallScreen ? 16 : 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Tarih aralığını seçin',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.8),
+                                fontSize: isSmallScreen ? 12 : 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: Colors.white,
+                          size: isSmallScreen ? 20 : 24,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // İçerik
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                    child: Column(
+                      children: [
+                        // Hızlı seçim butonları
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildQuickDateButton(
+                                'Son 7 Gün',
+                                Icons.looks_one_rounded,
+                                () {
+                                  setState(() {
+                                    _endDate = DateTime.now();
+                                    _startDate = _endDate!.subtract(const Duration(days: 7));
+                                  });
+                                  Navigator.of(context).pop();
+                                },
+                                isSmallScreen,
+                              ),
+                            ),
+                            SizedBox(width: isSmallScreen ? 8 : 12),
+                            Expanded(
+                              child: _buildQuickDateButton(
+                                'Son 30 Gün',
+                                Icons.looks_two_rounded,
+                                () {
+                                  setState(() {
+                                    _endDate = DateTime.now();
+                                    _startDate = _endDate!.subtract(const Duration(days: 30));
+                                  });
+                                  Navigator.of(context).pop();
+                                },
+                                isSmallScreen,
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        SizedBox(height: isSmallScreen ? 12 : 16),
+                        
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildQuickDateButton(
+                                'Son 3 Ay',
+                                Icons.looks_3_rounded,
+                                () {
+                                  setState(() {
+                                    _endDate = DateTime.now();
+                                    _startDate = _endDate!.subtract(const Duration(days: 90));
+                                  });
+                                  Navigator.of(context).pop();
+                                },
+                                isSmallScreen,
+                              ),
+                            ),
+                            SizedBox(width: isSmallScreen ? 8 : 12),
+                            Expanded(
+                              child: _buildQuickDateButton(
+                                'Tüm Zamanlar',
+                                Icons.all_inclusive_rounded,
+                                () {
+                                  setState(() {
+                                    _startDate = DateTime(2020);
+                                    _endDate = DateTime.now();
+                                  });
+                                  Navigator.of(context).pop();
+                                },
+                                isSmallScreen,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        SizedBox(height: isSmallScreen ? 20 : 24),
+
+                        // Özel tarih seçimi başlığı
+                        Row(
+                          children: [
+                            Expanded(child: Divider(color: Colors.grey.shade300)),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16),
+                              child: Text(
+                                'Özel Tarih Aralığı',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: isSmallScreen ? 12 : 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            Expanded(child: Divider(color: Colors.grey.shade300)),
+                          ],
+                        ),
+
+                        SizedBox(height: isSmallScreen ? 16 : 20),
+
+                        // Özel tarih seçiciler
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildModalDateButton('Başlangıç Tarihi', _startDate, true, isSmallScreen),
+                            ),
+                            SizedBox(width: isSmallScreen ? 12 : 16),
+                            Expanded(
+                              child: _buildModalDateButton('Bitiş Tarihi', _endDate, false, isSmallScreen),
+                            ),
+                          ],
+                        ),
+
+                        Spacer(),
+
+                        // Uygula butonu
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            icon: Icon(
+                              Icons.check_rounded,
+                              size: isSmallScreen ? 18 : 20,
+                            ),
+                            label: Text(
+                              'Filtrele',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 14 : 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(
+                                vertical: isSmallScreen ? 12 : 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                              ),
+                              elevation: 0,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Hızlı tarih seçim butonu
+  Widget _buildQuickDateButton(String label, IconData icon, VoidCallback onTap, bool isSmallScreen) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+        onTap: onTap,
+        child: Container(
+          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryColor.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+            border: Border.all(
+              color: AppTheme.primaryColor.withOpacity(0.2),
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                color: AppTheme.primaryColor,
+                size: isSmallScreen ? 20 : 24,
+              ),
+              SizedBox(height: isSmallScreen ? 6 : 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: AppTheme.primaryColor,
+                  fontSize: isSmallScreen ? 11 : 13,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Modal içindeki tarih butonu
+  Widget _buildModalDateButton(String label, DateTime? date, bool isStartDate, bool isSmallScreen) {
+    return GestureDetector(
+      onTap: () async {
+        final selectedDate = await showDatePicker(
+          context: context,
+          initialDate: date ?? DateTime.now(),
+          firstDate: DateTime.now().subtract(const Duration(days: 365)),
+          lastDate: DateTime.now(),
+          builder: (context, child) {
+            return Theme(
+              data: Theme.of(context).copyWith(
+                colorScheme: ColorScheme.light(
+                  primary: AppTheme.primaryColor,
+                ),
+              ),
+              child: child!,
+            );
+          },
+        );
+        
+        if (selectedDate != null) {
+          setState(() {
+            if (isStartDate) {
+              _startDate = selectedDate;
+            } else {
+              _endDate = selectedDate;
+            }
+          });
+        }
+      },
+      child: Container(
+        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+          border: Border.all(
+            color: date != null ? AppTheme.primaryColor.withOpacity(0.3) : Colors.grey.shade300,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: isSmallScreen ? 11 : 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            SizedBox(height: isSmallScreen ? 6 : 8),
+            Row(
+              children: [
+                Icon(
+                  Icons.calendar_today_rounded,
+                  color: date != null ? AppTheme.primaryColor : Colors.grey.shade500,
+                  size: isSmallScreen ? 16 : 18,
+                ),
+                SizedBox(width: isSmallScreen ? 6 : 8),
+                Text(
+                  date != null 
+                    ? '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}'
+                    : 'Tarih seçin',
+                  style: TextStyle(
+                    color: date != null ? AppTheme.textPrimaryColor : Colors.grey.shade500,
+                    fontSize: isSmallScreen ? 13 : 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Ürün bilgi rozeti
+  Widget _getBadge(String productName, int quantity, Color color) {
+    // Kısa ürün adı
+    String shortName = productName.length > 6
+        ? productName.substring(0, 6) + '...'
+        : productName;
+        
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            shortName,
+            style: TextStyle(
+              color: AppTheme.textPrimaryColor,
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Ürün açıklama satırları - Modern tasarım
+  List<Widget> _buildLegendItems(
+    List<Map<String, dynamic>> products,
+    List<Color> colors,
+    bool isSmallScreen,
+  ) {
+    return List<Widget>.generate(
+      products.length > 5 ? 5 : products.length, // İlk 5 ürünü göster
+      (index) {
+        final product = products[index];
+        final color = colors[index % colors.length];
+
+        return Padding(
+          padding: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
+          child: Row(
+            children: [
+              // Renk göstergesi - Modern
+              Container(
+                width: isSmallScreen ? 14 : 16,
+                height: isSmallScreen ? 14 : 16,
+                decoration: BoxDecoration(
+                  color: color, 
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: isSmallScreen ? 6 : 8),
+
+              // Ürün adı
+              Expanded(
+                child: Text(
+                  product['productName'],
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 11 : 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+
+              // Adet bilgisi - Modern tasarım
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 8 : 10,
+                  vertical: isSmallScreen ? 3 : 4,
+                ),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${product['totalQuantity']} adet',
+                      style: TextStyle(
+                        color: color,
+                        fontSize: isSmallScreen ? 10 : 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(width: isSmallScreen ? 2 : 3),
+                    Icon(Icons.arrow_forward_ios, color: color, size: isSmallScreen ? 8 : 10),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Ürün satış kartı - Modern tasarım
+  Widget _buildProductSalesCard(Map<String, dynamic> product, Color cardColor, bool isSmallScreen) {
+    return Container(
+      margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+        child: Row(
+          children: [
+            // Ürün kategorisi ikonu - Modern tasarım
+            Container(
+              width: isSmallScreen ? 40 : 50,
+              height: isSmallScreen ? 40 : 50,
+              decoration: BoxDecoration(
+                color: cardColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
+              ),
+              child: Center(
+                child: Icon(
+                  _getCategoryIcon(product['category']),
+                  color: cardColor,
+                  size: isSmallScreen ? 18 : 24,
+                ),
+              ),
+            ),
+
+            SizedBox(width: isSmallScreen ? 8 : 12),
+
+            // Ürün bilgileri - Modern layout
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          product['productName'],
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: isSmallScreen ? 13 : 16,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 6 : 8,
+                          vertical: isSmallScreen ? 3 : 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: cardColor,
+                          borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
+                        ),
+                        child: Text(
+                          '${product['totalQuantity']} adet',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: isSmallScreen ? 10 : 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: isSmallScreen ? 3 : 4),
+
+                  Text(
+                    product['category'],
+                    style: TextStyle(
+                      color: Colors.grey.shade600, 
+                      fontSize: isSmallScreen ? 10 : 12,
+                    ),
+                  ),
+
+                  SizedBox(height: isSmallScreen ? 6 : 8),
+
+                  // Firma bilgileri - Modern tasarım
+                  Text(
+                    '${product['firmaCount']} farklı firma tarafından sipariş edildi',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 10 : 12,
+                      color: AppTheme.textSecondaryColor,
+                    ),
+                  ),
+
+                  if (product['firmaCounts'] != null &&
+                      product['firmaCounts'].isNotEmpty)
+                    SizedBox(height: isSmallScreen ? 6 : 8),
+
+                  if (product['firmaCounts'] != null &&
+                      product['firmaCounts'].isNotEmpty)
+                    Wrap(
+                      spacing: isSmallScreen ? 4 : 8,
+                      runSpacing: isSmallScreen ? 2 : 4,
+                      children: product['firmaCounts'].entries
+                          .take(3)
+                          .map<Widget>(
+                            (entry) => _buildFirmaChip(
+                              entry.key,
+                              entry.value,
+                              cardColor,
+                              isSmallScreen,
+                            ),
+                          )
+                          .toList(),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Firma etiketi (chip) - Modern tasarım
+  Widget _buildFirmaChip(String firmaName, int adet, Color color, bool isSmallScreen) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 6 : 8, 
+        vertical: isSmallScreen ? 2 : 4,
+      ),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 3 : 4),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            firmaName,
+            style: TextStyle(
+              fontSize: isSmallScreen ? 8 : 10, 
+              color: color.withOpacity(0.8),
+            ),
+          ),
+          SizedBox(width: isSmallScreen ? 2 : 4),
+          Container(
+            padding: EdgeInsets.all(isSmallScreen ? 1 : 2),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(isSmallScreen ? 1 : 2),
+            ),
+            child: Text(
+              '$adet adet',
+              style: TextStyle(
+                fontSize: isSmallScreen ? 7 : 8,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Kategori ikonunu belirle
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'tatlılar':
+        return Icons.cake;
+      case 'hamur işleri':
+        return Icons.bakery_dining;
+      case 'pastalar':
+        return Icons.cake_outlined;
+      case 'kurabiyeler':
+        return Icons.cookie_outlined;
+      case 'şerbetli tatlılar':
+        return Icons.local_drink_outlined;
+      default:
+        return Icons.restaurant;
+    }
   }
 }
