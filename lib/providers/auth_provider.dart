@@ -70,6 +70,17 @@ class AuthProvider with ChangeNotifier {
             _isEmployeeLogin = false;
             _currentEmployee = null;
 
+            // DEBUG: Kullanıcı bilgilerini detaylı logla
+            if (_currentUser != null) {
+              print('🔍 DEBUG - Kullanıcı bilgileri:');
+              print('  - Name: ${_currentUser!.name}');
+              print('  - Email: ${_currentUser!.email}');
+              print('  - Role: ${_currentUser!.role}');
+              print('  - isAdmin: ${_currentUser!.isAdmin}');
+              print('  - isProducer: ${_currentUser!.isProducer}');
+              print('  - isCustomer: ${_currentUser!.isCustomer}');
+            }
+
             // Demo çalışan verisi kontrolü (email bazlı)
             if (user.email == 'calisan@test.com') {
               _currentEmployee = Employee(

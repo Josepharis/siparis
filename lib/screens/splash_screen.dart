@@ -88,10 +88,18 @@ class _SplashScreenState extends State<SplashScreen>
     final user = authProvider.currentUser;
     if (user != null) {
       print('🔄 Kullanıcı rolü: ${user.role}');
-      
+      print('🔍 DEBUG - Splash Screen Kullanıcı Kontrolü:');
+      print('  - User: ${user.name}');
+      print('  - Email: ${user.email}');
+      print('  - Role: ${user.role}');
+      print('  - isAdmin: ${user.isAdmin}');
+      print('  - Role lowercase: ${user.role.toLowerCase()}');
+
       // STRICT ROLE CHECKING - Her rol sadece kendi alanına erişir
+      // Admin kontrolü
       if (user.isAdmin) {
-        print('✅ Admin girişi tespit edildi, AdminHomeScreen\'e yönlendiriliyor');
+        print(
+            '✅ Admin girişi tespit edildi, AdminHomeScreen\'e yönlendiriliyor');
         // SADECE ADMIN - diğer sayfalar tamamen kapalı
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
@@ -99,8 +107,8 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         );
         return; // Diğer kontrolleri engelle
-      } 
-      
+      }
+
       if (user.isProducer) {
         print('✅ Üretici girişi tespit edildi, HomeScreen\'e yönlendiriliyor');
         // SADECE ÜRETICI sayfaları
@@ -110,10 +118,11 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         );
         return; // Diğer kontrolleri engelle
-      } 
-      
+      }
+
       // SADECE MÜŞTERI sayfaları
-      print('✅ Müşteri girişi tespit edildi, CustomerHomeScreen\'e yönlendiriliyor');
+      print(
+          '✅ Müşteri girişi tespit edildi, CustomerHomeScreen\'e yönlendiriliyor');
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => const CustomerHomeScreen(),
@@ -121,7 +130,7 @@ class _SplashScreenState extends State<SplashScreen>
       );
       return;
     }
-    
+
     print('ℹ️ Kullanıcı girişi yok, LoginScreen\'e yönlendiriliyor');
     _navigateToLogin();
   }
