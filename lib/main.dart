@@ -21,6 +21,7 @@ import 'package:siparis/providers/cart_provider.dart';
 import 'package:siparis/customer/screens/cart_screen.dart';
 import 'package:siparis/providers/employee_provider.dart';
 import 'package:siparis/screens/admin/admin_home_screen.dart';
+import 'package:siparis/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +30,9 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Bildirim servisini başlat
+  await NotificationService.initialize();
 
   // Sistem UI ayarları
   SystemChrome.setSystemUIOverlayStyle(

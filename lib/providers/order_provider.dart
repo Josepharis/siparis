@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:siparis/models/order.dart';
 import 'package:siparis/services/order_service.dart';
 import 'package:siparis/models/user_model.dart';
+import 'package:siparis/services/notification_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import 'dart:async';
 
 class OrderProvider extends ChangeNotifier {
@@ -196,15 +198,37 @@ class OrderProvider extends ChangeNotifier {
 
   // Sipariş ekleme - Firebase'e de kaydet
   Future<void> addOrder(Order order) async {
+    // customerId eksikse mevcut kullanıcının uid'ini ekle
+    Order finalOrder = order;
+    if (order.customerId == null && _currentUser != null) {
+      finalOrder = Order(
+        id: order.id,
+        customer: order.customer,
+        items: order.items,
+        orderDate: order.orderDate,
+        deliveryDate: order.deliveryDate,
+        requestedDate: order.requestedDate,
+        requestedTime: order.requestedTime,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        paidAmount: order.paidAmount,
+        note: order.note,
+        producerCompanyName: order.producerCompanyName,
+        producerCompanyId: order.producerCompanyId,
+        customerId: _currentUser!.uid, // ✅ Mevcut kullanıcının uid'ini ekle
+      );
+      print('✅ CustomerId eklendi: ${_currentUser!.uid}');
+    }
+
     // Önce local'e ekle (hızlı UI güncellemesi için)
-    _orders.add(order);
+    _orders.add(finalOrder);
     _updateSummaries();
     notifyListeners();
 
     // Firebase'e kaydet (arka planda)
     try {
-      await OrderService.saveOrder(order);
-      print('✅ Siparis Firebase\'e kaydedildi: ${order.id}');
+      await OrderService.saveOrder(finalOrder);
+      print('✅ Siparis Firebase\'e kaydedildi: ${finalOrder.id}');
     } catch (e) {
       print('❌ Siparis Firebase\'e kaydedilemedi: $e');
     }
@@ -239,6 +263,26 @@ class OrderProvider extends ChangeNotifier {
     try {
       print('🏗️ Yeni sipariş objesi oluşturuluyor...');
 
+      // customerId'yi belirle - eğer mevcut değilse customer email'i ile user arayalım
+      String? customerId = currentOrder.customerId;
+      if (customerId == null && currentOrder.customer.email != null) {
+        // Email ile user arayarak customerId bulmaya çalış
+        try {
+          final userQuery = await FirebaseFirestore.instance
+              .collection('users')
+              .where('email', isEqualTo: currentOrder.customer.email)
+              .limit(1)
+              .get();
+
+          if (userQuery.docs.isNotEmpty) {
+            customerId = userQuery.docs.first.id;
+            print('✅ CustomerId email ile bulundu: $customerId');
+          }
+        } catch (e) {
+          print('⚠️ CustomerId bulunamadı: $e');
+        }
+      }
+
       // Yeni sipariş oluştur, final değişkenleri güncellemek için
       final updatedOrder = Order(
         id: currentOrder.id,
@@ -254,6 +298,7 @@ class OrderProvider extends ChangeNotifier {
         note: currentOrder.note,
         producerCompanyName: currentOrder.producerCompanyName,
         producerCompanyId: currentOrder.producerCompanyId,
+        customerId: customerId, // ✅ Cloud Functions için customerId ekle
       );
 
       print('🔥 Firebase\'e kaydediliyor...');
@@ -271,6 +316,26 @@ class OrderProvider extends ChangeNotifier {
       }
 
       print('✅ Firebase güncelleme başarılı');
+
+      // Bildirim gönder (müşteriye sipariş durumu değişikliği bildirimi)
+      // Customer email'i ile kullanıcıyı bulmaya çalış
+      if (currentOrder.customer.email != null &&
+          currentOrder.customer.email!.isNotEmpty) {
+        // Email'i olan müşteri için bildirim gönder
+        try {
+          // Bu kısım şimdilik log olarak kalacak - backend gerekli
+          print('📱 Müşteri bildirimi hazırlanıyor:');
+          print('  - Email: ${currentOrder.customer.email}');
+          print('  - Sipariş: $orderId');
+          print('  - Yeni Durum: ${Order.getStatusText(newStatus)}');
+          print('  - Firma: ${currentOrder.producerCompanyName ?? 'Firma'}');
+          // await NotificationService.notifyCustomerByEmail(...);
+        } catch (e) {
+          print('⚠️ Müşteri bildirim hatası: $e');
+        }
+      } else {
+        print('⚠️ Müşteri email bilgisi yok, bildirim gönderilemedi');
+      }
 
       // Başarılı olursa local'i güncelle
       print('🔄 Local liste güncelleniyor...');

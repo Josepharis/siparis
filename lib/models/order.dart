@@ -146,6 +146,7 @@ class Order {
   final String? note;
   final String? producerCompanyName; // ✅ Üretici firma adı
   final String? producerCompanyId; // ✅ Üretici firma ID'si
+  final String? customerId; // ✅ Müşteri ID'si (Cloud Functions için)
 
   Order({
     String? id,
@@ -161,6 +162,7 @@ class Order {
     this.note,
     this.producerCompanyName, // ✅ Üretici firma adı
     this.producerCompanyId, // ✅ Üretici firma ID'si
+    this.customerId, // ✅ Müşteri ID'si (Cloud Functions için)
   })  : id = id ?? const Uuid().v4(),
         totalAmount = items.fold(0, (sum, item) => sum + item.total);
 
@@ -192,6 +194,7 @@ class Order {
       note: json['note'],
       producerCompanyName: json['producerCompanyName'], // ✅ Üretici firma adı
       producerCompanyId: json['producerCompanyId'], // ✅ Üretici firma ID'si
+      customerId: json['customerId'], // ✅ Müşteri ID'si
     );
   }
 
@@ -216,6 +219,7 @@ class Order {
       'note': note,
       'producerCompanyName': producerCompanyName, // ✅ Üretici firma adı
       'producerCompanyId': producerCompanyId, // ✅ Üretici firma ID'si
+      'customerId': customerId, // ✅ Müşteri ID'si
     };
   }
 

@@ -1545,6 +1545,7 @@ class _CartScreenState extends State<CartScreen> with WidgetsBindingObserver {
               currentUser.companyName ?? 'Bilinmeyen Firma'),
           producerCompanyName: companyGroup.companyName,
           producerCompanyId: companyGroup.companyId,
+          customerId: currentUser.uid, // ✅ Cloud Functions için customerId ekle
         );
 
         // Debug: Sipariş bilgilerini yazdır
