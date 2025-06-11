@@ -4,7 +4,6 @@ import 'package:siparis/config/theme.dart';
 import 'package:siparis/models/order.dart';
 import 'package:siparis/providers/order_provider.dart';
 import 'package:siparis/providers/auth_provider.dart';
-import 'package:fl_chart/fl_chart.dart';
 
 // Ödeme yöntemi
 enum PaymentMethod { card, cash }
@@ -2287,41 +2286,7 @@ class _BudgetScreenState extends State<BudgetScreen>
       (sum, product) => sum + product['totalQuantity'] as int,
     );
 
-    // Pasta grafik için sektör verilerini hazırla
-    final List<PieChartSectionData> pieChartSections = [];
-    for (int i = 0; i < topProducts.length; i++) {
-      final product = topProducts[i];
-      final double percentage = (product['totalQuantity'] / totalQuantity) * 100;
 
-      // Her bir dilim için veri oluştur
-      pieChartSections.add(
-        PieChartSectionData(
-          color: pieColors[i % pieColors.length],
-          value: (product['totalQuantity'] as int).toDouble(),
-          title: '${percentage.toStringAsFixed(1)}%',
-          radius: 80, // Vurgulanmış dilim daha büyük görünecek
-          titleStyle: const TextStyle(
-            color: Colors.white,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            shadows: [
-              Shadow(
-                color: Colors.black26,
-                blurRadius: 2,
-                offset: Offset(0, 1),
-              ),
-            ],
-          ),
-          badgeWidget: _getBadge(
-            product['productName'],
-            product['totalQuantity'],
-            pieColors[i % pieColors.length],
-          ),
-          badgePositionPercentageOffset:
-              1.2, // Ürün adı etiketini dışarıya doğru konumlandır
-        ),
-      );
-    }
 
     return SingleChildScrollView(
       padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
@@ -2455,68 +2420,215 @@ class _BudgetScreenState extends State<BudgetScreen>
                   padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
                   child: Column(
                     children: <Widget>[
-                      // Grafiği yükseklik ver - Modern boyutlandırma
-                      SizedBox(
-                        height: isSmallScreen ? 250 : 300,
-                        child: Stack(
+                                              // Kompakt İstatistik Kartları
+                        Row(
                           children: [
-                            // Pasta grafik - Modern animasyonlar
-                            PieChart(
-                              PieChartData(
-                                sections: pieChartSections,
-                                centerSpaceRadius: isSmallScreen ? 40 : 50,
-                                sectionsSpace: 2,
-                                startDegreeOffset: -90,
-                                pieTouchData: PieTouchData(
-                                  touchCallback: (
-                                    FlTouchEvent event,
-                                    PieTouchResponse? response,
-                                  ) {
-                                    // Modern dokunma etkileşimi
-                                  },
-                                  enabled: true,
+                            // Toplam Satış
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      AppTheme.primaryColor,
+                                      AppTheme.primaryColor.withOpacity(0.8),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppTheme.primaryColor.withOpacity(0.2),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
                                 ),
-                                borderData: FlBorderData(show: false),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.shopping_cart_rounded,
+                                          color: Colors.white.withOpacity(0.9),
+                                          size: isSmallScreen ? 14 : 16,
+                                        ),
+                                        SizedBox(width: isSmallScreen ? 3 : 4),
+                                        Expanded(
+                                          child: Text(
+                                            'Toplam Satış',
+                                            style: TextStyle(
+                                              color: Colors.white.withOpacity(0.9),
+                                              fontSize: isSmallScreen ? 9 : 11,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: isSmallScreen ? 4 : 6),
+                                    Text(
+                                      '${totalQuantity}',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: isSmallScreen ? 16 : 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      'adet',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.8),
+                                        fontSize: isSmallScreen ? 8 : 10,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              swapAnimationDuration: const Duration(
-                                milliseconds: 800,
-                              ),
-                              swapAnimationCurve: Curves.easeInOutQuint,
                             ),
-
-                            // Merkez içerik - Modern tasarım
-                            Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    totalQuantity.toString(),
-                                    style: TextStyle(
-                                      color: AppTheme.textPrimaryColor,
-                                      fontSize: isSmallScreen ? 20 : 26,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                            
+                            SizedBox(width: isSmallScreen ? 6 : 8),
+                            
+                            // Ürün Çeşitliliği
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.orange.shade400,
+                                      Colors.orange.shade300,
+                                    ],
                                   ),
-                                  SizedBox(height: isSmallScreen ? 2 : 4),
-                                  Text(
-                                    'Toplam\nSatış',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: AppTheme.textSecondaryColor,
-                                      fontSize: isSmallScreen ? 10 : 12,
+                                  borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.orange.withOpacity(0.2),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 3),
                                     ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.category_rounded,
+                                          color: Colors.white.withOpacity(0.9),
+                                          size: isSmallScreen ? 14 : 16,
+                                        ),
+                                        SizedBox(width: isSmallScreen ? 3 : 4),
+                                        Expanded(
+                                          child: Text(
+                                            'Ürün Çeşidi',
+                                            style: TextStyle(
+                                              color: Colors.white.withOpacity(0.9),
+                                              fontSize: isSmallScreen ? 9 : 11,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: isSmallScreen ? 4 : 6),
+                                    Text(
+                                      '${products.length}',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: isSmallScreen ? 16 : 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      'farklı ürün',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.8),
+                                        fontSize: isSmallScreen ? 8 : 10,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            
+                            SizedBox(width: isSmallScreen ? 6 : 8),
+                            
+                            // En Çok Satan
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.green.shade400,
+                                      Colors.green.shade300,
+                                    ],
                                   ),
-                                ],
+                                  borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.green.withOpacity(0.2),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.star_rounded,
+                                          color: Colors.white.withOpacity(0.9),
+                                          size: isSmallScreen ? 14 : 16,
+                                        ),
+                                        SizedBox(width: isSmallScreen ? 3 : 4),
+                                        Expanded(
+                                          child: Text(
+                                            'En Çok Satan',
+                                            style: TextStyle(
+                                              color: Colors.white.withOpacity(0.9),
+                                              fontSize: isSmallScreen ? 9 : 11,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: isSmallScreen ? 4 : 6),
+                                    Text(
+                                      '${topProducts.isNotEmpty ? topProducts.first['totalQuantity'] : 0}',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: isSmallScreen ? 16 : 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      topProducts.isNotEmpty 
+                                        ? (topProducts.first['productName'].length > 6 
+                                            ? '${topProducts.first['productName'].substring(0, 6)}...' 
+                                            : topProducts.first['productName'])
+                                        : 'Ürün yok',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.8),
+                                        fontSize: isSmallScreen ? 8 : 10,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
                         ),
-                      ),
 
-                      SizedBox(height: isSmallScreen ? 16 : 20),
-                      
-                      // Ürün bilgilendirme satırları - Modern tasarım
-                      ..._buildLegendItems(topProducts, pieColors, isSmallScreen),
+                        SizedBox(height: isSmallScreen ? 16 : 20),
+                        
+                        // En Çok Satan Ürünler Listesi
+                        _buildModernProductList(products, totalQuantity, isSmallScreen),
                     ],
                   ),
                 ),
@@ -2524,32 +2636,7 @@ class _BudgetScreenState extends State<BudgetScreen>
             ),
           ),
 
-          // Ürün satış detayları başlık - Modern
-          Padding(
-            padding: EdgeInsets.fromLTRB(0, isSmallScreen ? 6 : 8, 0, isSmallScreen ? 12 : 16),
-            child: Text(
-              'Ürün Satış Detayları',
-              style: TextStyle(
-                fontSize: isSmallScreen ? 14 : 16,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimaryColor,
-              ),
-            ),
-          ),
 
-          // Ürün kartları - Modern tasarım
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: products.length,
-            itemBuilder: (context, index) {
-              return _buildProductSalesCard(
-                products[index],
-                pieColors[index % pieColors.length],
-                isSmallScreen,
-              );
-            },
-          ),
         ],
       ),
     );
@@ -2997,45 +3084,252 @@ class _BudgetScreenState extends State<BudgetScreen>
     );
   }
 
-  // Ürün bilgi rozeti
-  Widget _getBadge(String productName, int quantity, Color color) {
-    // Kısa ürün adı
-    String shortName = productName.length > 6
-        ? productName.substring(0, 6) + '...'
-        : productName;
-        
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.3),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            shortName,
-            style: TextStyle(
-              color: AppTheme.textPrimaryColor,
-              fontSize: 9,
-              fontWeight: FontWeight.bold,
+  // Modern Ürün Listesi
+  Widget _buildModernProductList(
+    List<Map<String, dynamic>> products,
+    int totalQuantity,
+    bool isSmallScreen,
+  ) {
+    // En çok satan 10 ürünü al
+    final topProducts = products.take(10).toList();
+    
+    // Renk paleti
+    final List<Color> pieColors = [
+      const Color(0xFF5D43FB), // Mor
+      const Color(0xFF4285F4), // Mavi
+      const Color(0xFF00BCD4), // Cam göbeği
+      const Color(0xFF00D287), // Yeşil
+      const Color(0xFFFFCC00), // Sarı
+      const Color(0xFFFF9800), // Turuncu
+      const Color(0xFFFF5252), // Kırmızı
+      const Color(0xFF9C27B0), // Mor tonları
+      const Color(0xFF607D8B), // Blue Grey
+      const Color(0xFF795548), // Brown
+    ];
+    
+    return Column(
+      children: [
+        // Başlık
+        Row(
+          children: [
+            Text(
+              'En Çok Satan Ürünler',
+              style: TextStyle(
+                fontSize: isSmallScreen ? 16 : 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimaryColor,
+              ),
             ),
+            const Spacer(),
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: isSmallScreen ? 8 : 12,
+                vertical: isSmallScreen ? 4 : 6,
+              ),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+              ),
+              child: Text(
+                'TOP ${topProducts.length}',
+                style: TextStyle(
+                  color: AppTheme.primaryColor,
+                  fontSize: isSmallScreen ? 10 : 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        
+        SizedBox(height: isSmallScreen ? 12 : 16),
+        
+        // Kompakt ürün listesi
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
+          child: Column(
+            children: topProducts.asMap().entries.map((entry) {
+              final index = entry.key;
+              final product = entry.value;
+              final percentage = (product['totalQuantity'] / totalQuantity) * 100;
+              final isLast = index == topProducts.length - 1;
+              
+              return Container(
+                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                decoration: BoxDecoration(
+                  border: isLast ? null : Border(
+                    bottom: BorderSide(
+                      color: Colors.grey.shade100,
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    // Rank badge - daha küçük
+                    Container(
+                      width: isSmallScreen ? 24 : 28,
+                      height: isSmallScreen ? 24 : 28,
+                      decoration: BoxDecoration(
+                        color: pieColors[index % pieColors.length],
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${index + 1}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isSmallScreen ? 11 : 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    SizedBox(width: isSmallScreen ? 10 : 12),
+                    
+                    // Ürün bilgisi
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            product['productName'],
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 13 : 15,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textPrimaryColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: isSmallScreen ? 2 : 3),
+                          Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isSmallScreen ? 4 : 6,
+                                  vertical: isSmallScreen ? 1 : 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: pieColors[index % pieColors.length].withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(isSmallScreen ? 4 : 6),
+                                ),
+                                child: Text(
+                                  product['category'],
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 9 : 11,
+                                    color: pieColors[index % pieColors.length],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              if (product['firmaCount'] > 0) ...[
+                                SizedBox(width: isSmallScreen ? 4 : 6),
+                                Icon(
+                                  Icons.business_rounded,
+                                  size: isSmallScreen ? 10 : 12,
+                                  color: AppTheme.textSecondaryColor,
+                                ),
+                                SizedBox(width: 2),
+                                Text(
+                                  '${product['firmaCount']}',
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 9 : 11,
+                                    color: AppTheme.textSecondaryColor,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    SizedBox(width: isSmallScreen ? 8 : 12),
+                    
+                    // Progress bar
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '%${percentage.toStringAsFixed(1)}',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 11 : 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textSecondaryColor,
+                            ),
+                          ),
+                          SizedBox(height: isSmallScreen ? 4 : 6),
+                          Stack(
+                            children: [
+                              Container(
+                                height: isSmallScreen ? 4 : 6,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade200,
+                                  borderRadius: BorderRadius.circular(isSmallScreen ? 2 : 3),
+                                ),
+                              ),
+                              FractionallySizedBox(
+                                widthFactor: percentage / 100,
+                                child: Container(
+                                  height: isSmallScreen ? 4 : 6,
+                                  decoration: BoxDecoration(
+                                    color: pieColors[index % pieColors.length],
+                                    borderRadius: BorderRadius.circular(isSmallScreen ? 2 : 3),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    SizedBox(width: isSmallScreen ? 8 : 12),
+                    
+                    // Adet bilgisi
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${product['totalQuantity']}',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 14 : 16,
+                            fontWeight: FontWeight.bold,
+                            color: pieColors[index % pieColors.length],
+                          ),
+                        ),
+                        Text(
+                          'adet',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 9 : 11,
+                            color: AppTheme.textSecondaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 
