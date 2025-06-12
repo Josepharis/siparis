@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
 
 class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
@@ -407,6 +408,48 @@ class NotificationService {
       print('✅ Topic bildirimi hazırlandı');
     } catch (e) {
       print('❌ Topic bildirimi gönderme hatası: $e');
+    }
+  }
+
+  // Ödeme hatırlatması gönder (Firestore trigger ile - diğerleri gibi)
+  static Future<Map<String, dynamic>?> sendPaymentReminder({
+    required String companyId,
+    required String title,
+    required String body,
+    double? pendingAmount,
+  }) async {
+    try {
+      print('💳 Ödeme hatırlatması başlatılıyor: $companyId');
+      print('  - Başlık: $title');
+      print('  - İçerik: $body');
+      print('  - Tutar: ₺${pendingAmount?.toStringAsFixed(2) ?? '0.00'}');
+
+      // Firestore'a payment_reminder dokümanı ekle (diğer bildirimler gibi)
+      final reminderDoc =
+          await FirebaseFirestore.instance.collection('payment_reminders').add({
+        'companyId': companyId,
+        'title': title,
+        'body': body,
+        'pendingAmount': pendingAmount,
+        'createdAt': FieldValue.serverTimestamp(),
+        'processed': false,
+      });
+
+      print('✅ Ödeme hatırlatması kaydı oluşturuldu: ${reminderDoc.id}');
+      print('🔄 Firebase Function otomatik olarak tetiklenecek...');
+
+      // Başarılı sonuç döndür (gerçek sonuç Firebase Function'dan gelecek)
+      return {
+        'success': true,
+        'message': 'Ödeme hatırlatması başlatıldı',
+        'reminderId': reminderDoc.id,
+        'successCount': 1, // UI için mock değer
+        'failureCount': 0,
+        'totalTokens': 1
+      };
+    } catch (e) {
+      print('❌ Ödeme hatırlatması Firestore hatası: $e');
+      rethrow;
     }
   }
 }

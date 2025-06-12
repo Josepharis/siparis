@@ -253,8 +253,6 @@ exports.sendOrderStatusNotification = onDocumentUpdated(
   }
 );
 
-
-
 // Manuel bildirim gönderme endpoint'i (test için)
 exports.sendTestNotification = onCall(async (request) => {
   try {
@@ -373,3 +371,210 @@ exports.sendBulkNotification = onCall(async (request) => {
     throw new Error(`Toplu bildirim gönderilemedi: ${error.message}`);
   }
 });
+
+// Ödeme hatırlatması için topic bildirim gönderme
+exports.sendPaymentReminderNotification = onCall(async (request) => {
+  try {
+    const {companyId, title, body, pendingAmount} = request.data;
+
+    if (!companyId || !title || !body) {
+      throw new Error("companyId, title ve body gerekli");
+    }
+
+    logger.info(`💳 Ödeme hatırlatması gönderiliyor: ${companyId}`);
+    logger.info(`📋 Başlık: ${title}`);
+    logger.info(`📝 İçerik: ${body}`);
+
+    // Şirkete ait kullanıcıları al (company role'ü olan)
+    const companyUsersQuery = await admin.firestore()
+      .collection('users')
+      .where('companyId', '==', companyId)
+      .where('role', '==', 'customer')
+      .get();
+
+    if (companyUsersQuery.empty) {
+      logger.warn(`⚠️ ${companyId} firmasına ait kullanıcı bulunamadı`);
+      return {
+        success: false,
+        message: "Firmaya ait kullanıcı bulunamadı"
+      };
+    }
+
+    const tokens = [];
+    companyUsersQuery.forEach(doc => {
+      const userData = doc.data();
+      if (userData.fcmToken) {
+        tokens.push(userData.fcmToken);
+      }
+    });
+
+    if (tokens.length === 0) {
+      logger.warn(`⚠️ ${companyId} firmasında FCM token'ı olan kullanıcı yok`);
+      return {
+        success: false,
+        message: "FCM token'ı olan kullanıcı bulunamadı"
+      };
+    }
+
+    logger.info(`📱 ${tokens.length} kullanıcıya bildirim gönderilecek`);
+
+    // Bildirim mesajını hazırla
+    const message = {
+      tokens: tokens,
+      notification: {
+        title: title,
+        body: body
+      },
+      data: {
+        type: 'payment_reminder',
+        companyId: companyId,
+        pendingAmount: pendingAmount ? pendingAmount.toString() : '0',
+        timestamp: Date.now().toString()
+      },
+      android: {
+        notification: {
+          channelId: 'payment_reminders',
+          priority: 'high',
+          sound: 'default',
+          icon: 'ic_notification',
+          color: '#2196F3'
+        }
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: 'default',
+            badge: 1
+          }
+        }
+      }
+    };
+
+    // Bildirimi gönder
+    logger.info("📤 Ödeme hatırlatması gönderiliyor...");
+    const result = await admin.messaging().sendEachForMulticast(message);
+    
+    logger.info(`✅ Bildirim sonucu - Success: ${result.successCount}, Failure: ${result.failureCount}`);
+    
+    if (result.failureCount > 0) {
+      logger.warn("⚠️ Bazı bildirimler gönderilemedi:");
+      result.responses.forEach((resp, idx) => {
+        if (!resp.success) {
+          logger.error(`Token ${idx}: ${resp.error}`);
+        }
+      });
+    }
+
+    return {
+      success: true,
+      message: `Ödeme hatırlatması gönderildi`,
+      successCount: result.successCount,
+      failureCount: result.failureCount,
+      totalTokens: tokens.length
+    };
+
+  } catch (error) {
+    logger.error("Ödeme hatırlatması gönderme hatası:", error);
+    throw new Error(`Ödeme hatırlatması gönderilemedi: ${error.message}`);
+  }
+});
+
+// Ödeme hatırlatması Firestore trigger (basit yaklaşım)
+exports.sendPaymentReminderNotificationTrigger = onDocumentCreated(
+  'payment_reminders/{reminderId}',
+  async (event) => {
+    try {
+      const reminderData = event.data.data();
+      const {companyId, title, body, pendingAmount} = reminderData;
+
+      logger.info(`💳 Trigger ile ödeme hatırlatması: ${companyId}`);
+      logger.info(`📋 Başlık: ${title}`);
+      logger.info(`📝 İçerik: ${body}`);
+
+      logger.info(`🏢 Company ID: ${companyId}`);
+
+      // Company name ile users collection'da ara (companyName field'ı ile)
+      const usersQuery = await admin.firestore()
+        .collection('users')
+        .where('companyName', '==', companyId)
+        .limit(1)
+        .get();
+
+      if (usersQuery.empty) {
+        logger.warn(`⚠️ ${companyId} adlı firma bulunamadı`);
+        return;
+      }
+
+      // İlk kullanıcıyı al
+      const userDoc = usersQuery.docs[0];
+      const userData = userDoc.data();
+      const fcmToken = userData.fcmToken;
+
+      if (!fcmToken) {
+        logger.warn(`⚠️ ${companyId} kullanıcısının FCM token'ı yok`);
+        return;
+      }
+
+      logger.info(`📱 FCM Token bulundu, bildirim gönderiliyor...`);
+
+      // Bildirim mesajını hazırla
+      const message = {
+        token: fcmToken,
+        notification: {
+          title: title,
+          body: body
+        },
+        data: {
+          type: 'payment_reminder',
+          companyId: companyId,
+          pendingAmount: pendingAmount ? pendingAmount.toString() : '0',
+          timestamp: Date.now().toString()
+        },
+        android: {
+          notification: {
+            channelId: 'payment_reminders',
+            priority: 'high',
+            sound: 'default',
+            icon: 'ic_notification',
+            color: '#2196F3'
+          }
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: 'default',
+              badge: 1
+            }
+          }
+        }
+      };
+
+      // Bildirimi gönder
+      logger.info("📤 Trigger ile ödeme hatırlatması gönderiliyor...");
+      const result = await admin.messaging().send(message);
+      
+      logger.info(`✅ Trigger bildirim başarıyla gönderildi: ${result}`);
+      
+      // Reminder dokümanını işlendi olarak işaretle
+      await event.data.ref.update({
+        processed: true,
+        processedAt: admin.firestore.FieldValue.serverTimestamp(),
+        result: {
+          success: true,
+          messageId: result
+        }
+      });
+
+    } catch (error) {
+      logger.error("Trigger ödeme hatırlatması hatası:", error);
+      // Hata durumunda da işaretle
+      await event.data.ref.update({
+        processed: true,
+        processedAt: admin.firestore.FieldValue.serverTimestamp(),
+        error: error.message
+      });
+    }
+  }
+);
+
+
